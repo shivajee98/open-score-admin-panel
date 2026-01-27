@@ -29,7 +29,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined') {
             // Redirect to login if unauthorized
-            // window.location.href = '/login'; 
+            window.location.href = '/login';
         }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'API request failed');

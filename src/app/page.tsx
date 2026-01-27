@@ -12,8 +12,8 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
         try {
-            const users = await apiFetch('/users');
-            const pending = await apiFetch('/funds/pending');
+            const users = await apiFetch('/admin/users');
+            const pending = await apiFetch('/admin/funds/pending');
 
 
             // Calculate stats
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     const handleApprove = async (id: number) => {
         if (!confirm('Approve this transaction?')) return;
         try {
-            const res = await apiFetch(`/funds/${id}/approve`, { method: 'POST' });
+            const res = await apiFetch(`/admin/funds/${id}/approve`, { method: 'POST' });
             if (res.ok) {
                 alert('Funds Approved!');
                 loadData();
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     const handleReject = async (id: number) => {
         if (!confirm('Reject this transaction?')) return;
         try {
-            const res = await apiFetch(`/funds/${id}/reject`, { method: 'POST' });
+            const res = await apiFetch(`/admin/funds/${id}/reject`, { method: 'POST' });
             if (res.ok) {
                 alert('Request Rejected');
                 loadData();
