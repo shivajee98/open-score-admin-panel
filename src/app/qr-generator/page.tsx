@@ -24,8 +24,8 @@ export default function QrGenerator() {
             // After generating batch, fetch the codes
             const batchRes = await apiFetch(`/admin/qr/batches/${res.batch_id}`);
             setCodes(batchRes);
-        } catch (e) {
-            alert('Failed to generate codes');
+        } catch (e: any) {
+            alert(e.message || 'Failed to generate codes');
         } finally {
             setLoading(false);
         }
