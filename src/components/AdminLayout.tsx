@@ -25,6 +25,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
     const navItems = [
         { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" /> },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" /> },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" /> },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" /> },
