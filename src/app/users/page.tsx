@@ -37,15 +37,11 @@ export default function UsersPage() {
                 body: JSON.stringify({ amount: parseFloat(amount) })
             });
 
-            if (res.ok) {
-                alert('Success! Funds requested for approval.');
-                setIsCreditsModalOpen(false);
-                setAmount('');
-                loadUsers();
-            } else {
-                const err = await res.json();
-                alert(err.message || 'Failed');
-            }
+            // apiFetch throws if not OK, so if we are here, it's a success.
+            alert('Success! Funds added successfully.');
+            setIsCreditsModalOpen(false);
+            setAmount('');
+            loadUsers();
         } catch (e) {
             alert('Error adding funds');
         }
@@ -54,7 +50,7 @@ export default function UsersPage() {
     const handleDelete = async (id: number) => {
         if (!confirm('Are you sure you want to delete this user?')) return;
         const res = await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
-        if (res.ok) loadUsers();
+        loadUsers();
     };
 
     const filteredUsers = users.filter((u: any) =>
