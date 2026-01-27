@@ -11,8 +11,7 @@ export default function LogsPage() {
 
     const loadLogs = async () => {
         try {
-            const res = await apiFetch('/logs');
-            const data = await res.json();
+            const data = await apiFetch('/logs');
             setLogs(data);
         } catch (e) {
             console.error(e);

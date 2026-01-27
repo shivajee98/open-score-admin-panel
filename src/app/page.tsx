@@ -12,13 +12,9 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
         try {
-            const [usersRes, pendingRes] = await Promise.all([
-                apiFetch('/users'),
-                apiFetch('/funds/pending')
-            ]);
+            const users = await apiFetch('/users');
+            const pending = await apiFetch('/funds/pending');
 
-            const users = await usersRes.json();
-            const pending = await pendingRes.json();
 
             // Calculate stats
             const totalBalance = users.reduce((acc: number, user: any) => acc + parseFloat(user.wallet_balance), 0);

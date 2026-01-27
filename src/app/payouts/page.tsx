@@ -11,8 +11,7 @@ export default function PayoutsPage() {
 
     const loadPayouts = async () => {
         try {
-            const res = await apiFetch('/payouts');
-            const data = await res.json();
+            const data = await apiFetch('/payouts');
             setPayouts(data);
         } catch (e) {
             console.error(e);
