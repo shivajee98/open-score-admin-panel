@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { CheckCircle, Clock } from 'lucide-react';
+import { toast } from '@/components/ui/Toast';
 
 export default function PayoutsPage() {
     const [payouts, setPayouts] = useState([]);
@@ -29,11 +30,13 @@ export default function PayoutsPage() {
         try {
             const res = await apiFetch(`/payouts/${id}/approve`, { method: 'POST' });
             if (res.ok) {
-                alert('Payout Approved');
+                toast.success('Payout Approved');
                 loadPayouts();
+            } else {
+                toast.error('Failed to approve payout');
             }
-        } catch (e) {
-            alert('Error approving payout');
+        } catch (e: any) {
+            toast.error(e.message || 'Error approving payout');
         }
     };
 

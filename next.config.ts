@@ -11,7 +11,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  basePath: '/admin',
   reactCompiler: true,
 };
 
