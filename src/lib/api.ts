@@ -1,4 +1,4 @@
-export const API_BASE_URL = '/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     // In a real app, you'd handle auth tokens here (e.g. from cookies or localStorage)
@@ -8,14 +8,20 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         token = localStorage.getItem('token');
     }
 
-    const headers = {
+    const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
     };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
+
+    // Check if we are using the absolute URL (bypass proxy) or relative (use proxy)
+    // If using absolute URL, we might need to handle CORS.
+    // However, since 404 is the issue, direct connection is safer for debugging.
+    const response = await fetch(url, {
+
         ...options,
         headers,
     });
