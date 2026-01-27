@@ -42,15 +42,29 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.glass {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-clip: text;
-  color: transparent;
+@media print {
+  @page {
+    margin: 1cm;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .print\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .print\:border {
+    border: 1px solid #000;
+  }
+  .print\:w-full {
+    width: 100%;
+  }
+  .print\:gap-4 {
+    gap: 1rem;
+  }
+  .print\:shadow-none {
+    box-shadow: none;
+  }
+  body {
+    background: white;
+  }
 }

@@ -58,8 +58,8 @@ export default function UsersPage() {
     };
 
     const filteredUsers = users.filter((u: any) =>
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.mobile_number.includes(search)
+        (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.mobile_number || '').includes(search)
     );
 
     return (
@@ -95,10 +95,10 @@ export default function UsersPage() {
                                     <td className="p-6 pl-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center font-bold text-slate-600">
-                                                {user.name[0]}
+                                                {(user.name || 'U')[0]}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-slate-900">{user.name}</p>
+                                                <p className="font-bold text-slate-900">{user.name || 'Unknown User'}</p>
                                                 <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
                                             </div>
                                         </div>
@@ -109,7 +109,7 @@ export default function UsersPage() {
                                         </span>
                                     </td>
                                     <td className="p-6">
-                                        <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance).toLocaleString('en-IN')}</span>
+                                        <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
                                     </td>
                                     <td className="p-6">
                                         <div className="flex items-center gap-2">

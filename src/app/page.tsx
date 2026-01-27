@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({ totalUsers: 0, systemBalance: 0, pendingCount: 0 });
@@ -17,7 +18,7 @@ export default function AdminDashboard() {
 
 
             // Calculate stats
-            const totalBalance = users.reduce((acc: number, user: any) => acc + parseFloat(user.wallet_balance), 0);
+            const totalBalance = users.reduce((acc: number, user: any) => acc + parseFloat(user.wallet_balance || '0'), 0);
 
             setStats({
                 totalUsers: users.length,
@@ -94,6 +95,19 @@ export default function AdminDashboard() {
                         <p className="text-3xl font-black text-slate-900">{stats.pendingCount}</p>
                     </div>
                 </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mb-8">
+                <Link href="/qr-generator" className="inline-flex items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:border-blue-200 transition-all group">
+                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <QrCode className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-slate-900 text-lg">QR Generator</h3>
+                        <p className="text-slate-400 text-xs font-medium">Create & print merchant codes</p>
+                    </div>
+                </Link>
             </div>
 
             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
