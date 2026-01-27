@@ -12,7 +12,7 @@ export default function PayoutsPage() {
 
     const loadPayouts = async () => {
         try {
-            const data = await apiFetch('/payouts');
+            const data = await apiFetch('/admin/payouts');
             setPayouts(data);
         } catch (e) {
             console.error(e);
@@ -28,7 +28,7 @@ export default function PayoutsPage() {
     const handleApprove = async (id: number) => {
         if (!confirm('Approve this payout?')) return;
         try {
-            const res = await apiFetch(`/payouts/${id}/approve`, { method: 'POST' });
+            const res = await apiFetch(`/admin/payouts/${id}/approve`, { method: 'POST' });
             if (res.ok) {
                 toast.success('Payout Approved');
                 loadPayouts();

@@ -15,7 +15,7 @@ export default function UsersPage() {
 
     const loadUsers = async () => {
         try {
-            const data = await apiFetch('/users');
+            const data = await apiFetch('/admin/users');
             setUsers(data);
         } catch (e) {
             console.error(e);
@@ -31,7 +31,7 @@ export default function UsersPage() {
     const handleAddFunds = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await apiFetch(`/users/${selectedUser.id}/credit`, {
+            const res = await apiFetch(`/admin/users/${selectedUser.id}/credit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount: parseFloat(amount) })
@@ -53,7 +53,7 @@ export default function UsersPage() {
 
     const handleDelete = async (id: number) => {
         if (!confirm('Are you sure you want to delete this user?')) return;
-        const res = await apiFetch(`/users/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
         if (res.ok) loadUsers();
     };
 
