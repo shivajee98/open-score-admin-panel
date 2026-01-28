@@ -141,7 +141,16 @@ export default function LoanApprovals() {
                                                 )}
 
                                                 {loan.status === 'KYC_SENT' && (
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase italic">Awaiting KYC</span>
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase italic">Awaiting KYC</span>
+                                                        <button
+                                                            disabled={!!actionLoading}
+                                                            onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Form Link Sent!')}
+                                                            className="px-4 py-2 bg-amber-400/10 text-amber-600 border border-amber-200 rounded-lg font-bold text-[10px] hover:bg-amber-400/20 transition-all"
+                                                        >
+                                                            Resend link
+                                                        </button>
+                                                    </div>
                                                 )}
 
                                                 {loan.status === 'FORM_SUBMITTED' && (
