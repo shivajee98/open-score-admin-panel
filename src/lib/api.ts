@@ -11,26 +11,23 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
+        // Auth disabled for now
+        // ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
     };
 
     const url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
 
-    // Check if we are using the absolute URL (bypass proxy) or relative (use proxy)
-    // If using absolute URL, we might need to handle CORS.
-    // However, since 404 is the issue, direct connection is safer for debugging.
     const response = await fetch(url, {
-
         ...options,
         headers,
     });
 
     if (!response.ok) {
-        if (response.status === 401 && typeof window !== 'undefined') {
-            // Redirect to login if unauthorized
-            window.location.href = '/login';
-        }
+        // Disabled redirect to login
+        // if (response.status === 401 && typeof window !== 'undefined') {
+        //     window.location.href = '/login';
+        // }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'API request failed');
     }
