@@ -24,7 +24,11 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined') {
-            window.location.href = '/login';
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
         }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'API request failed');

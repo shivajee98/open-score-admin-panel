@@ -15,7 +15,7 @@ export default function AdminLogin() {
     useEffect(() => {
         // Checking if we already have a token to skip login
         const token = localStorage.getItem('token');
-        if (token) {
+        if (token && token !== 'undefined' && token !== 'null') {
             router.push('/');
         }
     }, [router]);

@@ -11,12 +11,14 @@ export default function AdminLayout({ children, title }: { children: React.React
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Basic auth check
+    // Basic auth check
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) {
+        const isInvalid = !token || token === 'undefined' || token === 'null';
+        if (isInvalid && pathname !== '/login') {
             router.push('/login');
         }
-    }, [router]);
+    }, [router, pathname]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
