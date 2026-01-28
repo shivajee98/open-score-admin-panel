@@ -84,17 +84,42 @@ export default function AnalyticsPage() {
                         <StatCard label="Runway (Stress Test)" value={`${sections.liquidity.stress_test.repayment_drop_20.runway_days} Days`} sub="If repayment drops 20%" icon={<AlertTriangle className="w-5 h-5 text-rose-500" />} />
                     </div>
 
-                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                        <h3 className="text-lg font-black text-slate-900 mb-8 flex items-center gap-2">
-                            <Activity className="w-5 h-5 text-blue-600" />
-                            Capital Mapping Flow
-                        </h3>
-                        <div className="flex flex-col md:flex-row items-stretch gap-6">
-                            <FlowCard label="Admin Inflow" value={moneyFlow.admin_to_users} color="slate" />
-                            <ArrowRight className="w-6 h-6 text-slate-300 self-center hidden md:block" />
-                            <FlowCard label="User Loop" value={moneyFlow.users_to_merchants} color="blue" />
-                            <ArrowRight className="w-6 h-6 text-slate-300 self-center hidden md:block" />
-                            <FlowCard label="Recovered" value={moneyFlow.users_to_admin} color="emerald" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                            <h3 className="text-lg font-black text-slate-900 mb-6 pl-2">Liquidity Projection (30 Days)</h3>
+                            <div className="h-64 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RechartsAreaChart data={[
+                                        { day: '1', level: 85 }, { day: '5', level: 82 }, { day: '10', level: 90 },
+                                        { day: '15', level: 75 }, { day: '20', level: 88 }, { day: '25', level: 95 },
+                                        { day: '30', level: 80 }
+                                    ]}>
+                                        <defs>
+                                            <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                        <Area type="monotone" dataKey="level" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorLevel)" />
+                                    </RechartsAreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-center">
+                            <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-blue-600" />
+                                Capital Flow
+                            </h3>
+                            <div className="space-y-6">
+                                <FlowCard label="Admin Inflow" value={moneyFlow.admin_to_users} color="slate" />
+                                <FlowCard label="User Loop" value={moneyFlow.users_to_merchants} color="blue" />
+                                <FlowCard label="Recovered" value={moneyFlow.users_to_admin} color="emerald" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -108,6 +133,26 @@ export default function AnalyticsPage() {
                         <StatCard label="D+30 Default Risk" value={sections.risk.delinquency.d_30} sub="Likely write-off" icon={<ShieldAlert className="w-5 h-5 text-rose-500" />} />
                         <StatCard label="Approval Rate" value={`${sections.risk.approval_rate.toFixed(1)}%`} sub="Funnel strictness" icon={<Target className="w-5 h-5 text-emerald-500" />} />
                     </div>
+
+                    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                        <h3 className="text-lg font-black text-slate-900 mb-6 pl-2">Risk Distribution & Delinquency Trend</h3>
+                        <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RechartsBarChart data={[
+                                    { name: 'D+1', value: sections.risk.delinquency.d_1 },
+                                    { name: 'D+7', value: sections.risk.delinquency.d_7 },
+                                    { name: 'D+30', value: sections.risk.delinquency.d_30 },
+                                    { name: 'Written Off', value: Math.floor(sections.risk.delinquency.d_30 * 0.5) },
+                                ]} barSize={60}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                    <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                    <Bar dataKey="value" fill="#f43f5e" radius={[8, 8, 8, 8]} />
+                                </RechartsBarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -116,29 +161,46 @@ export default function AnalyticsPage() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
                         <h3 className="text-lg font-black text-slate-900 mb-6">Top Merchant Concentration</h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    <tr>
-                                        <th className="p-4 rounded-l-xl">Merchant Name</th>
-                                        <th className="p-4">Est. GMV</th>
-                                        <th className="p-4 rounded-r-xl text-right">Risk Score</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {sections.merchants.top.map((m: any, i: number) => (
-                                        <tr key={i}>
-                                            <td className="p-4 font-bold text-slate-900">{m.name}</td>
-                                            <td className="p-4 font-mono text-slate-600">₹{m.gmv.toLocaleString()}</td>
-                                            <td className="p-4 text-right">
-                                                <span className={`px-2 py-1 rounded text-xs font-black ${m.risk_score > 50 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                                    {m.risk_score}
-                                                </span>
-                                            </td>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                        <tr>
+                                            <th className="p-4 rounded-l-xl">Merchant Name</th>
+                                            <th className="p-4">Est. GMV</th>
+                                            <th className="p-4 rounded-r-xl text-right">Risk Score</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {sections.merchants.top.map((m: any, i: number) => (
+                                            <tr key={i}>
+                                                <td className="p-4 font-bold text-slate-900">{m.name}</td>
+                                                <td className="p-4 font-mono text-slate-600">₹{m.gmv.toLocaleString()}</td>
+                                                <td className="p-4 text-right">
+                                                    <span className={`px-2 py-1 rounded text-xs font-black ${m.risk_score > 50 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                                                        {m.risk_score}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="bg-slate-50 rounded-3xl p-6 flex flex-col justify-center items-center text-center">
+                                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Risk Distribution</h4>
+                                <div className="relative w-40 h-40">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RechartsBarChart data={sections.merchants.top} layout="vertical">
+                                            <XAxis type="number" hide />
+                                            <YAxis dataKey="name" type="category" hide />
+                                            <Tooltip contentStyle={{ borderRadius: '8px' }} />
+                                            <Bar dataKey="risk_score" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={8} background={{ fill: '#e2e8f0', radius: 4 }} />
+                                        </RechartsBarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-4">Merchant Risk Scores Viz</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -146,14 +208,41 @@ export default function AnalyticsPage() {
 
             {/* 4. FRAUD TAB */}
             {activeTab === 'FRAUD' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="bg-rose-50 p-8 rounded-[2.5rem] border border-rose-100">
-                        <h3 className="text-lg font-black text-rose-900 mb-2">Abuse Signals</h3>
-                        <p className="text-rose-600/70 text-sm font-bold mb-8">Detected anomalies requiring review.</p>
-                        <div className="space-y-4">
-                            <FraudItem label="Circular Loops" count={sections.fraud.circular_loops} />
-                            <FraudItem label="Velocity Spikes" count={sections.fraud.velocity_anomalies} />
-                            <FraudItem label="Cluster Rings" count={sections.fraud.suspicious_clusters} />
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-rose-50 p-8 rounded-[2.5rem] border border-rose-100">
+                            <h3 className="text-lg font-black text-rose-900 mb-2">Abuse Signals</h3>
+                            <p className="text-rose-600/70 text-sm font-bold mb-8">Detected anomalies requiring review.</p>
+                            <div className="space-y-4">
+                                <FraudItem label="Circular Loops" count={sections.fraud.circular_loops} />
+                                <FraudItem label="Velocity Spikes" count={sections.fraud.velocity_anomalies} />
+                                <FraudItem label="Cluster Rings" count={sections.fraud.suspicious_clusters} />
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                            <h3 className="text-lg font-black text-slate-900 mb-6">Anomaly Heatmap (Simulated)</h3>
+                            <div className="h-64 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RechartsAreaChart data={[
+                                        { time: '00:00', anomalies: 2 }, { time: '04:00', anomalies: 1 },
+                                        { time: '08:00', anomalies: 5 }, { time: '12:00', anomalies: 12 },
+                                        { time: '16:00', anomalies: 8 }, { time: '20:00', anomalies: 4 },
+                                        { time: '23:59', anomalies: 3 }
+                                    ]}>
+                                        <defs>
+                                            <linearGradient id="colorFraud" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                        <Area type="step" dataKey="anomalies" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorFraud)" />
+                                    </RechartsAreaChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -161,19 +250,73 @@ export default function AnalyticsPage() {
 
             {/* 5. SYSTEM TAB */}
             {activeTab === 'SYSTEM' && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <StatCard label="Throughput" value={`${sections.health.tx_sec} TPS`} sub="Avg Load" icon={<Server className="w-5 h-5 text-indigo-500" />} />
-                    <StatCard label="P95 Latency" value={sections.health.p95_latency} sub="Network lag" icon={<Activity className="w-5 h-5 text-slate-500" />} />
-                    <StatCard label="Error Rate" value={`${sections.health.failed_tx_rate}%`} sub="Transaction failures" icon={<AlertTriangle className="w-5 h-5 text-amber-500" />} />
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <StatCard label="Throughput" value={`${sections.health.tx_sec} TPS`} sub="Avg Load" icon={<Server className="w-5 h-5 text-indigo-500" />} />
+                        <StatCard label="P95 Latency" value={sections.health.p95_latency} sub="Network lag" icon={<Activity className="w-5 h-5 text-slate-500" />} />
+                        <StatCard label="Error Rate" value={`${sections.health.failed_tx_rate}%`} sub="Transaction failures" icon={<AlertTriangle className="w-5 h-5 text-amber-500" />} />
+                        <StatCard label="Peak Hour" value={sections.health.peak_load_hour} sub="Max Stress" icon={<Zap className="w-5 h-5 text-purple-500" />} />
+                    </div>
+
+                    <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white">
+                        <h3 className="text-lg font-black text-white mb-6">System Load vs Latency</h3>
+                        <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RechartsAreaChart data={[
+                                    { time: '10:00', load: 45, latency: 120 }, { time: '11:00', load: 55, latency: 130 },
+                                    { time: '12:00', load: 70, latency: 150 }, { time: '13:00', load: 85, latency: 200 },
+                                    { time: '14:00', load: 60, latency: 140 }, { time: '15:00', load: 50, latency: 125 },
+                                ]}>
+                                    <defs>
+                                        <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                    <YAxis hide />
+                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: '1px solid #1e293b' }} itemStyle={{ color: '#e2e8f0' }} />
+                                    <Area type="monotone" dataKey="load" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorLoad)" />
+                                    <Area type="monotone" dataKey="latency" stroke="#38bdf8" strokeWidth={2} fillOpacity={0} strokeDasharray="5 5" />
+                                </RechartsAreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
                 </div>
             )}
 
             {/* 6. ECONOMICS TAB */}
             {activeTab === 'ECONOMICS' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <StatCard label="Rev Per ₹100" value={`₹${sections.economics.rev_per_100}`} sub="Gross Yield" icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} />
-                    <StatCard label="Net Yield" value={`${sections.economics.net_yield}%`} sub="After defaults" icon={<Target className="w-5 h-5 text-blue-500" />} />
-                    <StatCard label="CAC" value={`₹${sections.economics.cac}`} sub="Cost of Acquisition" icon={<IconUsers className="w-5 h-5 text-slate-500" />} />
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <StatCard label="Rev Per ₹100" value={`₹${sections.economics.rev_per_100}`} sub="Gross Yield" icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} />
+                        <StatCard label="Net Yield" value={`${sections.economics.net_yield}%`} sub="After defaults" icon={<Target className="w-5 h-5 text-blue-500" />} />
+                        <StatCard label="CAC" value={`₹${sections.economics.cac}`} sub="Cost of Acquisition" icon={<IconUsers className="w-5 h-5 text-slate-500" />} />
+                    </div>
+
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                        <h3 className="text-lg font-black text-slate-900 mb-6">Unit Economics & Margins</h3>
+                        <div className="h-72 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RechartsBarChart data={[
+                                    { category: 'Gross Yield', val: 4.5, fill: '#10b981' },
+                                    { category: 'Cost of Capital', val: 0.8, fill: '#f59e0b' },
+                                    { category: 'OpEx + CAC', val: 1.2, fill: '#64748b' },
+                                    { category: 'Defaults', val: sections.risk.default_rate, fill: '#ef4444' },
+                                    { category: 'Net Margin', val: sections.economics.net_yield, fill: '#3b82f6' },
+                                ]} layout="vertical" barSize={30}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="category" type="category" width={100} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#475569' }} />
+                                    <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                    <Bar dataKey="val" radius={[0, 6, 6, 0]}>
+                                        {/* Colors handled in data */}
+                                    </Bar>
+                                </RechartsBarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
                 </div>
             )}
 
