@@ -148,12 +148,12 @@ export default function LoanApprovals() {
                                         </td>
                                         <td className="p-6">
                                             <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${loan.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
-                                                    loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
-                                                        loan.status === 'KC_SENT' ? 'bg-amber-100 text-amber-600' :
-                                                            loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
-                                                                loan.status === 'REJECTED' ? 'bg-rose-100 text-rose-600' :
-                                                                    loan.status === 'CANCELLED' ? 'bg-slate-200 text-slate-600 line-through' :
-                                                                        'bg-slate-100 text-slate-600'
+                                                loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
+                                                    loan.status === 'KYC_SENT' ? 'bg-amber-100 text-amber-600' :
+                                                        loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
+                                                            loan.status === 'REJECTED' ? 'bg-rose-100 text-rose-600' :
+                                                                loan.status === 'CANCELLED' ? 'bg-slate-200 text-slate-600 line-through' :
+                                                                    'bg-slate-100 text-slate-600'
                                                 }`}>{loan.status}</span>
                                         </td>
                                         <td className="p-6 text-right">
