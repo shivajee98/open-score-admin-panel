@@ -45,7 +45,7 @@ export default function AnalyticsPage() {
         );
     }
 
-    const { sections, moneyFlow } = data;
+    const { sections, money_flow: moneyFlow } = data;
 
     const tabs = [
         { id: 'LIQUIDITY', label: 'Liquidity & Capital', icon: <Activity className="w-4 h-4" /> },
