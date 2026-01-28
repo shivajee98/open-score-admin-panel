@@ -8,14 +8,21 @@ import { BadgeCheck, Ban, Clock, ChevronRight, Calculator, IndianRupee } from 'l
 
 export default function LoanApprovals() {
     const [loans, setLoans] = useState([]);
+    const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     const loadLoans = async () => {
+        setLoading(true);
         try {
-            const data = await apiFetch('/admin/loans');
-            setLoans(data);
+            const [pendingData, historyData] = await Promise.all([
+                apiFetch('/admin/loans'),
+                apiFetch('/admin/loans/history')
+            ]);
+            setLoans(pendingData);
+            setHistory(historyData);
         } catch (error) {
             console.error('Failed to load loans', error);
         } finally {
@@ -40,23 +47,52 @@ export default function LoanApprovals() {
         }
     };
 
+    const displayedLoans = activeTab === 'requests' ? loans : history;
+
     return (
         <AdminLayout title="Loan Approvals">
+            <div className="flex gap-4 mb-6">
+                <button
+                    onClick={() => setActiveTab('requests')}
+                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'requests'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                        : 'bg-white text-slate-500 hover:bg-slate-50'
+                        }`}
+                >
+                    Pending Requests
+                </button>
+                <button
+                    onClick={() => setActiveTab('history')}
+                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'history'
+                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30'
+                        : 'bg-white text-slate-500 hover:bg-slate-50'
+                        }`}
+                >
+                    Loan History
+                </button>
+            </div>
+
             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center">
                     <div>
-                        <h3 className="text-xl font-black text-slate-900">Pending Loan Requests</h3>
-                        <p className="text-slate-500 font-medium text-sm mt-1">Review applicant details and approve disbursals.</p>
+                        <h3 className="text-xl font-black text-slate-900">
+                            {activeTab === 'requests' ? 'Pending Loan Requests' : 'Past Loan Records'}
+                        </h3>
+                        <p className="text-slate-500 font-medium text-sm mt-1">
+                            {activeTab === 'requests'
+                                ? 'Review applicant details and approve disbursals.'
+                                : 'Archive of disbursed, rejected, and closed loans.'}
+                        </p>
                     </div>
                     {loading && <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />}
                 </div>
 
-                {loans.length === 0 ? (
+                {displayedLoans.length === 0 ? (
                     <div className="p-12 text-center">
                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <BadgeCheck className="w-8 h-8 text-slate-300" />
                         </div>
-                        <p className="text-slate-500 font-bold">No pending loans</p>
+                        <p className="text-slate-500 font-bold">No records found</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -72,7 +108,7 @@ export default function LoanApprovals() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {loans.map((loan: any) => (
+                                {displayedLoans.map((loan: any) => (
                                     <tr key={loan.id} className="hover:bg-slate-50/80 transition-colors">
                                         <td className="p-6">
                                             <div className="flex items-center gap-3">
@@ -112,10 +148,12 @@ export default function LoanApprovals() {
                                         </td>
                                         <td className="p-6">
                                             <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${loan.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
-                                                loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
-                                                    loan.status === 'KYC_SENT' ? 'bg-amber-100 text-amber-600' :
-                                                        loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
-                                                            'bg-slate-100 text-slate-600'
+                                                    loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
+                                                        loan.status === 'KC_SENT' ? 'bg-amber-100 text-amber-600' :
+                                                            loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
+                                                                loan.status === 'REJECTED' ? 'bg-rose-100 text-rose-600' :
+                                                                    loan.status === 'CANCELLED' ? 'bg-slate-200 text-slate-600 line-through' :
+                                                                        'bg-slate-100 text-slate-600'
                                                 }`}>{loan.status}</span>
                                         </td>
                                         <td className="p-6 text-right">
@@ -187,6 +225,16 @@ export default function LoanApprovals() {
                                                         className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs hover:bg-slate-800 transition-all"
                                                     >
                                                         Release Funds
+                                                    </button>
+                                                )}
+
+                                                {/* History Actions - Mostly View Only */}
+                                                {(loan.status === 'DISBURSED' || loan.status === 'REJECTED' || loan.status === 'CLOSED' || loan.status === 'CANCELLED') && (
+                                                    <button
+                                                        onClick={() => setPreviewLoan(loan)}
+                                                        className="px-4 py-2 bg-slate-50 text-slate-400 rounded-lg font-bold text-xs hover:bg-slate-100 transition-all"
+                                                    >
+                                                        View Data
                                                     </button>
                                                 )}
                                             </div>
