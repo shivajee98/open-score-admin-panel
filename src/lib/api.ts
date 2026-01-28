@@ -11,8 +11,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        // Auth disabled for now
-        // ...(token && { Authorization: `Bearer ${token}` }),
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
     };
 
@@ -24,10 +23,9 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     });
 
     if (!response.ok) {
-        // Disabled redirect to login
-        // if (response.status === 401 && typeof window !== 'undefined') {
-        //     window.location.href = '/login';
-        // }
+        if (response.status === 401 && typeof window !== 'undefined') {
+            window.location.href = '/login';
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'API request failed');
     }

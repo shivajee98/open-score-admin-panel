@@ -13,9 +13,12 @@ export default function AdminLogin() {
     const router = useRouter();
 
     useEffect(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-    }, []);
+        // Checking if we already have a token to skip login
+        const token = localStorage.getItem('token');
+        if (token) {
+            router.push('/');
+        }
+    }, [router]);
 
     const handleSendOtp = async () => {
         setLoading(true);
@@ -63,7 +66,13 @@ export default function AdminLogin() {
                 <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-center bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
                     Admin Portal
                 </h1>
-                <p className="text-center text-slate-500 mb-8 text-sm font-bold uppercase tracking-widest">System Control Center</p>
+                <p className="text-center text-slate-500 mb-2 text-sm font-bold uppercase tracking-widest">System Control Center</p>
+
+                <div className="mb-8 p-4 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-center">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-sky-400 mb-1">Demo Credentials</p>
+                    <p className="text-sm font-bold text-slate-300">Number: <span className="text-white">9478563245</span></p>
+                    <p className="text-sm font-bold text-slate-300">OTP: <span className="text-white">849645</span></p>
+                </div>
 
                 {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-400/10 py-2 rounded-lg border border-red-400/20">{error}</p>}
 

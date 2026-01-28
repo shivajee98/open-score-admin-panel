@@ -10,14 +10,17 @@ export default function AdminLayout({ children, title }: { children: React.React
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Auth disabled for direct access
+    // Basic auth check
     useEffect(() => {
-        // Direct access enabled
-    }, []);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            router.push('/login');
+        }
+    }, [router]);
 
     const handleLogout = () => {
-        // localStorage.removeItem('token');
-        // router.push('/login');
+        localStorage.removeItem('token');
+        router.push('/login');
     };
 
     const navItems = [

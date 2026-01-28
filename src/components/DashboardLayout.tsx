@@ -25,17 +25,33 @@ export default function DashboardLayout({
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+
         if (storedUser) {
             setUser(JSON.parse(storedUser));
         }
-        // Direct access: no auth or redirects
-    }, []);
+
+        // Hydrate latest data from server if token exists
+        if (token) {
+            apiFetch('/auth/me')
+                .then(data => {
+                    setUser(data);
+                    localStorage.setItem('user', JSON.stringify(data));
+                })
+                .catch(err => {
+                    console.error("Hydration failed", err);
+                    if (!storedUser) router.push('/login');
+                });
+        } else {
+            router.push('/login');
+        }
+    }, [router]);
 
     const handleLogout = () => {
-        // localStorage.removeItem('token');
-        // localStorage.removeItem('user');
-        // setUser(null);
-        // router.push('/login');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        router.push('/login');
     };
 
     return (
@@ -89,7 +105,7 @@ export default function DashboardLayout({
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar scroll-smooth">
-                    {children}
+                    {user ? children : <div className="p-8 text-center text-slate-500 uppercase tracking-widest font-black text-xs animate-pulse">Authenticating Session...</div>}
                 </div>
 
                 {/* Mobile Bottom Navigation (Visible only on Mobile) */}
