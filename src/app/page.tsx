@@ -7,22 +7,30 @@ import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode } from 'lucid
 import Link from 'next/link';
 
 export default function AdminDashboard() {
-    const [stats, setStats] = useState({ totalUsers: 0, systemBalance: 0, pendingCount: 0 });
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        totalMerchants: 0,
+        totalDisbursed: 0,
+        totalRepaid: 0,
+        pendingCount: 0
+    });
     const [pendingTx, setPendingTx] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const loadData = async () => {
         try {
-            const users = await apiFetch('/admin/users');
-            const pending = await apiFetch('/admin/funds/pending');
-
-
-            // Calculate stats
-            const totalBalance = users.reduce((acc: number, user: any) => acc + parseFloat(user.wallet_balance || '0'), 0);
+            // Parallel fetch for speed
+            const [analytics, pending, users] = await Promise.all([
+                apiFetch('/admin/analytics/dashboard'),
+                apiFetch('/admin/funds/pending'),
+                apiFetch('/admin/users') // Keeping for user list if needed elsewhere or remove if analytics covers it
+            ]);
 
             setStats({
-                totalUsers: users.length,
-                systemBalance: totalBalance,
+                totalUsers: analytics.total_users,
+                totalMerchants: analytics.total_merchants,
+                totalDisbursed: analytics.total_disbursed,
+                totalRepaid: analytics.total_repaid,
                 pendingCount: pending.length
             });
             setPendingTx(pending);
@@ -65,7 +73,7 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout title="System Overview">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
                     <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
                         <Users className="w-7 h-7" />
@@ -77,12 +85,22 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
                         <Wallet className="w-7 h-7" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">System Float</p>
-                        <p className="text-3xl font-black text-slate-900">₹{stats.systemBalance.toLocaleString('en-IN')}</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Disbursed (Loans)</p>
+                        <p className="text-3xl font-black text-slate-900">₹{stats.totalDisbursed.toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                        <TrendingUp className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Loans Repaid</p>
+                        <p className="text-3xl font-black text-emerald-600">₹{stats.totalRepaid.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp } from 'lucide-react';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
     const pathname = usePathname();
@@ -22,6 +22,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
     const navItems = [
         { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: 'Analytics', href: '/analytics', icon: <TrendingUp className="w-5 h-5" /> },
         { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" /> },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" /> },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" /> },
