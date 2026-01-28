@@ -154,6 +154,13 @@ export default function LoanApprovals() {
                                                         </button>
                                                         <button
                                                             disabled={!!actionLoading}
+                                                            onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Form Link Sent!')}
+                                                            className="px-4 py-2 bg-amber-400 text-slate-900 rounded-lg font-bold text-xs hover:bg-amber-500 transition-all"
+                                                        >
+                                                            Resend KYC Link
+                                                        </button>
+                                                        <button
+                                                            disabled={!!actionLoading}
                                                             onClick={() => handleAction(loan.id, 'approve', 'Loan Approved!')}
                                                             className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-xs hover:bg-emerald-600 transition-all"
                                                         >
