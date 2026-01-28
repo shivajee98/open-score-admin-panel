@@ -9,6 +9,8 @@ import { BadgeCheck, Ban, Clock, ChevronRight, Calculator, IndianRupee } from 'l
 export default function LoanApprovals() {
     const [loans, setLoans] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [previewLoan, setPreviewLoan] = useState<any>(null);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     const loadLoans = async () => {
         try {
@@ -25,14 +27,16 @@ export default function LoanApprovals() {
         loadLoans();
     }, []);
 
-    const handleApprove = async (id: number) => {
-        if (!confirm('Approve this loan? Funds will be credited to user wallet.')) return;
+    const handleAction = async (id: number, endpoint: string, successMsg: string) => {
+        setActionLoading(`${id}-${endpoint}`);
         try {
-            await apiFetch(`/admin/loans/${id}/approve`, { method: 'POST' });
-            alert('Loan Approved!');
+            await apiFetch(`/admin/loans/${id}/${endpoint}`, { method: 'POST' });
+            alert(successMsg);
             loadLoans();
         } catch (e) {
-            alert('Approval failed');
+            alert('Action failed');
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -63,6 +67,7 @@ export default function LoanApprovals() {
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Terms</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -105,14 +110,70 @@ export default function LoanApprovals() {
                                             <br />
                                             <span className="text-xs text-slate-400">{new Date(loan.created_at).toLocaleTimeString()}</span>
                                         </td>
+                                        <td className="p-6">
+                                            <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${loan.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
+                                                    loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
+                                                        loan.status === 'KYC_SENT' ? 'bg-amber-100 text-amber-600' :
+                                                            loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
+                                                                'bg-slate-100 text-slate-600'
+                                                }`}>{loan.status}</span>
+                                        </td>
                                         <td className="p-6 text-right">
-                                            <button
-                                                onClick={() => handleApprove(loan.id)}
-                                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 active:scale-95"
-                                            >
-                                                <BadgeCheck className="w-4 h-4" />
-                                                Approve Loan
-                                            </button>
+                                            <div className="flex justify-end gap-2">
+                                                {loan.status === 'PENDING' && (
+                                                    <button
+                                                        disabled={!!actionLoading}
+                                                        onClick={() => handleAction(loan.id, 'proceed', 'Loan Proceeded!')}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 transition-all"
+                                                    >
+                                                        Proceed
+                                                    </button>
+                                                )}
+
+                                                {loan.status === 'PROCEEDED' && (
+                                                    <button
+                                                        disabled={!!actionLoading}
+                                                        onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Form Link Sent!')}
+                                                        className="px-4 py-2 bg-amber-400 text-slate-900 rounded-lg font-bold text-xs hover:bg-amber-500 transition-all"
+                                                    >
+                                                        Send KYC Form Link
+                                                    </button>
+                                                )}
+
+                                                {loan.status === 'KYC_SENT' && (
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase italic">Awaiting KYC</span>
+                                                )}
+
+                                                {loan.status === 'FORM_SUBMITTED' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setPreviewLoan(loan)}
+                                                            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-200 transition-all"
+                                                        >
+                                                            Preview Details
+                                                        </button>
+                                                        <button
+                                                            disabled={!!actionLoading}
+                                                            onClick={() => handleAction(loan.id, 'approve', 'Loan Approved!')}
+                                                            className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-xs hover:bg-emerald-600 transition-all"
+                                                        >
+                                                            Approve Loan
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {loan.status === 'APPROVED' && (
+                                                    <button
+                                                        disabled={!!actionLoading}
+                                                        onClick={() => {
+                                                            if (confirm('Release funds to user wallet?')) handleAction(loan.id, 'release', 'Funds Released!');
+                                                        }}
+                                                        className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs hover:bg-slate-800 transition-all"
+                                                    >
+                                                        Release Funds
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -121,6 +182,36 @@ export default function LoanApprovals() {
                     </div>
                 )}
             </div>
+            {/* Preview Modal */}
+            {previewLoan && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl">
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900">KYC Form Details</h2>
+                                <p className="text-sm text-slate-500">Submitted on {new Date(previewLoan.updated_at).toLocaleDateString()}</p>
+                            </div>
+                            <button onClick={() => setPreviewLoan(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900">
+                                <BadgeCheck className="w-6 h-6 rotate-45" />
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-8">
+                            {previewLoan.form_data ? (
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                                    {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => (
+                                        <div key={key}>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
+                                            <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-slate-500 italic">No form data submitted.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }
