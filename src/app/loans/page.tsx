@@ -112,10 +112,10 @@ export default function LoanApprovals() {
                                         </td>
                                         <td className="p-6">
                                             <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${loan.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
-                                                    loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
-                                                        loan.status === 'KYC_SENT' ? 'bg-amber-100 text-amber-600' :
-                                                            loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
-                                                                'bg-slate-100 text-slate-600'
+                                                loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
+                                                    loan.status === 'KYC_SENT' ? 'bg-amber-100 text-amber-600' :
+                                                        loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
+                                                            'bg-slate-100 text-slate-600'
                                                 }`}>{loan.status}</span>
                                         </td>
                                         <td className="p-6 text-right">
@@ -198,12 +198,32 @@ export default function LoanApprovals() {
                         <div className="p-8 space-y-8">
                             {previewLoan.form_data ? (
                                 <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                                    {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => (
-                                        <div key={key}>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
-                                            <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
-                                        </div>
-                                    ))}
+                                    {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => {
+                                        const isImageObject = value && typeof value === 'object' && value.url;
+                                        return (
+                                            <div key={key} className={isImageObject ? "col-span-2 sm:col-span-1" : ""}>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
+                                                {isImageObject ? (
+                                                    <div className="space-y-2">
+                                                        <a href={value.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+                                                            <img src={value.url} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
+                                                                <ChevronRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            </div>
+                                                        </a>
+                                                        {value.geo && (
+                                                            <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                <span>Lat: {value.geo.lat?.toFixed(6)}</span>
+                                                                <span>Lng: {value.geo.lng?.toFixed(6)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <p className="text-slate-500 italic">No form data submitted.</p>
