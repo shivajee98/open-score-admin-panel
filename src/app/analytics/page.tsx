@@ -143,7 +143,7 @@ export default function AnalyticsPage() {
                     </h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data.user_growth}>
+                            <RechartsAreaChart data={data.user_growth}>
                                 <defs>
                                     <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                                 <Tooltip />
                                 <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
-                            </AreaChart>
+                            </RechartsAreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
                 <h3 className="text-lg font-black text-slate-900 mb-6">30-Day Transaction Volume</h3>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data.daily_volume}>
+                        <RechartsBarChart data={data.daily_volume}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                             <XAxis dataKey="date" axisLine={false} tickLine={false} tickFormatter={(val) => new Date(val).getDate().toString()} />
                             <YAxis axisLine={false} tickLine={false} />
@@ -175,7 +175,7 @@ export default function AnalyticsPage() {
                                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                             />
                             <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        </BarChart>
+                        </RechartsBarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
