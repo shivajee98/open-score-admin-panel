@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     const backendUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:8001';
     return [
       {
-        source: '/api/:path*',
+        source: '/api/:path((?!auth).*)',
         destination: `${backendUrl}/api/:path*`,
       },
     ];

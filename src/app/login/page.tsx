@@ -13,13 +13,13 @@ export default function AdminLogin() {
     const [error, setError] = useState('');
     const router = useRouter();
 
-    useEffect(() => {
-        // Checking if we already have a token to skip login
-        const token = localStorage.getItem('token');
-        if (token && token !== 'undefined' && token !== 'null') {
-            router.push('/');
-        }
-    }, [router]);
+    // useEffect(() => {
+    //     // Checking if we already have a token to skip login
+    //     const token = localStorage.getItem('token');
+    //     if (token && token !== 'undefined' && token !== 'null') {
+    //         router.push('/');
+    //     }
+    // }, [router]);
 
     const handleSendOtp = async () => {
         setLoading(true);
