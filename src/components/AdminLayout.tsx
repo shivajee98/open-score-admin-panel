@@ -15,15 +15,9 @@ export default function AdminLayout({ children, title }: { children: React.React
     // Let's use Ref for silence
     const txRef = useRef<string | null>(null);
 
-    // Basic auth check
+    // Auth check is now handled by Middleware and apiFetch
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const isInvalid = !token || token === 'undefined' || token === 'null';
-        if (isInvalid && pathname !== '/login') {
-            router.push('/login');
-        } else if (!isInvalid) {
-            checkNewTransactions();
-        }
+        checkNewTransactions();
     }, [router, pathname]);
 
     useEffect(() => {

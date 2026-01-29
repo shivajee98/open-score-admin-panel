@@ -1,11 +1,19 @@
+import { getSession, signOut } from 'next-auth/react';
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-    // In a real app, you'd handle auth tokens here (e.g. from cookies or localStorage)
-    // For this demo, we'll assume the token is stored in localStorage by the login page
     let token = null;
+
+    // Try to get token from NextAuth session first
     if (typeof window !== 'undefined') {
-        token = localStorage.getItem('token');
+        const session = await getSession();
+        if (session && (session as any).accessToken) {
+            token = (session as any).accessToken;
+        } else {
+            // Fallback to localStorage if no session (legacy/backup)
+            token = localStorage.getItem('token');
+        }
     }
 
     const headers: HeadersInit = {
@@ -24,11 +32,9 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
-            }
+            // Force sign out to clear stale session and prevent middleware loop
+            signOut({ callbackUrl: '/login' });
+            return;
         }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'API request failed');
