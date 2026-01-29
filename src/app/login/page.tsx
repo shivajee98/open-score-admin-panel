@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { signIn } from 'next-auth/react';
 
 export default function AdminLogin() {
     const [mobile, setMobile] = useState('');
@@ -40,21 +41,59 @@ export default function AdminLogin() {
         setLoading(true);
         setError('');
         try {
-            const data = await apiFetch('/auth/verify', {
-                method: 'POST',
-                body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
+            // Updated to use NextAuth
+            const res = await signIn('credentials', {
+                mobile: mobile,
+                otp: otp,
+                role: 'ADMIN', // Explicitly passing role for credential provider
+                redirect: false
             });
 
-            if (data.user.role !== 'ADMIN') {
-                throw new Error('Access Denied: This number is not registered as an Administrator.');
+            if (res?.error) {
+                // If fails, we might try manual verify to see specific error message 
+                // or just show generic error. 
+                // Let's stick to the pattern:
+                const data = await apiFetch('/auth/verify', {
+                    method: 'POST',
+                    body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
+                });
+
+                if (data.user.role !== 'ADMIN') {
+                    throw new Error('Access Denied: This number is not registered as an Administrator.');
+                }
+
+                // If manual check passed but signin failed, retry signin? 
+                // Or just assume something went wrong with auth.
+                // Let's retry signin if we are here implies credentials are correct but maybe network hiccup
+                const retry = await signIn('credentials', {
+                    mobile: mobile,
+                    otp: otp,
+                    role: 'ADMIN',
+                    redirect: false
+                });
+
+                if (retry?.ok) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/';
+                } else {
+                    throw new Error('Login failed. Please try again.');
+                }
+
+            } else {
+                // Success
+                // We might need to fetch user details to store in localStorage if dependent components use it
+                // Ideally they should use useSession(). But for backward compat:
+                const data = await apiFetch('/auth/verify', {
+                    method: 'POST',
+                    body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
+                }); // Redundant fetch but ensures we have user object in local storage if needed immediately
+
+                localStorage.setItem('user', JSON.stringify(data.user));
+                window.location.href = '/';
             }
 
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            router.push('/');
-
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Login Failed');
         } finally {
             setLoading(false);
         }
