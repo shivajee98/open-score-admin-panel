@@ -78,10 +78,10 @@ export default function QrGenerator() {
         window.print();
     };
 
+    const [selectedCode, setSelectedCode] = useState<any>(null);
+
     const handleCodeClick = (code: any) => {
-        if (code.status === 'assigned') {
-            alert(`Merchant Details:\nName: ${code.merchant_name || 'N/A'}\nMobile: ${code.merchant_mobile || 'N/A'}`);
-        }
+        setSelectedCode(code);
     };
 
     return (
@@ -165,8 +165,8 @@ export default function QrGenerator() {
                             >
                                 {/* Status Badge */}
                                 <div className={`absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider print:hidden ${code.status === 'assigned'
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : 'bg-emerald-100 text-emerald-700'
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : 'bg-emerald-100 text-emerald-700'
                                     }`}>
                                     {code.status === 'assigned' ? <UserCheck size={10} /> : <CheckCircle size={10} />}
                                     {code.status === 'assigned' ? 'Assigned' : 'Available'}
@@ -179,6 +179,59 @@ export default function QrGenerator() {
                                 <p className="text-[10px] font-bold text-blue-600 uppercase mt-1">OpenScore Pay</p>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Code Details Modal */}
+            {selectedCode && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6 print:hidden" onClick={() => setSelectedCode(null)}>
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in fade-in zoom-in duration-300 relative" onClick={e => e.stopPropagation()}>
+                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-white rounded-full p-2 shadow-xl">
+                            <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center">
+                                <QRCode value={selectedCode.code} size={64} />
+                            </div>
+                        </div>
+
+                        <div className="mt-10 text-center">
+                            <div className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-500 font-mono font-bold text-xs uppercase tracking-widest mb-4">
+                                ID: {selectedCode.code}
+                            </div>
+
+                            {selectedCode.status === 'assigned' ? (
+                                <div className="space-y-6">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned Merchant</p>
+                                        <h3 className="text-xl font-black text-slate-900">{selectedCode.merchant_name || 'N/A'}</h3>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Number</p>
+                                        <h3 className="text-xl font-black text-slate-900 font-mono tracking-tight">{selectedCode.merchant_mobile || 'N/A'}</h3>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Mapped On</p>
+                                        <p className="text-sm font-bold text-slate-600">{selectedCode.updated_at ? new Date(selectedCode.updated_at).toLocaleString() : 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl text-center text-sm font-bold">
+                                        Active & Receiving Payments
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="bg-blue-50 text-blue-700 p-6 rounded-xl text-center">
+                                        <p className="font-bold mb-1">Ready to Map</p>
+                                        <p className="text-xs opacity-70">This QR code is generated and ready to be assigned to a merchant.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={() => setSelectedCode(null)}
+                                className="mt-8 w-full py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all"
+                            >
+                                Close Details
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

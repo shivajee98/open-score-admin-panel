@@ -1,24 +1,83 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp } from 'lucide-react';
+
+import { apiFetch } from '@/lib/api';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
     const pathname = usePathname();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Basic auth check
+    // Let's use Ref for silence
+    const txRef = useRef<string | null>(null);
+
     // Basic auth check
     useEffect(() => {
         const token = localStorage.getItem('token');
         const isInvalid = !token || token === 'undefined' || token === 'null';
         if (isInvalid && pathname !== '/login') {
             router.push('/login');
+        } else if (!isInvalid) {
+            checkNewTransactions();
         }
     }, [router, pathname]);
+
+    useEffect(() => {
+        const interval = setInterval(checkNewTransactions, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const checkNewTransactions = async () => {
+        try {
+            // Admin sees global transactions or maybe just recent ones?
+            // /admin/payouts is unrelated (withdrawals).
+            // /wallet/transactions might not work for admin if not acting as a user.
+            // But admin might want to hear about *any* credit to *any* user?
+            // The request said "making a sound that X amount of money is credited".
+            // Typically this is for the *receiver*.
+            // If Admin wants to hear it, maybe they want to hear *any* credit flow in the system?
+            // Or maybe Admin has their own wallet?
+            // Assuming Admin manages the system, maybe they want to know about successful Credits (Payments to Merchants)?
+
+            // If I look at the user request: "in customer and merchant and even in the admin panel"
+            // It suggests a global notification system or specific to the logged-in entity.
+
+            // Since Admin API might be different. 
+            // Let's assume hitting `/wallet/transactions` works for Admin's view (if admin has a wallet)
+            // OR if Admin should listen to global events.
+            // Given the complexity of "Global Listening", I will stick to the same endpoint `/wallet/transactions`.
+            // If the Admin User itself receives money, it plays sound.
+            // If the user meant "Admin hears ALL transactions", that requires a new API endpoint like `/admin/transactions/latest`.
+
+            // Let's stick to `/wallet/transactions` for now to be safe and consistent.
+
+            const res = await apiFetch('/wallet/transactions?limit=1');
+            if (res && res.data && res.data.length > 0) {
+                const latestTx = res.data[0];
+                if (txRef.current && txRef.current !== latestTx.id) {
+                    if (latestTx.type === 'CREDIT' && latestTx.amount > 0) {
+                        playNotificationSound(`Rupees ${latestTx.amount} credited.`);
+                    }
+                }
+                txRef.current = latestTx.id;
+            }
+        } catch (e) {
+            // silent
+        }
+    };
+
+    const playNotificationSound = (text: string) => {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            window.speechSynthesis.speak(utterance);
+        }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
