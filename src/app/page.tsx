@@ -12,7 +12,10 @@ export default function AdminDashboard() {
         totalMerchants: 0,
         totalDisbursed: 0,
         totalRepaid: 0,
-        pendingCount: 0
+        pendingCount: 0,
+        activeLoans: 0,
+        defaultedLoans: 0,
+        pendingLoans: 0
     });
     const [pendingTx, setPendingTx] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -31,7 +34,10 @@ export default function AdminDashboard() {
                 totalMerchants: analytics.total_merchants,
                 totalDisbursed: analytics.total_disbursed,
                 totalRepaid: analytics.total_repaid,
-                pendingCount: pending.length
+                pendingCount: pending.length,
+                activeLoans: analytics.active_loans,
+                defaultedLoans: analytics.defaulted_loans,
+                pendingLoans: analytics.pending_loans
             });
             setPendingTx(pending);
         } catch (error) {
@@ -111,6 +117,43 @@ export default function AdminDashboard() {
                     <div>
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Approvals</p>
                         <p className="text-3xl font-black text-slate-900">{stats.pendingCount}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Loan Health Stats */}
+            <h3 className="text-lg font-bold text-slate-900 mb-4 px-1">Loan Health Insights</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                        <TrendingUp className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Loans</p>
+                        <p className="text-3xl font-black text-slate-900">{stats.activeLoans}</p>
+                        <p className="text-xs font-bold text-emerald-600">Paying Customers</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
+                        <Clock className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Processing</p>
+                        <p className="text-3xl font-black text-slate-900">{stats.pendingLoans}</p>
+                        <p className="text-xs font-bold text-amber-600">Applications Pending</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center">
+                        <Ban className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Defaulted</p>
+                        <p className="text-3xl font-black text-slate-900">{stats.defaultedLoans}</p>
+                        <p className="text-xs font-bold text-red-600">Needs Attention</p>
                     </div>
                 </div>
             </div>
