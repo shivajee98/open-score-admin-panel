@@ -13,11 +13,22 @@ interface FeeConfig {
 
 interface TenureConfig {
     tenure_days: number;
-    interest_rate: number;
+    interest_rate: number; // Default rate
+    interest_rates: Record<string, number>; // Specific rate per frequency
     fees: FeeConfig[];
     allowed_frequencies: string[];
     cashback: Record<string, number>;
 }
+
+const formatTenure = (days: number) => {
+    if (!days) return "";
+    if (days % 30 === 0) {
+        const months = days / 30;
+        return `${months} ${months === 1 ? 'Month' : 'Months'}`;
+    }
+    const months = (days / 30).toFixed(1);
+    return `${days} Days (~${months} Months)`;
+};
 
 export default function CreateLoanPlan() {
     const router = useRouter();
@@ -54,12 +65,13 @@ export default function CreateLoanPlan() {
                 {
                     tenure_days: 30,
                     interest_rate: 0,
+                    interest_rates: {},
                     fees: [
                         { name: 'Processing Fee', amount: 0 },
                         { name: 'GST (18% of Loan Amount)', amount: gstAmount }
                     ],
                     allowed_frequencies: ['MONTHLY'],
-                    cashback: {}
+                    cashback: {},
                 }
             ]
         }));
@@ -188,6 +200,9 @@ export default function CreateLoanPlan() {
                         ...c,
                         tenure_days: Number(c.tenure_days),
                         interest_rate: Number(c.interest_rate),
+                        interest_rates: Object.fromEntries(
+                            Object.entries(c.interest_rates).map(([k, v]) => [k, Number(v)])
+                        ),
                         fees: c.fees.map(f => ({ ...f, amount: Number(f.amount) }))
                     }))
                 })
@@ -283,7 +298,12 @@ export default function CreateLoanPlan() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tenure (Days)</label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase">Tenure (Days)</label>
+                                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tight">
+                                                {formatTenure(config.tenure_days)}
+                                            </span>
+                                        </div>
                                         <input
                                             type="number"
                                             value={config.tenure_days}
@@ -325,18 +345,34 @@ export default function CreateLoanPlan() {
                                                 </label>
 
                                                 {config.allowed_frequencies.includes(freq) && (
-                                                    <div>
-                                                        <label className="text-[10px] uppercase font-bold text-slate-400">Cashback</label>
-                                                        <input
-                                                            type="number"
-                                                            placeholder="0"
-                                                            value={config.cashback[freq] || 0}
-                                                            onChange={(e) => {
-                                                                const newCb = { ...config.cashback, [freq]: parseFloat(e.target.value) };
-                                                                updateConfig(idx, 'cashback', newCb);
-                                                            }}
-                                                            className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
-                                                        />
+                                                    <div className="space-y-2">
+                                                        <div>
+                                                            <label className="text-[10px] uppercase font-bold text-slate-400 block">Int. Rate (%/mo)</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                placeholder="0"
+                                                                value={config.interest_rates[freq] ?? config.interest_rate}
+                                                                onChange={(e) => {
+                                                                    const newRates = { ...config.interest_rates, [freq]: parseFloat(e.target.value) };
+                                                                    updateConfig(idx, 'interest_rates', newRates);
+                                                                }}
+                                                                className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] uppercase font-bold text-slate-400 block">Cashback (₹)</label>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="0"
+                                                                value={config.cashback[freq] || 0}
+                                                                onChange={(e) => {
+                                                                    const newCb = { ...config.cashback, [freq]: parseFloat(e.target.value) };
+                                                                    updateConfig(idx, 'cashback', newCb);
+                                                                }}
+                                                                className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
