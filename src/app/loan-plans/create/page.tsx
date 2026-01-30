@@ -297,7 +297,7 @@ export default function CreateLoanPlan() {
                                 </button>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
+                                    <div className="md:col-span-1">
                                         <div className="flex justify-between items-center mb-1">
                                             <label className="block text-xs font-bold text-slate-500 uppercase">Tenure (Days)</label>
                                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tight">
@@ -308,16 +308,6 @@ export default function CreateLoanPlan() {
                                             type="number"
                                             value={config.tenure_days}
                                             onChange={(e) => updateConfig(idx, 'tenure_days', parseInt(e.target.value))}
-                                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Interest Rate (%/month)</label>
-                                        <input
-                                            type="number"
-                                            step="0.1"
-                                            value={config.interest_rate}
-                                            onChange={(e) => updateConfig(idx, 'interest_rate', parseFloat(e.target.value))}
                                             className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800"
                                         />
                                     </div>
