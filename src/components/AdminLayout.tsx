@@ -20,10 +20,13 @@ export default function AdminLayout({ children, title }: { children: React.React
         checkNewTransactions();
     }, [router, pathname]);
 
+    // Polling removed as per user request
+    /*
     useEffect(() => {
         const interval = setInterval(checkNewTransactions, 30000);
         return () => clearInterval(interval);
     }, []);
+    */
 
     const checkNewTransactions = async () => {
         try {

@@ -53,6 +53,22 @@ export default function UsersPage() {
         loadUsers();
     };
 
+    const toggleStatus = async (user: any) => {
+        const newStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
+        if (!confirm(`Are you sure you want to ${newStatus === 'ACTIVE' ? 'activate' : 'suspend'} this user?`)) return;
+
+        try {
+            await apiFetch(`/admin/users/${user.id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            loadUsers();
+        } catch (e) {
+            alert('Error updating status');
+        }
+    };
+
     const filteredUsers = users.filter((u: any) =>
         (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (u.mobile_number || '').includes(search)
@@ -115,6 +131,13 @@ export default function UsersPage() {
                                     </td>
                                     <td className="p-6 pr-8 text-right">
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => toggleStatus(user)}
+                                                className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                                                title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
+                                            >
+                                                {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                                            </button>
                                             <button
                                                 onClick={() => { setSelectedUser(user); setIsCreditsModalOpen(true); }}
                                                 className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"

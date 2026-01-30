@@ -1,7 +1,8 @@
 'use client';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
+import { apiFetch } from "@/lib/api";
 import { ArrowLeft } from 'lucide-react';
 
 // Interfaces for V2 Structure
@@ -26,13 +27,26 @@ export default function CreateLoanPlan() {
         amount: '',
         plan_color: 'bg-indigo-500',
         tag_text: '',
-        configurations: [] as TenureConfig[]
+        configurations: [] as TenureConfig[],
+        is_public: true,
+        assigned_user_ids: [] as number[]
     });
+
+    const [targetableUsers, setTargetableUsers] = useState<any[]>([]);
+    const [userFilters, setUserFilters] = useState({
+        min_loan_completed: '',
+        min_loans_count: '',
+        search: ''
+    });
+    const [searching, setSearching] = useState(false);
 
     const [error, setError] = useState('');
 
     // Helper to add a new default configuration
     const addConfiguration = () => {
+        const amount = Number(formData.amount) || 0;
+        const gstAmount = Math.round(amount * 0.18);
+
         setFormData(prev => ({
             ...prev,
             configurations: [
@@ -40,7 +54,10 @@ export default function CreateLoanPlan() {
                 {
                     tenure_days: 30,
                     interest_rate: 0,
-                    fees: [{ name: 'Processing Fee', amount: 0 }],
+                    fees: [
+                        { name: 'Processing Fee', amount: 0 },
+                        { name: 'GST (18% of Loan Amount)', amount: gstAmount }
+                    ],
                     allowed_frequencies: ['MONTHLY'],
                     cashback: {}
                 }
@@ -59,6 +76,96 @@ export default function CreateLoanPlan() {
         setFormData({ ...formData, configurations: newConfigs });
     };
 
+    // Handle Amount Change
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const numVal = Number(val);
+
+        setFormData(prev => {
+            // Update GST in existing configs if GST fee is present
+            const updatedConfigs = prev.configurations.map(config => {
+                const fees = config.fees.map(f => {
+                    if (f.name.includes('GST')) {
+                        return { ...f, amount: Math.round(numVal * 0.18) };
+                    }
+                    return f;
+                });
+                return { ...config, fees };
+            });
+
+            return { ...prev, amount: val, configurations: updatedConfigs };
+        });
+    };
+
+    const fetchTargetableUsers = async () => {
+        setSearching(true);
+        try {
+            // Fetch ALL targetable users once, then filter on frontend for instant response
+            const data = await apiFetch(`/admin/users/targetable`);
+            setTargetableUsers(data);
+        } catch (err) {
+            console.error("Failed to fetch targetable users", err);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    // Fetch once when targeted mode is toggled ON
+    useEffect(() => {
+        if (!formData.is_public && targetableUsers.length === 0) {
+            fetchTargetableUsers();
+        }
+    }, [formData.is_public]);
+
+    const filteredUsersList = targetableUsers.filter(user => {
+        // Search Filter
+        if (userFilters.search) {
+            const s = userFilters.search.toLowerCase();
+            const matchesSearch =
+                user.name?.toLowerCase().includes(s) ||
+                user.mobile_number?.includes(s) ||
+                user.business_name?.toLowerCase().includes(s);
+            if (!matchesSearch) return false;
+        }
+
+        // Min Loan Completed Filter
+        if (userFilters.min_loan_completed) {
+            const minAmount = parseFloat(userFilters.min_loan_completed);
+            if ((user.max_loan_completed || 0) < minAmount) return false;
+        }
+
+        // Min Loans Count Filter
+        if (userFilters.min_loans_count) {
+            const minCount = parseInt(userFilters.min_loans_count);
+            if ((user.loans_count || 0) < minCount) return false;
+        }
+
+        return true;
+    });
+
+    const toggleUser = (userId: number) => {
+        const current = [...formData.assigned_user_ids];
+        const index = current.indexOf(userId);
+        if (index > -1) {
+            current.splice(index, 1);
+        } else {
+            current.push(userId);
+        }
+        setFormData({ ...formData, assigned_user_ids: current });
+    };
+
+    const selectAllFiltered = () => {
+        const filteredIds = filteredUsersList.map(u => u.id);
+        const combined = Array.from(new Set([...formData.assigned_user_ids, ...filteredIds]));
+        setFormData({ ...formData, assigned_user_ids: combined });
+    };
+
+    const deselectAllFiltered = () => {
+        const filteredIds = filteredUsersList.map(u => u.id);
+        const remaining = formData.assigned_user_ids.filter(id => !filteredIds.includes(id));
+        setFormData({ ...formData, assigned_user_ids: remaining });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -71,12 +178,8 @@ export default function CreateLoanPlan() {
         }
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/loan-plans`, {
+            await apiFetch('/admin/loan-plans', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
                 body: JSON.stringify({
                     ...formData,
                     // Ensure numbers are sent as numbers
@@ -89,11 +192,6 @@ export default function CreateLoanPlan() {
                     }))
                 })
             });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Failed to create plan');
-            }
 
             router.push('/loan-plans');
         } catch (err: any) {
@@ -113,7 +211,7 @@ export default function CreateLoanPlan() {
                 <h1 className="text-2xl font-bold text-slate-800 mb-6">Create Multi-Tenure Loan Plan</h1>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
-                    {/* Top Level Info */}
+                    {/* Basic Info */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="text-lg font-semibold text-slate-700 mb-2">Basic Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,7 +231,7 @@ export default function CreateLoanPlan() {
                                     type="number"
                                     required
                                     value={formData.amount}
-                                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                    onChange={handleAmountChange}
                                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
                                 />
                             </div>
@@ -205,7 +303,6 @@ export default function CreateLoanPlan() {
                                     </div>
                                 </div>
 
-                                {/* Frequencies */}
                                 <div className="mb-6">
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Allowed Frequencies & Cashback</label>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -247,7 +344,6 @@ export default function CreateLoanPlan() {
                                     </div>
                                 </div>
 
-                                {/* Custom Fees */}
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="block text-xs font-bold text-slate-500 uppercase">Fee Structure</label>
@@ -267,7 +363,7 @@ export default function CreateLoanPlan() {
                                             <div key={feeIdx} className="flex gap-2">
                                                 <input
                                                     type="text"
-                                                    placeholder="Fee Name (e.g. Insurance)"
+                                                    placeholder="Fee Name"
                                                     value={fee.name}
                                                     onChange={(e) => {
                                                         const newFees = [...config.fees];
@@ -307,7 +403,132 @@ export default function CreateLoanPlan() {
                         {formData.configurations.length === 0 && (
                             <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                                 <p className="text-slate-500">No tenure configurations added yet.</p>
-                                <p className="text-sm text-slate-400">Add different tenure options (e.g. 30 days, 90 days) for this plan.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Targeting Section */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-700">Targeting & Visibility</h3>
+                                <p className="text-xs font-medium text-slate-400">Control who can see and apply for this loan plan.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${formData.is_public ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                    {formData.is_public ? 'Global (All Users)' : 'Targeted (Specific Users)'}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, is_public: !formData.is_public })}
+                                    className={`w-12 h-6 rounded-full relative transition-colors ${formData.is_public ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.is_public ? 'right-1' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {!formData.is_public && (
+                            <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
+                                {/* WhatsApp Style Search Bar */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={userFilters.search}
+                                        onChange={(e) => setUserFilters({ ...userFilters, search: e.target.value })}
+                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold pl-12 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                        placeholder="Search by name, mobile number or business..."
+                                    />
+                                    <svg className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+
+                                {/* Mini Filters Row */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 mx-1">Min Loan Completed (₹)</label>
+                                        <input
+                                            type="number"
+                                            value={userFilters.min_loan_completed}
+                                            onChange={(e) => setUserFilters({ ...userFilters, min_loan_completed: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-100/50 border border-slate-200 rounded-xl text-xs font-bold"
+                                            placeholder="Filter by amount..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 mx-1">Min Loans Count</label>
+                                        <input
+                                            type="number"
+                                            value={userFilters.min_loans_count}
+                                            onChange={(e) => setUserFilters({ ...userFilters, min_loans_count: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-100/50 border border-slate-200 rounded-xl text-xs font-bold"
+                                            placeholder="Filter by count..."
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                                                {filteredUsersList.length} Users Listed
+                                            </span>
+                                            <span className="text-[10px] font-bold text-indigo-500">
+                                                {formData.assigned_user_ids.length} Total Selected
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <button
+                                                type="button"
+                                                onClick={selectAllFiltered}
+                                                className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition"
+                                            >
+                                                Select All
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={deselectAllFiltered}
+                                                className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:text-red-700 transition"
+                                            >
+                                                Clear All
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="max-h-[400px] overflow-y-auto border border-slate-200 rounded-2xl bg-white shadow-sm custom-scrollbar scroll-smooth">
+                                        {searching ? (
+                                            <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Fetching users...</div>
+                                        ) : filteredUsersList.length > 0 ? (
+                                            <div className="divide-y divide-slate-50">
+                                                {filteredUsersList.map(user => (
+                                                    <div
+                                                        key={user.id}
+                                                        onClick={() => toggleUser(user.id)}
+                                                        className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/80 transition-all ${formData.assigned_user_ids.includes(user.id) ? 'bg-indigo-50/30' : ''}`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${formData.assigned_user_ids.includes(user.id) ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+                                                                {user.name?.charAt(0) || 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-slate-800">{user.name}</h4>
+                                                                <p className="text-[11px] text-slate-500 font-bold tracking-tight">{user.mobile_number} {user.business_name && <span className="text-slate-300 mx-1">|</span>} {user.business_name}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${formData.assigned_user_ids.includes(user.id) ? 'bg-indigo-600 border-indigo-600 scale-110 shadow-md' : 'border-slate-300 group-hover:border-slate-400'}`}>
+                                                            {formData.assigned_user_ids.includes(user.id) && (
+                                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" /></svg>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="p-10 text-center">
+                                                <p className="text-slate-400 font-bold">No users found matching your criteria</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

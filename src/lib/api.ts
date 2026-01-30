@@ -1,15 +1,18 @@
 import { getSession, signOut } from 'next-auth/react';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+
+let cachedToken: string | null = null;
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-    let token = null;
+    let token = cachedToken;
 
-    // Try to get token from NextAuth session first
-    if (typeof window !== 'undefined') {
+    // Try to get token if not cached
+    if (!token && typeof window !== 'undefined') {
         const session = await getSession();
         if (session && (session as any).accessToken) {
             token = (session as any).accessToken;
+            cachedToken = token; // Cache it
         } else {
             // Fallback to localStorage if no session (legacy/backup)
             token = localStorage.getItem('token');
