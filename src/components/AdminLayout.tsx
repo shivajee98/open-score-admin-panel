@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { signOut } from 'next-auth/react';
@@ -89,6 +89,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" /> },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" /> },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" /> },
+        { label: 'Referrals', href: '/referrals', icon: <Ticket className="w-5 h-5" /> },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" /> },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" /> },
     ];
