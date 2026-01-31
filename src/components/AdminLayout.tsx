@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
+import { signOut } from 'next-auth/react';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
     const pathname = usePathname();
@@ -78,7 +79,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
     const handleLogout = () => {
         localStorage.removeItem('token');
-        router.push('/login');
+        signOut({ callbackUrl: '/login' });
     };
 
     const navItems = [
