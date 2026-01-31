@@ -3,8 +3,146 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Sub-component for individual user rows to handle local input state
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers }: any) => {
+    const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage || '');
+    const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount || '');
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Sync state if user prop changes (e.g. after reload)
+    useEffect(() => {
+        setCashbackPercent(user.cashback_percentage || '');
+        setCashbackFlat(user.cashback_flat_amount || '');
+    }, [user.cashback_percentage, user.cashback_flat_amount]);
+
+    const handleSaveCashback = async () => {
+        setIsSaving(true);
+        try {
+            await apiFetch('/admin/users/bulk-cashback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_ids: [user.id],
+                    cashback_percentage: parseFloat(cashbackPercent) || 0,
+                    cashback_flat_amount: parseFloat(cashbackFlat) || 0
+                })
+            });
+            alert('Cashback updated!');
+            reloadUsers();
+        } catch (e) {
+            alert('Error updating cashback');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <tr className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
+            <td className="p-6 text-center">
+                <button onClick={() => toggleSelect(user.id)}>
+                    {selectedIds.includes(user.id) ?
+                        <CheckSquare className="text-blue-600" /> : <Square className="text-slate-300 group-hover:text-slate-400" />
+                    }
+                </button>
+            </td>
+            <td className="p-6 pl-2">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center font-bold text-slate-600">
+                        {(user.name || 'U')[0]}
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-900">{user.name || 'Unknown User'}</p>
+                        <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
+                    </div>
+                </div>
+            </td>
+            <td className="p-6">
+                <span className={cn(
+                    "inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
+                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : user.role === 'MERCHANT' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                )}>
+                    {user.role}
+                </span>
+            </td>
+            <td className="p-6">
+                <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
+            </td>
+
+            {/* Inline Cashback Inputs */}
+            <td className="p-6">
+                <div className="flex items-center gap-2">
+                    <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="%"
+                        className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
+                        value={cashbackPercent}
+                        onChange={(e) => setCashbackPercent(e.target.value)}
+                    />
+                </div>
+            </td>
+            <td className="p-6">
+                <div className="flex items-center gap-2">
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="₹"
+                        className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
+                        value={cashbackFlat}
+                        onChange={(e) => setCashbackFlat(e.target.value)}
+                    />
+                    {/* Update Button for both fields */}
+                    <button
+                        onClick={handleSaveCashback}
+                        disabled={isSaving}
+                        className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors ml-2"
+                        title="Update Cashback Rules"
+                    >
+                        <Save className="w-4 h-4" />
+                    </button>
+                </div>
+            </td>
+
+            <td className="p-6">
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    <span className="text-sm font-bold text-slate-600">{user.status}</span>
+                </div>
+            </td>
+            <td className="p-6 pr-8 text-right">
+                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={() => toggleStatus(user)}
+                        className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                        title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
+                    >
+                        {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                    </button>
+                    <button
+                        onClick={() => { setSelectedUser(user); setIsCreditsModalOpen(true); }}
+                        className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                        title="Add Funds"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
+                        title="Delete User"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+};
 
 export default function UsersPage() {
     const [users, setUsers] = useState([]);
@@ -109,7 +247,7 @@ export default function UsersPage() {
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.length === filteredUsers.length) {
+        if (selectedIds.length === filteredUsers.length && filteredUsers.length > 0) {
             setSelectedIds([]);
         } else {
             setSelectedIds(filteredUsers.map((u: any) => u.id));
@@ -174,74 +312,17 @@ export default function UsersPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {filteredUsers.map((user: any) => (
-                                <tr key={user.id} className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
-                                    <td className="p-6 text-center">
-                                        <button onClick={() => toggleSelect(user.id)}>
-                                            {selectedIds.includes(user.id) ?
-                                                <CheckSquare className="text-blue-600" /> : <Square className="text-slate-300 group-hover:text-slate-400" />
-                                            }
-                                        </button>
-                                    </td>
-                                    <td className="p-6 pl-2">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center font-bold text-slate-600">
-                                                {(user.name || 'U')[0]}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-slate-900">{user.name || 'Unknown User'}</p>
-                                                <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className={cn(
-                                            "inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                                            user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : user.role === 'MERCHANT' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
-                                        )}>
-                                            {user.role}
-                                        </span>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className="font-mono font-bold text-purple-600">{user.cashback_percentage > 0 ? `${user.cashback_percentage}%` : '-'}</span>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className="font-mono font-bold text-emerald-600">{user.cashback_flat_amount > 0 ? `₹${user.cashback_flat_amount}` : '-'}</span>
-                                    </td>
-                                    <td className="p-6">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                            <span className="text-sm font-bold text-slate-600">{user.status}</span>
-                                        </div>
-                                    </td>
-                                    <td className="p-6 pr-8 text-right">
-                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => toggleStatus(user)}
-                                                className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
-                                                title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
-                                            >
-                                                {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
-                                            </button>
-                                            <button
-                                                onClick={() => { setSelectedUser(user); setIsCreditsModalOpen(true); }}
-                                                className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                                                title="Add Funds"
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(user.id)}
-                                                className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                                                title="Delete User"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <UserRow
+                                    key={user.id}
+                                    user={user}
+                                    selectedIds={selectedIds}
+                                    toggleSelect={toggleSelect}
+                                    toggleStatus={toggleStatus}
+                                    handleDelete={handleDelete}
+                                    setSelectedUser={setSelectedUser}
+                                    setIsCreditsModalOpen={setIsCreditsModalOpen}
+                                    reloadUsers={loadUsers}
+                                />
                             ))}
                         </tbody>
                     </table>
