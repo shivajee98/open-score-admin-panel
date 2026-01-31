@@ -339,23 +339,25 @@ export default function EditLoanPlan() {
                                 <div className="mb-6">
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Allowed Frequencies & Cashback</label>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS'].map(freq => (
+                                        {['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS', ...config.allowed_frequencies.filter(f => !['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS'].includes(f))].map(freq => (
                                             <div key={freq} className={`p-3 rounded-lg border ${config.allowed_frequencies.includes(freq) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                                <label className="flex items-center space-x-2 cursor-pointer mb-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={config.allowed_frequencies.includes(freq)}
-                                                        onChange={(e) => {
-                                                            const current = config.allowed_frequencies;
-                                                            const newFreqs = e.target.checked
-                                                                ? [...current, freq]
-                                                                : current.filter(f => f !== freq);
-                                                            updateConfig(idx, 'allowed_frequencies', newFreqs);
-                                                        }}
-                                                        className="w-4 h-4 text-indigo-600 rounded"
-                                                    />
-                                                    <span className="text-sm font-bold text-slate-700">{freq.replace('_', ' ')}</span>
-                                                </label>
+                                                <div className="flex justify-between items-start">
+                                                    <label className="flex items-center space-x-2 cursor-pointer mb-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={config.allowed_frequencies.includes(freq)}
+                                                            onChange={(e) => {
+                                                                const current = config.allowed_frequencies;
+                                                                const newFreqs = e.target.checked
+                                                                    ? [...current, freq]
+                                                                    : current.filter(f => f !== freq);
+                                                                updateConfig(idx, 'allowed_frequencies', newFreqs);
+                                                            }}
+                                                            className="w-4 h-4 text-indigo-600 rounded"
+                                                        />
+                                                        <span className="text-sm font-bold text-slate-700">{freq.replace('_', ' ')}</span>
+                                                    </label>
+                                                </div>
 
                                                 {config.allowed_frequencies.includes(freq) && (
                                                     <div className="space-y-2">
@@ -390,6 +392,32 @@ export default function EditLoanPlan() {
                                                 )}
                                             </div>
                                         ))}
+
+                                        {/* Custom Frequency Adder */}
+                                        <div className="p-3 rounded-lg border border-dashed border-slate-300 flex flex-col justify-center items-center gap-2">
+                                            <span className="text-xs font-bold text-slate-400">Add Custom Days</span>
+                                            <div className="flex gap-1 w-full">
+                                                <input
+                                                    type="number"
+                                                    placeholder="Days"
+                                                    className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-sm font-bold"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            const val = parseInt(e.currentTarget.value);
+                                                            if (val > 0) {
+                                                                const newFreq = `${val} DAYS`;
+                                                                if (!config.allowed_frequencies.includes(newFreq)) {
+                                                                    updateConfig(idx, 'allowed_frequencies', [...config.allowed_frequencies, newFreq]);
+                                                                }
+                                                                e.currentTarget.value = '';
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <p className="text-[9px] text-slate-400 text-center">Type & Enter (e.g. 13)</p>
+                                        </div>
                                     </div>
                                 </div>
 
