@@ -166,6 +166,8 @@ export default function UsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">User Details</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback %</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Flat Bonus</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
@@ -201,6 +203,12 @@ export default function UsersPage() {
                                     </td>
                                     <td className="p-6">
                                         <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
+                                    </td>
+                                    <td className="p-6">
+                                        <span className="font-mono font-bold text-purple-600">{user.cashback_percentage > 0 ? `${user.cashback_percentage}%` : '-'}</span>
+                                    </td>
+                                    <td className="p-6">
+                                        <span className="font-mono font-bold text-emerald-600">{user.cashback_flat_amount > 0 ? `₹${user.cashback_flat_amount}` : '-'}</span>
                                     </td>
                                     <td className="p-6">
                                         <div className="flex items-center gap-2">
