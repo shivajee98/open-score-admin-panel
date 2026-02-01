@@ -72,16 +72,19 @@ export default function EditLoanPlan() {
                 // Parse configurations if it's JSON from DB (it comes as array from Laravel casts usually)
                 let configs = plan.configurations || [];
 
-                // Ensure interest_rates exists for each config
-                const sanitizedConfigs = configs.map((c: any) => ({
+                // Ensure interest_rates, allowed_frequencies, fees, and cashback exist for each config
+                const sanitizedConfigs = (Array.isArray(configs) ? configs : []).map((c: any) => ({
                     ...c,
-                    interest_rates: c.interest_rates || {}
+                    interest_rates: c.interest_rates || {},
+                    allowed_frequencies: c.allowed_frequencies || [],
+                    fees: c.fees || [],
+                    cashback: c.cashback || {}
                 }));
 
                 setFormData({
                     name: plan.name,
                     amount: plan.amount,
-                    plan_color: plan.plan_color,
+                    plan_color: plan.plan_color || 'bg-indigo-500',
                     tag_text: plan.tag_text || '',
                     configurations: sanitizedConfigs,
                     is_public: plan.is_public ?? true,
@@ -219,11 +222,11 @@ export default function EditLoanPlan() {
                     configurations: formData.configurations.map(c => ({
                         ...c,
                         tenure_days: Number(c.tenure_days),
-                        interest_rate: Number(c.interest_rate),
+                        interest_rate: Number(c.interest_rate || 0),
                         interest_rates: Object.fromEntries(
-                            Object.entries(c.interest_rates).map(([k, v]) => [k, Number(v)])
+                            Object.entries(c.interest_rates || {}).map(([k, v]) => [k, Number(v)])
                         ),
-                        fees: c.fees.map(f => ({ ...f, amount: Number(f.amount) }))
+                        fees: (c.fees || []).map(f => ({ ...f, amount: Number(f.amount) }))
                     }))
                 })
             });
@@ -281,8 +284,19 @@ export default function EditLoanPlan() {
                                 >
                                     <option value="bg-indigo-500">Indigo (Default)</option>
                                     <option value="bg-blue-500">Blue</option>
+                                    <option value="bg-sky-500">Sky Blue</option>
+                                    <option value="bg-cyan-500">Cyan</option>
+                                    <option value="bg-teal-500">Teal</option>
                                     <option value="bg-emerald-500">Emerald</option>
+                                    <option value="bg-lime-500">Lime</option>
+                                    <option value="bg-yellow-500">Yellow</option>
+                                    <option value="bg-amber-500">Amber</option>
+                                    <option value="bg-orange-500">Orange</option>
+                                    <option value="bg-rose-500">Rose Red</option>
+                                    <option value="bg-pink-500">Pink</option>
+                                    <option value="bg-fuchsia-500">Fuchsia</option>
                                     <option value="bg-purple-500">Purple</option>
+                                    <option value="bg-violet-500">Violet</option>
                                     <option value="bg-slate-900">Dark</option>
                                 </select>
                             </div>
@@ -339,7 +353,7 @@ export default function EditLoanPlan() {
                                 <div className="mb-6">
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Allowed Frequencies & Cashback</label>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS', ...config.allowed_frequencies.filter(f => !['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS'].includes(f))].map(freq => (
+                                        {['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS', ...(config.allowed_frequencies || []).filter(f => !['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS'].includes(f))].map(freq => (
                                             <div key={freq} className={`p-3 rounded-lg border ${config.allowed_frequencies.includes(freq) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
                                                 <div className="flex justify-between items-start">
                                                     <label className="flex items-center space-x-2 cursor-pointer mb-2">

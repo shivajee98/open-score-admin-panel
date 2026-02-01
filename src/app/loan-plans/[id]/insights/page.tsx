@@ -135,7 +135,7 @@ export default function LoanPlanInsights() {
                                 <td className="p-6 font-medium text-slate-600">{config.interest_rate}%</td>
                                 <td className="p-6">
                                     <div className="flex gap-2 flex-wrap">
-                                        {config.allowed_frequencies.map((f: string) => (
+                                        {(config.allowed_frequencies || []).map((f: string) => (
                                             <span key={f} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold">{f}</span>
                                         ))}
                                     </div>
