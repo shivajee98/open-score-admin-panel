@@ -1,28 +1,36 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, ChevronRight, Calculator, IndianRupee } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft } from 'lucide-react';
 
 export default function LoanApprovals() {
     const [loans, setLoans] = useState([]);
-    const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+    // Filters & Pagination
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
     const loadLoans = async () => {
         setLoading(true);
         try {
-            const [pendingData, historyData] = await Promise.all([
-                apiFetch('/admin/loans'),
-                apiFetch('/admin/loans/history')
-            ]);
-            setLoans(pendingData);
-            setHistory(historyData);
+            const endpoint = activeTab === 'requests' ? '/admin/loans' : '/admin/loans/history';
+            const query = new URLSearchParams({
+                search: search,
+                status: statusFilter,
+                page: page.toString(),
+                per_page: '20'
+            });
+            const response = await apiFetch(`${endpoint}?${query}`);
+            setLoans(response.data);
+            setTotalPages(response.last_page);
         } catch (error) {
             console.error('Failed to load loans', error);
         } finally {
@@ -31,13 +39,18 @@ export default function LoanApprovals() {
     };
 
     useEffect(() => {
-        loadLoans();
-    }, []);
+        const timeout = setTimeout(loadLoans, 300);
+        return () => clearTimeout(timeout);
+    }, [activeTab, search, statusFilter, page]);
 
-    const handleAction = async (id: number, endpoint: string, successMsg: string) => {
+    const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
+        if (!confirm('Are you sure you want to perform this action?')) return;
+
         setActionLoading(`${id}-${endpoint}`);
         try {
-            await apiFetch(`/admin/loans/${id}/${endpoint}`, { method: 'POST' });
+            // Normalize path
+            const path = endpoint ? (endpoint.startsWith('/') ? endpoint : `/${endpoint}`) : '';
+            await apiFetch(`/admin/loans/${id}${path}`, { method });
             alert(successMsg);
             loadLoans();
         } catch (e) {
@@ -47,122 +60,155 @@ export default function LoanApprovals() {
         }
     };
 
-    const displayedLoans = activeTab === 'requests' ? loans : history;
-
     return (
         <AdminLayout title="Loan Approvals">
-            <div className="flex gap-4 mb-6">
-                <button
-                    onClick={() => setActiveTab('requests')}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'requests'
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                        : 'bg-white text-slate-500 hover:bg-slate-50'
-                        }`}
-                >
-                    Pending Requests
-                </button>
-                <button
-                    onClick={() => setActiveTab('history')}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'history'
-                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30'
-                        : 'bg-white text-slate-500 hover:bg-slate-50'
-                        }`}
-                >
-                    Loan History
-                </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
+                    <button
+                        onClick={() => { setActiveTab('requests'); setStatusFilter('ALL'); setPage(1); }}
+                        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'requests'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                    >
+                        Pending Requests
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('history'); setStatusFilter('ALL'); setPage(1); }}
+                        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'history'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                    >
+                        Loan History
+                    </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div className="relative">
+                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                        <select
+                            className="pl-11 pr-8 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 appearance-none focus:ring-2 focus:ring-blue-100 cursor-pointer shadow-sm"
+                            value={statusFilter}
+                            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                        >
+                            <option value="ALL">All Status</option>
+                            {activeTab === 'requests' ? (
+                                <>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="PROCEEDED">Proceeded</option>
+                                    <option value="KYC_SENT">KYC Sent</option>
+                                    <option value="FORM_SUBMITTED">Form Submitted</option>
+                                    <option value="APPROVED">Approved</option>
+                                </>
+                            ) : (
+                                <>
+                                    <option value="DISBURSED">Disbursed</option>
+                                    <option value="CLOSED">Closed</option>
+                                    <option value="REJECTED">Rejected</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </>
+                            )}
+                        </select>
+                    </div>
+                    <div className="relative flex-1 md:flex-none">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search by ID, Name or Mobile..."
+                            className="pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-medium w-full md:w-64 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        />
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-                <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                     <div>
                         <h3 className="text-xl font-black text-slate-900">
-                            {activeTab === 'requests' ? 'Pending Loan Requests' : 'Past Loan Records'}
+                            {activeTab === 'requests' ? 'Live Loan Pipeline' : 'Archived Loan Records'}
                         </h3>
                         <p className="text-slate-500 font-medium text-sm mt-1">
                             {activeTab === 'requests'
-                                ? 'Review applicant details and approve disbursals.'
-                                : 'Archive of disbursed, rejected, and closed loans.'}
+                                ? 'Review applicant details, manage KYC and approve disbursals.'
+                                : 'Comprehensive history of closed, cancelled or rejected requests.'}
                         </p>
                     </div>
-                    {loading && <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />}
+                    {loading && <div className="animate-spin w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full" />}
                 </div>
 
-                {displayedLoans.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <BadgeCheck className="w-8 h-8 text-slate-300" />
+                {loans.length === 0 && !loading ? (
+                    <div className="p-24 text-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                            <BadgeCheck className="w-10 h-10 text-slate-300" />
                         </div>
-                        <p className="text-slate-500 font-bold">No records found</p>
+                        <h4 className="text-lg font-black text-slate-900 mb-1">No applications found</h4>
+                        <p className="text-slate-400 font-medium">Try adjusting your filters or search query.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                        <table className="w-full text-left order-collapse">
                             <thead className="bg-slate-50/50">
                                 <tr>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Applicant</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Terms</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Applicant & Loan ID</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Details</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {displayedLoans.map((loan: any) => (
-                                    <tr key={loan.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="p-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm">
+                                {loans.map((loan: any) => (
+                                    <tr key={loan.id} className="hover:bg-slate-50/80 transition-all group">
+                                        <td className="p-6 pl-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
                                                     {loan.user?.name?.[0] || 'U'}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-900">{loan.user?.name || 'Unknown User'}</p>
-                                                    <p className="text-xs font-medium text-slate-500">ID: {loan.user_id}</p>
+                                                    <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.id} • {loan.user?.mobile_number}</p>
+                                                    <div className="mt-1">
+                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${loan.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                            loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                                loan.status === 'KYC_SENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                                    loan.status === 'FORM_SUBMITTED' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                                                                        loan.status === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                                            'bg-slate-50 text-slate-500 border-slate-100'
+                                                            }`}>{loan.status}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-6">
                                             <div className="flex items-center gap-2">
-                                                <IndianRupee size={16} className="text-slate-400" />
-                                                <span className="font-black text-slate-900 text-lg">
+                                                <IndianRupee size={16} className="text-slate-300" />
+                                                <span className="font-black text-slate-900 text-xl tracking-tighter">
                                                     {parseFloat(loan.amount).toLocaleString('en-IN')}
                                                 </span>
                                             </div>
+                                            <p className="text-[10px] font-bold text-slate-400 mt-0.5">Application Date: {new Date(loan.created_at).toLocaleDateString()}</p>
                                         </td>
                                         <td className="p-6">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                                    <Clock size={12} />
-                                                    {loan.tenure} Months
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-2 text-[11px] font-black text-slate-600">
+                                                    <Clock size={12} className="text-slate-400" />
+                                                    {loan.tenure} Months Tenure
                                                 </div>
-                                                <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-fit">
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg w-fit border border-blue-100 shadow-sm">
                                                     <Calculator size={12} />
-                                                    {loan.payout_frequency}
+                                                    {loan.payout_frequency} Payout
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="p-6 font-medium text-slate-500 text-sm">
-                                            {new Date(loan.created_at).toLocaleDateString()}
-                                            <br />
-                                            <span className="text-xs text-slate-400">{new Date(loan.created_at).toLocaleTimeString()}</span>
-                                        </td>
-                                        <td className="p-6">
-                                            <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${loan.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' :
-                                                loan.status === 'DISBURSED' ? 'bg-blue-100 text-blue-600' :
-                                                    loan.status === 'KYC_SENT' ? 'bg-amber-100 text-amber-600' :
-                                                        loan.status === 'FORM_SUBMITTED' ? 'bg-purple-100 text-purple-600' :
-                                                            loan.status === 'REJECTED' ? 'bg-rose-100 text-rose-600' :
-                                                                loan.status === 'CANCELLED' ? 'bg-slate-200 text-slate-600 line-through' :
-                                                                    'bg-slate-100 text-slate-600'
-                                                }`}>{loan.status}</span>
-                                        </td>
-                                        <td className="p-6 text-right">
-                                            <div className="flex justify-end gap-2">
+                                        <td className="p-6 pr-8 text-right">
+                                            <div className="flex justify-end items-center gap-2">
                                                 {loan.status === 'PENDING' && (
                                                     <button
                                                         disabled={!!actionLoading}
                                                         onClick={() => handleAction(loan.id, 'proceed', 'Loan Proceeded!')}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 transition-all"
+                                                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-mono"
                                                     >
                                                         Proceed
                                                     </button>
@@ -171,72 +217,61 @@ export default function LoanApprovals() {
                                                 {loan.status === 'PROCEEDED' && (
                                                     <button
                                                         disabled={!!actionLoading}
-                                                        onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Form Link Sent!')}
-                                                        className="px-4 py-2 bg-amber-400 text-slate-900 rounded-lg font-bold text-xs hover:bg-amber-500 transition-all"
+                                                        onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Link Sent!')}
+                                                        className="px-5 py-2.5 bg-amber-400 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 shadow-xl shadow-amber-500/20 transition-all font-mono"
                                                     >
-                                                        Send KYC Form Link
+                                                        Send KYC
                                                     </button>
                                                 )}
 
-                                                {loan.status === 'KYC_SENT' && (
-                                                    <div className="flex flex-col items-end gap-1">
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase italic">Awaiting KYC</span>
-                                                        <button
-                                                            disabled={!!actionLoading}
-                                                            onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Form Link Sent!')}
-                                                            className="px-4 py-2 bg-amber-400/10 text-amber-600 border border-amber-200 rounded-lg font-bold text-[10px] hover:bg-amber-400/20 transition-all"
-                                                        >
-                                                            Resend link
-                                                        </button>
-                                                    </div>
-                                                )}
-
                                                 {loan.status === 'FORM_SUBMITTED' && (
-                                                    <>
+                                                    <div className="flex gap-2">
                                                         <button
                                                             onClick={() => setPreviewLoan(loan)}
-                                                            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-200 transition-all"
+                                                            className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
+                                                            title="Preview KYC"
                                                         >
-                                                            Preview Details
-                                                        </button>
-                                                        <button
-                                                            disabled={!!actionLoading}
-                                                            onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Form Link Sent!')}
-                                                            className="px-4 py-2 bg-amber-400 text-slate-900 rounded-lg font-bold text-xs hover:bg-amber-500 transition-all"
-                                                        >
-                                                            Resend KYC Link
+                                                            <Search size={18} />
                                                         </button>
                                                         <button
                                                             disabled={!!actionLoading}
                                                             onClick={() => handleAction(loan.id, 'approve', 'Loan Approved!')}
-                                                            className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-xs hover:bg-emerald-600 transition-all"
+                                                            className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all font-mono"
                                                         >
-                                                            Approve Loan
+                                                            Approve
                                                         </button>
-                                                    </>
+                                                    </div>
                                                 )}
 
                                                 {loan.status === 'APPROVED' && (
                                                     <button
                                                         disabled={!!actionLoading}
-                                                        onClick={() => {
-                                                            if (confirm('Release funds to user wallet?')) handleAction(loan.id, 'release', 'Funds Released!');
-                                                        }}
-                                                        className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs hover:bg-slate-800 transition-all"
+                                                        onClick={() => handleAction(loan.id, 'release', 'Funds Released!')}
+                                                        className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 shadow-xl shadow-slate-900/30 transition-all font-mono"
                                                     >
-                                                        Release Funds
+                                                        Disburse
                                                     </button>
                                                 )}
 
-                                                {/* History Actions - Mostly View Only */}
-                                                {(loan.status === 'DISBURSED' || loan.status === 'REJECTED' || loan.status === 'CLOSED' || loan.status === 'CANCELLED') && (
+                                                {/* Universal Management Actions */}
+                                                <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity ml-4 border-l pl-4 border-slate-100">
+                                                    {['DISBURSED'].includes(loan.status) && (
+                                                        <button
+                                                            onClick={() => handleAction(loan.id, 'close', 'Loan Closed Manually!', 'POST')}
+                                                            className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                                                            title="Close Loan"
+                                                        >
+                                                            <XCircle size={18} />
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => setPreviewLoan(loan)}
-                                                        className="px-4 py-2 bg-slate-50 text-slate-400 rounded-lg font-bold text-xs hover:bg-slate-100 transition-all"
+                                                        onClick={() => handleAction(loan.id, '', 'Loan Deleted!', 'DELETE')}
+                                                        className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                        title="Delete Record"
                                                     >
-                                                        View Data
+                                                        <Trash2 size={18} />
                                                     </button>
-                                                )}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -245,7 +280,31 @@ export default function LoanApprovals() {
                         </table>
                     </div>
                 )}
+
+                {/* Pagination */}
+                <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Page {page} of {totalPages}
+                    </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
+                </div>
             </div>
+
             {/* Preview Modal */}
             {previewLoan && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
