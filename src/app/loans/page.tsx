@@ -6,7 +6,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft } from 'lucide-react';
 
 export default function LoanApprovals() {
-    const [loans, setLoans] = useState([]);
+    const [loans, setLoans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
@@ -29,8 +29,15 @@ export default function LoanApprovals() {
                 per_page: '20'
             });
             const response = await apiFetch(`${endpoint}?${query}`);
-            setLoans(response.data);
-            setTotalPages(response.last_page);
+            if (response && response.data) {
+                setLoans(Array.isArray(response.data) ? response.data : []);
+                setTotalPages(response.last_page || 1);
+            } else if (Array.isArray(response)) {
+                setLoans(response);
+                setTotalPages(1);
+            } else {
+                setLoans([]);
+            }
         } catch (error) {
             console.error('Failed to load loans', error);
         } finally {

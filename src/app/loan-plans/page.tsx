@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function LoanPlansList() {
-    const [plans, setPlans] = useState([]);
+    const [plans, setPlans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
     const router = useRouter();
@@ -17,7 +17,7 @@ export default function LoanPlansList() {
         setLoading(true);
         try {
             const data = await apiFetch(`/admin/loan-plans?status=${activeTab}`, { cache: 'no-store' });
-            setPlans(data);
+            setPlans(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to load plans', error);
         } finally {

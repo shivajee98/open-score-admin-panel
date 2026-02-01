@@ -17,7 +17,7 @@ export default function AdminDashboard() {
         defaultedLoans: 0,
         pendingLoans: 0
     });
-    const [pendingTx, setPendingTx] = useState([]);
+    const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     const loadData = async () => {
@@ -30,16 +30,16 @@ export default function AdminDashboard() {
             ]);
 
             setStats({
-                totalUsers: analytics.total_users,
-                totalMerchants: analytics.total_merchants,
-                totalDisbursed: analytics.total_disbursed,
-                totalRepaid: analytics.total_repaid,
-                pendingCount: pending.length,
-                activeLoans: analytics.active_loans,
-                defaultedLoans: analytics.defaulted_loans,
-                pendingLoans: analytics.pending_loans
+                totalUsers: analytics?.total_users || 0,
+                totalMerchants: analytics?.total_merchants || 0,
+                totalDisbursed: analytics?.total_disbursed || 0,
+                totalRepaid: analytics?.total_repaid || 0,
+                pendingCount: Array.isArray(pending) ? pending.length : 0,
+                activeLoans: analytics?.active_loans || 0,
+                defaultedLoans: analytics?.defaulted_loans || 0,
+                pendingLoans: analytics?.pending_loans || 0
             });
-            setPendingTx(pending);
+            setPendingTx(Array.isArray(pending) ? pending : []);
         } catch (error) {
             console.error('Failed to load admin data', error);
         } finally {

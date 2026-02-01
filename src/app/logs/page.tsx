@@ -6,7 +6,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { Shield, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function LogsPage() {
-    const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [actionFilter, setActionFilter] = useState('ALL');
@@ -24,9 +24,17 @@ export default function LogsPage() {
                 per_page: '20'
             });
             const response = await apiFetch(`/logs?${query}`);
-            setLogs(response.data);
-            setTotalPages(response.last_page);
-            setTotalLogs(response.total);
+            if (response && response.data) {
+                setLogs(Array.isArray(response.data) ? response.data : []);
+                setTotalPages(response.last_page || 1);
+                setTotalLogs(response.total || 0);
+            } else if (Array.isArray(response)) {
+                setLogs(response);
+                setTotalPages(1);
+                setTotalLogs(response.length);
+            } else {
+                setLogs([]);
+            }
         } catch (e) {
             console.error(e);
         } finally {
