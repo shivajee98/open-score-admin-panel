@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Plus, Users, Copy, CheckCircle2, Ticket } from 'lucide-react';
+import { Plus, Users, Copy, CheckCircle2, Ticket, Link as LinkIcon } from 'lucide-react';
+
+const CUSTOMER_APP_URL = process.env.NEXT_PUBLIC_CUSTOMER_APP_URL || 'http://localhost:3001';
 
 export default function ReferralsPage() {
     const [campaigns, setCampaigns] = useState([]);
@@ -11,6 +13,14 @@ export default function ReferralsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newCampaign, setNewCampaign] = useState({ name: '', code: '', cashback_amount: '' });
     const [creating, setCreating] = useState(false);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    const handleCopyLink = (code: string, id: string) => {
+        const link = `${CUSTOMER_APP_URL}/?ref=${code}`;
+        navigator.clipboard.writeText(link);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
 
     const loadCampaigns = async () => {
         setLoading(true);
@@ -82,9 +92,23 @@ export default function ReferralsPage() {
                             </div>
 
                             <h3 className="text-lg font-black text-slate-900 mb-1">{camp.name}</h3>
-                            <div className="flex items-center gap-2 text-slate-500 font-bold text-xs uppercase tracking-wider mb-6">
-                                <span>Code:</span>
-                                <code className="bg-slate-100 px-2 py-1 rounded text-slate-700 text-sm">{camp.code}</code>
+                            <div className="flex items-center gap-2 mb-6">
+                                <button
+                                    onClick={() => handleCopyLink(camp.code, camp.id)}
+                                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition-colors group w-full justify-center border border-slate-200"
+                                >
+                                    {copiedId === camp.id ? (
+                                        <>
+                                            <CheckCircle2 size={14} className="text-emerald-600" />
+                                            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Copied!</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <LinkIcon size={14} className="text-slate-400 group-hover:text-slate-600" />
+                                            <span className="text-xs font-bold uppercase tracking-wider">Copy Invite Link</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
 
                             <div className="flex items-center justify-between pt-6 border-t border-slate-50">
