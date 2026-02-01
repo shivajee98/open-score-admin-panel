@@ -260,6 +260,7 @@ export default function CreateLoanPlan() {
                                     <option value="bg-indigo-500">Indigo (Default)</option>
                                     <option value="bg-blue-500">Blue</option>
                                     <option value="bg-emerald-500">Emerald</option>
+                                    <option value="bg-emerald-950">Dark Green</option>
                                     <option value="bg-purple-500">Purple</option>
                                     <option value="bg-slate-900">Dark</option>
                                 </select>
