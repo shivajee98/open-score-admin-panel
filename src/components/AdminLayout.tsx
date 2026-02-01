@@ -87,6 +87,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Analytics', href: '/analytics', icon: <TrendingUp className="w-5 h-5" /> },
         { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" /> },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" /> },
+        { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" /> },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" /> },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" /> },
         { label: 'Referrals', href: '/referrals', icon: <Ticket className="w-5 h-5" /> },
