@@ -164,7 +164,7 @@ export default function WithdrawalRulesPage() {
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{rule.user_type}</span>
                                             {rule.loan_plan ? (
-                                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">{rule.loan_plan.plan_name}</span>
+                                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">{rule.loan_plan.name}</span>
                                             ) : (
                                                 <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Global Rule</span>
                                             )}
@@ -242,7 +242,7 @@ export default function WithdrawalRulesPage() {
                                     >
                                         <option value="">Apply Globally (No specific plan)</option>
                                         {loanPlans.map(plan => (
-                                            <option key={plan.id} value={plan.id}>{plan.plan_name}</option>
+                                            <option key={plan.id} value={plan.id}>{plan.name}</option>
                                         ))}
                                     </select>
                                 </div>
