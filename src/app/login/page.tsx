@@ -8,8 +8,6 @@ import { signIn } from 'next-auth/react';
 export default function AdminLogin() {
     const [mobile, setMobile] = useState('');
     const [otp, setOtp] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [step, setStep] = useState(1); // 1: Input, 2: OTP (for Admin)
     const [loginMode, setLoginMode] = useState<'ADMIN' | 'SUB_USER'>('ADMIN');
     const [loading, setLoading] = useState(false);
@@ -42,7 +40,7 @@ export default function AdminLogin() {
                 body: JSON.stringify({ mobile_number: mobile, otp })
             });
             localStorage.setItem('token', data.access_token);
-            localStorage.setItem('user', JSON.stringify({ ...data.user, role: 'SUB_USER' }));
+            localStorage.setItem('user', JSON.stringify({ ...data.sub_user, role: 'SUB_USER' }));
             window.location.href = '/';
         } catch (err: any) {
             setError(err.message || 'Login failed');
@@ -246,7 +244,7 @@ export default function AdminLogin() {
                         </div>
                         <button
                             type="submit"
-                            disabled={loading || !email || !password}
+                            disabled={loading || mobile.length < 10 || otp.length < 6}
                             className="w-full rounded-2xl bg-indigo-600 py-4 font-black shadow-lg shadow-indigo-900/40 hover:bg-indigo-500 transition-all active:scale-[0.98] disabled:opacity-30 uppercase tracking-widest text-sm"
                         >
                             {loading ? 'Authenticating...' : 'Enter Dashboard'}
