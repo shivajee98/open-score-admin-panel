@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
-import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight } from 'lucide-react';
+import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp } from 'lucide-react';
 
 interface SubUser {
     id: number;
@@ -19,6 +20,7 @@ interface SubUser {
 }
 
 export default function SubUsersPage() {
+    const router = useRouter();
     const [subUsers, setSubUsers] = useState<SubUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -110,9 +112,13 @@ export default function SubUsersPage() {
                             </div>
                         ) : (
                             subUsers.map((subUser) => (
-                                <div key={subUser.id} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:border-blue-200 transition-all">
+                                <div
+                                    key={subUser.id}
+                                    className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer"
+                                    onClick={() => router.push(`/sub-users/${subUser.id}`)}
+                                >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black">
+                                        <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black group-hover:bg-blue-600 transition-colors">
                                             {subUser.name[0]}
                                         </div>
                                         <div>
@@ -143,7 +149,7 @@ export default function SubUsersPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                                         <div className="relative">
                                             <input
                                                 type="number"
@@ -158,9 +164,15 @@ export default function SubUsersPage() {
                                         </div>
                                         <button
                                             onClick={() => handleAddCredit(subUser.id)}
-                                            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                                            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 whitespace-nowrap"
                                         >
                                             Add Credit
+                                        </button>
+                                        <button
+                                            onClick={() => router.push(`/sub-users/${subUser.id}`)}
+                                            className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
+                                        >
+                                            <TrendingUp size={20} />
                                         </button>
                                     </div>
                                 </div>
