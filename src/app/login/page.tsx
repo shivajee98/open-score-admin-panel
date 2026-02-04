@@ -35,6 +35,7 @@ export default function AdminLogin() {
         setLoading(true);
         setError('');
         try {
+            console.log('[Agent Login] Attempting login with:', { mobile, role: 'SUB_USER' });
             const res = await signIn('credentials', {
                 mobile: mobile,
                 otp: otp,
@@ -42,12 +43,19 @@ export default function AdminLogin() {
                 redirect: false
             });
 
+            console.log('[Agent Login] Response:', res);
+
             if (res?.error) {
+                console.error('[Agent Login] Error:', res.error);
                 setError('Invalid Agent Credentials');
+            } else if (res?.ok) {
+                console.log('[Agent Login] Success! Redirecting to dashboard...');
+                window.location.href = '/sub-user-dashboard';
             } else {
-                window.location.href = '/';
+                setError('Login failed - unexpected response');
             }
         } catch (err: any) {
+            console.error('[Agent Login] Exception:', err);
             setError('Login failed');
         } finally {
             setLoading(false);

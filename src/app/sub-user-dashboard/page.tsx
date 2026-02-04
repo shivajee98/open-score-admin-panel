@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
-import { Wallet, Users, Link as LinkIcon, Copy, TrendingUp, QrCode, User, Shield, Headphones, FileText, Lock, Mail, LogOut, Lightbulb, HelpCircle } from 'lucide-react';
+import { Wallet, Users, Link as LinkIcon, Copy, TrendingUp, QrCode, User, Shield, HelpCircle, FileText, Mail, LogOut, Lightbulb } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface Stats {
     total_referrals: number;
@@ -13,25 +15,34 @@ interface Stats {
 }
 
 export default function SubUserDashboard() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            fetchStats(parsedUser.id);
+        if (status === 'unauthenticated') {
+            router.push('/login');
+            return;
         }
-    }, []);
+
+        if (status === 'authenticated' && session?.user) {
+            console.log('[SubUserDashboard] Loaded session user', session.user);
+            setUser(session.user);
+            if ((session.user as any).id) {
+                fetchStats((session.user as any).id);
+            }
+        }
+    }, [session, status, router]);
 
     const fetchStats = async (id: number) => {
         try {
+            // No need to pass token manually, apiFetch handles it from session
             const data = await apiFetch(`/admin/sub-users/${id}/stats`);
             setStats(data);
         } catch (e) {
-            console.error('Failed to load stats');
+            console.error('Failed to load stats', e);
         } finally {
             setLoading(false);
         }
@@ -42,13 +53,15 @@ export default function SubUserDashboard() {
         const link = `${window.location.origin.replace('admin.', '')}/signup?ref=${user.referral_code}`;
         // Note: Replacing admin prefix if exists, assuming customer site is on main domain
         const finalLink = link.replace('admin-panel.', 'kyc.'); // Adjusted for this project's structure maybe
-
-        // Let's just use a relative link if we don't know the exact domain, or use a placeholder
         const shareLink = `https://openscore-kyc.vercel.app/?ref=${user.referral_code}`;
 
         navigator.clipboard.writeText(shareLink);
         toast.success('Referral link copied!');
     };
+
+    if (loading && !user) {
+        return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 font-bold">Loading Agent Dashboard...</div>
+    }
 
     return (
         <AdminLayout title="Agent Dashboard">
@@ -148,8 +161,7 @@ export default function SubUserDashboard() {
                         <h3 className="text-2xl font-black text-slate-900">Settings</h3>
                         <button
                             onClick={() => {
-                                localStorage.removeItem('token');
-                                window.location.href = '/login';
+                                signOut({ callbackUrl: '/login' });
                             }}
                             className="flex items-center gap-2 text-slate-500 font-bold text-xs uppercase tracking-widest hover:text-rose-600 transition-colors"
                         >

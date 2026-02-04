@@ -1,12 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminDashboard() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalMerchants: 0,
@@ -20,13 +24,21 @@ export default function AdminDashboard() {
     const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+        if (status === 'authenticated' && (session as any)?.user?.role === 'SUB_USER') {
+            router.push('/sub-user-dashboard');
+        } else if (status === 'authenticated' && (session as any)?.user?.role === 'ADMIN') {
+            loadData();
+        }
+    }, [session, status, router]);
+
     const loadData = async () => {
         try {
             // Parallel fetch for speed
             const [analytics, pending, users] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
-                apiFetch('/admin/users') // Keeping for user list if needed elsewhere or remove if analytics covers it
+                apiFetch('/admin/users')
             ]);
 
             setStats({
@@ -47,18 +59,12 @@ export default function AdminDashboard() {
         }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
     const handleApprove = async (id: number) => {
         if (!confirm('Approve this transaction?')) return;
         try {
-            const res = await apiFetch(`/admin/funds/${id}/approve`, { method: 'POST' });
-            if (res.ok) {
-                alert('Funds Approved!');
-                loadData();
-            }
+            await apiFetch(`/admin/funds/${id}/approve`, { method: 'POST' });
+            alert('Funds Approved!');
+            loadData();
         } catch (e) {
             alert('Approval failed');
         }
@@ -67,15 +73,21 @@ export default function AdminDashboard() {
     const handleReject = async (id: number) => {
         if (!confirm('Reject this transaction?')) return;
         try {
-            const res = await apiFetch(`/admin/funds/${id}/reject`, { method: 'POST' });
-            if (res.ok) {
-                alert('Request Rejected');
-                loadData();
-            }
+            await apiFetch(`/admin/funds/${id}/reject`, { method: 'POST' });
+            alert('Request Rejected');
+            loadData();
         } catch (e) {
             alert('Rejection failed');
         }
     };
+
+    if (status === 'loading') {
+        return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
+    }
+
+    if ((session as any)?.user?.role === 'SUB_USER') {
+        return null; // Will redirect
+    }
 
     return (
         <AdminLayout title="System Overview">

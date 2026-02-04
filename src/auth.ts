@@ -11,6 +11,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             authorize: async (credentials) => {
                 if (!credentials?.mobile || !credentials?.otp) {
+                    console.error('[NextAuth] Missing credentials');
                     return null;
                 }
 
@@ -41,41 +42,69 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     }
 
                     const data = await res.json();
-                    console.log(`[NextAuth] Data received:`, { ...data, access_token: '***' });
+                    console.log(`[NextAuth] Data received:`, {
+                        ...data,
+                        access_token: data.access_token ? '***' : undefined
+                    });
 
+                    // For Sub-Users (Agents)
                     if (isSubUser && data.access_token && data.sub_user) {
-                        return {
-                            ...data.sub_user,
+                        const user = {
+                            id: String(data.sub_user.id), // NextAuth requires string ID
+                            name: data.sub_user.name,
+                            email: data.sub_user.email || data.sub_user.mobile_number + '@agent.local',
+                            mobile_number: data.sub_user.mobile_number,
                             role: 'SUB_USER',
+                            referral_code: data.sub_user.referral_code,
+                            credit_balance: data.sub_user.credit_balance,
+                            credit_limit: data.sub_user.credit_limit,
+                            default_signup_amount: data.sub_user.default_signup_amount,
+                            is_active: data.sub_user.is_active,
                             accessToken: data.access_token
                         };
+                        console.log('[NextAuth] Sub-User authorized:', user.name, user.role);
+                        return user;
                     }
 
+                    // For Admins
                     if (data.access_token && data.user && data.user.role === 'ADMIN') {
-                        return {
-                            ...data.user,
+                        const user = {
+                            id: String(data.user.id), // NextAuth requires string ID
+                            name: data.user.name,
+                            email: data.user.email || data.user.mobile_number + '@admin.local',
+                            mobile_number: data.user.mobile_number,
+                            role: data.user.role,
                             accessToken: data.access_token
                         };
+                        console.log('[NextAuth] Admin authorized:', user.name, user.role);
+                        return user;
                     }
 
+                    console.error('[NextAuth] No valid user data in response');
                     return null;
                 } catch (e) {
-                    console.error("Auth error:", e);
+                    console.error("[NextAuth] Auth error:", e);
                     return null;
                 }
             },
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger }) {
+            // Initial sign in
             if (user) {
+                console.log('[NextAuth JWT] User signing in:', user.name, user.role);
+                token.id = user.id;
                 token.accessToken = (user as any).accessToken;
+                token.role = (user as any).role;
+                token.mobile_number = (user as any).mobile_number;
                 token.user = user;
             }
             return token;
         },
         async session({ session, token }) {
             if (token) {
+                console.log('[NextAuth Session] Creating session for:', token.user?.name, token.role);
                 (session as any).accessToken = token.accessToken;
                 (session as any).user = token.user;
             }
@@ -83,11 +112,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
     },
     pages: {
-        signIn: '/login', // Admin custom login page
+        signIn: '/login',
     },
     session: {
         strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     secret: process.env.AUTH_SECRET,
+    debug: true, // Enable debug mode for better logging
+    trustHost: true, // Required for localhost
 });

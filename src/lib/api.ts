@@ -44,8 +44,8 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) {
-            console.warn('[API] 401 Unauthorized - Redirecting to login');
-            signOut({ callbackUrl: '/login' });
+            console.warn('[API] 401 Unauthorized - Auto-logout disabled for debugging');
+            // signOut({ callbackUrl: '/login' });
         }
 
         let errorData: any = {};
