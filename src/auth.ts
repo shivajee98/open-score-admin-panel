@@ -18,21 +18,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     const endpoint = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
                     const baseUrl = endpoint.startsWith('http') ? endpoint : `http://localhost:8001${endpoint}`;
 
-                    const res = await fetch(`${baseUrl}/auth/verify`, {
+                    const isSubUser = credentials.role === 'SUB_USER';
+                    const url = isSubUser ? `${baseUrl}/auth/sub-user/login` : `${baseUrl}/auth/verify`;
+                    const body = isSubUser
+                        ? { mobile_number: credentials.mobile, otp: credentials.otp }
+                        : { mobile_number: credentials.mobile, otp: credentials.otp, role: 'ADMIN' };
+
+                    console.log(`[NextAuth] Authorize attempt: ${url}`, body);
+
+                    const res = await fetch(url, {
                         method: 'POST',
-                        body: JSON.stringify({
-                            mobile_number: credentials.mobile,
-                            otp: credentials.otp,
-                            role: 'ADMIN' // Force role to ADMIN for admin panel
-                        }),
+                        body: JSON.stringify(body),
                         headers: { "Content-Type": "application/json" }
                     });
 
+                    console.log(`[NextAuth] Backend response: ${res.status}`);
+
                     if (!res.ok) {
+                        const errText = await res.text();
+                        console.error(`[NextAuth] Backend error: ${errText}`);
                         return null;
                     }
 
                     const data = await res.json();
+                    console.log(`[NextAuth] Data received:`, { ...data, access_token: '***' });
+
+                    if (isSubUser && data.access_token && data.sub_user) {
+                        return {
+                            ...data.sub_user,
+                            role: 'SUB_USER',
+                            accessToken: data.access_token
+                        };
+                    }
 
                     if (data.access_token && data.user && data.user.role === 'ADMIN') {
                         return {

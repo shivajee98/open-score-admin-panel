@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
-import { signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
+    const { data: session, status } = useSession();
     const pathname = usePathname();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -79,6 +80,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
     const handleLogout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         signOut({ callbackUrl: '/login' });
     };
 
@@ -98,15 +100,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
     ];
 
-    const [user, setUser] = useState<any>(null);
-
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-    }, []);
-
+    const user = (session as any)?.user;
     const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
 
     return (
@@ -182,7 +176,9 @@ export default function AdminLayout({ children, title }: { children: React.React
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
                             <Verified className="w-4 h-4 text-blue-600 fill-blue-100" />
-                            <span className="text-sm font-bold text-slate-700">Administrator</span>
+                            <span className="text-sm font-bold text-slate-700">
+                                {user?.role === 'SUB_USER' ? 'Credit Agent' : 'Administrator'}
+                            </span>
                         </div>
                     </div>
                 </header>

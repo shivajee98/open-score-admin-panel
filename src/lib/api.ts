@@ -13,6 +13,11 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         if (session && (session as any).accessToken) {
             token = (session as any).accessToken;
             cachedToken = token; // Cache it
+            // Sync to localStorage for legacy components
+            if (token) localStorage.setItem('token', token);
+            if ((session as any).user) {
+                localStorage.setItem('user', JSON.stringify((session as any).user));
+            }
         } else {
             // Fallback to localStorage if no session (legacy/backup)
             token = localStorage.getItem('token');

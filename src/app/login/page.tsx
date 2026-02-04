@@ -35,21 +35,20 @@ export default function AdminLogin() {
         setLoading(true);
         setError('');
         try {
-            const data = await apiFetch('/auth/sub-user/login', {
-                method: 'POST',
-                body: JSON.stringify({ mobile_number: mobile, otp })
+            const res = await signIn('credentials', {
+                mobile: mobile,
+                otp: otp,
+                role: 'SUB_USER',
+                redirect: false
             });
 
-            if (!data || !data.access_token) {
-                throw new Error('Invalid server response');
+            if (res?.error) {
+                setError('Invalid Agent Credentials');
+            } else {
+                window.location.href = '/';
             }
-
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('user', JSON.stringify({ ...data.sub_user, role: 'SUB_USER' }));
-            window.location.href = '/';
         } catch (err: any) {
-            console.error('Agent Login Error:', err);
-            setError(err.message || 'Login failed');
+            setError('Login failed');
         } finally {
             setLoading(false);
         }
