@@ -39,7 +39,7 @@ export default function AdminLogin() {
         try {
             const data = await apiFetch('/auth/sub-user/login', {
                 method: 'POST',
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ mobile_number: mobile, otp })
             });
             localStorage.setItem('token', data.access_token);
             localStorage.setItem('user', JSON.stringify({ ...data.user, role: 'SUB_USER' }));
@@ -140,6 +140,14 @@ export default function AdminLogin() {
                     </div>
                 )}
 
+                {loginMode === 'SUB_USER' && (
+                    <div className="mb-8 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-center">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Agent Demo Credentials</p>
+                        <p className="text-sm font-bold text-slate-300">Number: <span className="text-white">8888888888</span></p>
+                        <p className="text-sm font-bold text-slate-300">OTP: <span className="text-white">123456</span></p>
+                    </div>
+                )}
+
                 {error && <p className="text-red-400 text-xs text-center mb-6 bg-red-400/10 py-3 rounded-xl border border-red-400/20 px-4">{error}</p>}
 
                 {loginMode === 'ADMIN' ? (
@@ -204,25 +212,35 @@ export default function AdminLogin() {
                     <form onSubmit={handleSubUserLogin} className="space-y-6">
                         <div className="space-y-4">
                             <div className="group">
-                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-indigo-400">Agent Email</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full rounded-2xl bg-black/20 border border-slate-800 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold"
-                                    placeholder="agent@example.com"
-                                />
+                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-indigo-400">Agent Mobile Number</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-sm">+91</span>
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={mobile}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setMobile(value);
+                                        }}
+                                        className="w-full rounded-2xl bg-black/20 border border-slate-800 pl-14 pr-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold tracking-[0.2em] text-lg"
+                                        placeholder="00000 00000"
+                                    />
+                                </div>
                             </div>
                             <div className="group">
-                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-indigo-400">Security Password</label>
+                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-indigo-400">One-Time Password (OTP)</label>
                                 <input
-                                    type="password"
+                                    type="text"
                                     required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full rounded-2xl bg-black/20 border border-slate-800 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold"
-                                    placeholder="••••••••"
+                                    maxLength={6}
+                                    value={otp}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                        setOtp(value);
+                                    }}
+                                    className="w-full rounded-2xl bg-black/20 border border-slate-800 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold text-center tracking-[0.3em] text-xl"
+                                    placeholder="••••••"
                                 />
                             </div>
                         </div>
