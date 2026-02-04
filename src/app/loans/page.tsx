@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye } from 'lucide-react';
+import LoanDetailModal from '@/components/loans/LoanDetailModal';
 
 export default function LoanApprovals() {
     const [loans, setLoans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
+    const [selectedLoan, setSelectedLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     // Filters & Pagination
@@ -261,6 +263,13 @@ export default function LoanApprovals() {
                                                 )}
 
                                                 {/* Universal Management Actions */}
+                                                <button
+                                                    onClick={() => setSelectedLoan(loan.id)}
+                                                    className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
                                                 <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity ml-4 border-l pl-4 border-slate-100">
                                                     {['DISBURSED'].includes(loan.status) && (
                                                         <button
@@ -361,6 +370,16 @@ export default function LoanApprovals() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {selectedLoan && (
+                <LoanDetailModal
+                    loanId={selectedLoan}
+                    onClose={() => setSelectedLoan(null)}
+                    onUpdate={() => {
+                        loadLoans();
+                    }}
+                />
             )}
         </AdminLayout>
     );
