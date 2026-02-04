@@ -159,49 +159,49 @@ export default function SubUserDashboard() {
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         {/* Profile */}
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all group">
-                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-indigo-500 shadow-sm group-hover:scale-110 transition-transform">
-                                <User className="w-6 h-6" />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center gap-2 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all group">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <User className="w-5 h-5" />
                             </div>
                             <span className="text-sm font-black text-slate-700">Profile</span>
                         </div>
 
                         {/* Tutorial */}
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-amber-50 hover:border-amber-100 transition-all group">
-                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-amber-500 shadow-sm group-hover:scale-110 transition-transform">
-                                <Lightbulb className="w-6 h-6" />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center gap-2 cursor-pointer hover:bg-amber-50 hover:border-amber-100 transition-all group">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <Lightbulb className="w-5 h-5" />
                             </div>
                             <span className="text-sm font-black text-slate-700">Tutorial</span>
                         </div>
 
                         {/* Help */}
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-rose-50 hover:border-rose-100 transition-all group">
-                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-rose-500 shadow-sm group-hover:scale-110 transition-transform">
-                                <HelpCircle className="w-6 h-6" />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center gap-2 cursor-pointer hover:bg-rose-50 hover:border-rose-100 transition-all group">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-rose-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <HelpCircle className="w-5 h-5" />
                             </div>
                             <span className="text-sm font-black text-slate-700">Help</span>
                         </div>
 
                         {/* T&C */}
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-sky-50 hover:border-sky-100 transition-all group">
-                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-sky-500 shadow-sm group-hover:scale-110 transition-transform">
-                                <FileText className="w-6 h-6" />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center gap-2 cursor-pointer hover:bg-sky-50 hover:border-sky-100 transition-all group">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-sky-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <FileText className="w-5 h-5" />
                             </div>
                             <span className="text-sm font-black text-slate-700">T&C</span>
                         </div>
 
                         {/* Privacy */}
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-emerald-50 hover:border-emerald-100 transition-all group">
-                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm group-hover:scale-110 transition-transform">
-                                <Shield className="w-6 h-6" />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center gap-2 cursor-pointer hover:bg-emerald-50 hover:border-emerald-100 transition-all group">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <Shield className="w-5 h-5" />
                             </div>
                             <span className="text-sm font-black text-slate-700">Privacy</span>
                         </div>
 
                         {/* Contact Us */}
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-100 transition-all group">
-                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm group-hover:scale-110 transition-transform">
-                                <Mail className="w-6 h-6" />
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-100 transition-all group">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <Mail className="w-5 h-5" />
                             </div>
                             <span className="text-sm font-black text-slate-700">Contact Us</span>
                         </div>
