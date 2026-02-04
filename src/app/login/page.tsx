@@ -39,10 +39,16 @@ export default function AdminLogin() {
                 method: 'POST',
                 body: JSON.stringify({ mobile_number: mobile, otp })
             });
+
+            if (!data || !data.access_token) {
+                throw new Error('Invalid server response');
+            }
+
             localStorage.setItem('token', data.access_token);
             localStorage.setItem('user', JSON.stringify({ ...data.sub_user, role: 'SUB_USER' }));
             window.location.href = '/';
         } catch (err: any) {
+            console.error('Agent Login Error:', err);
             setError(err.message || 'Login failed');
         } finally {
             setLoading(false);

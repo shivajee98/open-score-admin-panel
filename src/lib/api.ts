@@ -28,19 +28,31 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     const url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
 
+    console.log(`[API Request] ${options.method || 'GET'} ${url}`);
+
     const response = await fetch(url, {
         ...options,
         headers,
     });
 
+    console.log(`[API Response] ${response.status} ${url}`);
+
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) {
-            // Force sign out only for non-auth routes (expired session)
+            console.warn('[API] 401 Unauthorized - Redirecting to login');
             signOut({ callbackUrl: '/login' });
         }
 
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || 'API request failed');
+        let errorData: any = {};
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            console.error('[API] Failed to parse error response', e);
+        }
+
+        const errorMessage = errorData.error || errorData.message || `HTTP Error ${response.status}`;
+        console.error(`[API Error] ${errorMessage}`, errorData);
+        throw new Error(errorMessage);
     }
 
     return response.json();
