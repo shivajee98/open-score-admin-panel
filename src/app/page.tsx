@@ -16,10 +16,13 @@ export default function AdminDashboard() {
         totalMerchants: 0,
         totalDisbursed: 0,
         totalRepaid: 0,
+        totalOutstanding: 0,
+        totalOverdue: 0,
         pendingCount: 0,
         activeLoans: 0,
         defaultedLoans: 0,
-        pendingLoans: 0
+        pendingLoans: 0,
+        recentRepayments: []
     });
     const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,10 +49,13 @@ export default function AdminDashboard() {
                 totalMerchants: analytics?.total_merchants || 0,
                 totalDisbursed: analytics?.total_disbursed || 0,
                 totalRepaid: analytics?.total_repaid || 0,
+                totalOutstanding: analytics?.total_outstanding || 0,
+                totalOverdue: analytics?.total_overdue || 0,
                 pendingCount: Array.isArray(pending) ? pending.length : 0,
                 activeLoans: analytics?.active_loans || 0,
                 defaultedLoans: analytics?.defaulted_loans || 0,
-                pendingLoans: analytics?.pending_loans || 0
+                pendingLoans: analytics?.pending_loans || 0,
+                recentRepayments: analytics?.recent_repayments || []
             });
             setPendingTx(Array.isArray(pending) ? pending : []);
         } catch (error) {
@@ -117,55 +123,118 @@ export default function AdminDashboard() {
                         <TrendingUp className="w-7 h-7" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Loans Repaid</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Recovered</p>
                         <p className="text-3xl font-black text-emerald-600">₹{stats.totalRepaid.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+                    <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center">
                         <Clock className="w-7 h-7" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Approvals</p>
-                        <p className="text-3xl font-black text-slate-900">{stats.pendingCount}</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Outstanding</p>
+                        <p className="text-3xl font-black text-purple-600">₹{stats.totalOutstanding.toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+                        <Ban className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Overdue</p>
+                        <p className="text-3xl font-black text-red-600">₹{stats.totalOverdue.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Loan Health Stats */}
-            <h3 className="text-lg font-bold text-slate-900 mb-4 px-1">Loan Health Insights</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                        <TrendingUp className="w-7 h-7" />
+            {/* Recent Repayments & Health Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-slate-900">Recent Repayments</h3>
                     </div>
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Loans</p>
-                        <p className="text-3xl font-black text-slate-900">{stats.activeLoans}</p>
-                        <p className="text-xs font-bold text-emerald-600">Paying Customers</p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50/50">
+                                <tr>
+                                    <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-6">User</th>
+                                    <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                    <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode</th>
+                                    <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-6">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {stats.recentRepayments && (stats.recentRepayments as any[]).length > 0 ? (
+                                    (stats.recentRepayments as any[]).map((rp: any) => (
+                                        <tr key={rp.id}>
+                                            <td className="p-4 pl-6">
+                                                <p className="font-bold text-slate-900 text-xs">{rp.user_name}</p>
+                                                <p className="text-[10px] font-medium text-slate-400">#{rp.id}</p>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="font-black text-emerald-600 text-sm">
+                                                    +₹{parseFloat(rp.amount).toLocaleString('en-IN')}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${rp.mode === 'MANUAL' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                                                    }`}>{rp.mode}</span>
+                                            </td>
+                                            <td className="p-4 text-right pr-6 text-[10px] font-bold text-slate-400">
+                                                {new Date(rp.paid_at).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-slate-400 text-xs font-bold">No recent repayments found</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
-                        <Clock className="w-7 h-7" />
-                    </div>
+                {/* Vertical Right Column */}
+                <div className="space-y-8">
+                    {/* Loan Health Stats */}
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Processing</p>
-                        <p className="text-3xl font-black text-slate-900">{stats.pendingLoans}</p>
-                        <p className="text-xs font-bold text-amber-600">Applications Pending</p>
-                    </div>
-                </div>
+                        <div className="flex items-center justify-between px-1 mb-4">
+                            <h3 className="text-lg font-bold text-slate-900">Loan Status</h3>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                                    <TrendingUp className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Active Loans</p>
+                                    <p className="text-2xl font-black text-slate-900">{stats.activeLoans}</p>
+                                </div>
+                            </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center">
-                        <Ban className="w-7 h-7" />
-                    </div>
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Defaulted</p>
-                        <p className="text-3xl font-black text-slate-900">{stats.defaultedLoans}</p>
-                        <p className="text-xs font-bold text-red-600">Needs Attention</p>
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                                    <Clock className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Processing</p>
+                                    <p className="text-2xl font-black text-slate-900">{stats.pendingLoans}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
+                                    <Ban className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Defaulted</p>
+                                    <p className="text-2xl font-black text-slate-900">{stats.defaultedLoans}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
