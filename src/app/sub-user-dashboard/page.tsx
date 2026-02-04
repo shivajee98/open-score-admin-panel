@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
-import { Wallet, Users, Link as LinkIcon, Copy, TrendingUp, QrCode } from 'lucide-react';
+import { Wallet, Users, Link as LinkIcon, Copy, TrendingUp, QrCode, User, Shield, Headphones, FileText, Lock, Mail, LogOut, Lightbulb, HelpCircle } from 'lucide-react';
 
 interface Stats {
     total_referrals: number;
@@ -139,6 +139,72 @@ export default function SubUserDashboard() {
                         <button disabled className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-bold cursor-not-allowed">
                             View QR Code
                         </button>
+                    </div>
+                </div>
+
+                {/* Settings Grid Section */}
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 mt-8">
+                    <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-2xl font-black text-slate-900">Settings</h3>
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem('token');
+                                window.location.href = '/login';
+                            }}
+                            className="flex items-center gap-2 text-slate-500 font-bold text-xs uppercase tracking-widest hover:text-rose-600 transition-colors"
+                        >
+                            <LogOut className="w-4 h-4" /> Logout
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        {/* Profile */}
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all group">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-indigo-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <User className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-black text-slate-700">Profile</span>
+                        </div>
+
+                        {/* Tutorial */}
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-amber-50 hover:border-amber-100 transition-all group">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-amber-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <Lightbulb className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-black text-slate-700">Tutorial</span>
+                        </div>
+
+                        {/* Help */}
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-rose-50 hover:border-rose-100 transition-all group">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-rose-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <HelpCircle className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-black text-slate-700">Help</span>
+                        </div>
+
+                        {/* T&C */}
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-sky-50 hover:border-sky-100 transition-all group">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-sky-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <FileText className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-black text-slate-700">T&C</span>
+                        </div>
+
+                        {/* Privacy */}
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-emerald-50 hover:border-emerald-100 transition-all group">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <Shield className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-black text-slate-700">Privacy</span>
+                        </div>
+
+                        {/* Contact Us */}
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-100 transition-all group">
+                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm group-hover:scale-110 transition-transform">
+                                <Mail className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-black text-slate-700">Contact Us</span>
+                        </div>
                     </div>
                 </div>
             </div>
