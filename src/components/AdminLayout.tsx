@@ -82,20 +82,32 @@ export default function AdminLayout({ children, title }: { children: React.React
         signOut({ callbackUrl: '/login' });
     };
 
-    const navItems = [
-        { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" /> },
-        { label: 'Analytics', href: '/analytics', icon: <TrendingUp className="w-5 h-5" /> },
-        { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" /> },
-        { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" /> },
-        { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" /> },
-        { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" /> },
-        { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" /> },
-        { label: 'Referrals', href: '/referrals', icon: <Ticket className="w-5 h-5" /> },
-        { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" /> },
-        { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" /> },
-        { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" /> },
-        { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" /> },
+    const allNavItems = [
+        { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['ADMIN', 'SUB_USER'] },
+        { label: 'Sub-User Stats', href: '/sub-user-dashboard', icon: <TrendingUp className="w-5 h-5" />, roles: ['SUB_USER'] },
+        { label: 'Analytics', href: '/analytics', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Referrals', href: '/referrals', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
     ];
+
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+    }, []);
+
+    const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -108,14 +120,14 @@ export default function AdminLayout({ children, title }: { children: React.React
                                 <ShieldCheck className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-black tracking-tight">OpenScore</h1>
-                                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Admin Portal</p>
+                                <h1 className="text-xl font-black tracking-tight">{user?.role === 'SUB_USER' ? 'Agent Panel' : 'OpenScore'}</h1>
+                                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{user?.role === 'SUB_USER' ? 'Credit Agent' : 'Admin Portal'}</p>
                             </div>
                         </div>
                     </div>
 
                     <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
-                        <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Main Menu</p>
+                        <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{user?.role === 'SUB_USER' ? 'Agent Menu' : 'Main Menu'}</p>
                         {navItems.map((item) => {
                             const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
                             return (
@@ -123,7 +135,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                                     key={item.href}
                                     href={item.href}
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-200 group ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-200 group ${isActive ? (user?.role === 'SUB_USER' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/50') : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
                                 >
                                     <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
                                         {item.icon}
