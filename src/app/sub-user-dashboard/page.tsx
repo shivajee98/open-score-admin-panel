@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api';
 import { Wallet, Users, Link as LinkIcon, Copy, TrendingUp, QrCode, User, Shield, Headphones, FileText, Lock, Mail, LogOut, Lightbulb, HelpCircle } from 'lucide-react';
 
 interface Stats {
@@ -27,8 +28,7 @@ export default function SubUserDashboard() {
 
     const fetchStats = async (id: number) => {
         try {
-            const res = await fetch(`/api/proxy/admin/sub-users/${id}/stats`);
-            const data = await res.json();
+            const data = await apiFetch(`/admin/sub-users/${id}/stats`);
             setStats(data);
         } catch (e) {
             console.error('Failed to load stats');

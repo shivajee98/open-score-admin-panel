@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api';
 import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight } from 'lucide-react';
 
 interface SubUser {
@@ -39,8 +40,7 @@ export default function SubUsersPage() {
 
     const fetchSubUsers = async () => {
         try {
-            const res = await fetch('/api/proxy/admin/sub-users');
-            const data = await res.json();
+            const data = await apiFetch('/admin/sub-users');
             setSubUsers(Array.isArray(data) ? data : []);
         } catch (e) {
             toast.error('Failed to load sub-users');
@@ -52,22 +52,16 @@ export default function SubUsersPage() {
     const handleCreateSubUser = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await fetch('/api/proxy/admin/sub-users', {
+            await apiFetch('/admin/sub-users', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
-            const data = await res.json();
-            if (res.ok) {
-                toast.success('Sub-user created successfully');
-                setShowModal(false);
-                setFormData({ name: '', mobile_number: '', email: '', password: '', credit_limit: '', default_signup_amount: '' });
-                fetchSubUsers();
-            } else {
-                toast.error(data.error || 'Failed to create sub-user');
-            }
-        } catch (e) {
-            toast.error('Error creating sub-user');
+            toast.success('Sub-user created successfully');
+            setShowModal(false);
+            setFormData({ name: '', mobile_number: '', email: '', password: '', credit_limit: '', default_signup_amount: '' });
+            fetchSubUsers();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to create sub-user');
         }
     };
 
@@ -77,21 +71,15 @@ export default function SubUsersPage() {
             return;
         }
         try {
-            const res = await fetch(`/api/proxy/admin/sub-users/${subUserId}/credit`, {
+            await apiFetch(`/admin/sub-users/${subUserId}/credit`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount: parseFloat(creditAmount) })
             });
-            const data = await res.json();
-            if (res.ok) {
-                toast.success('Credit added successfully');
-                setCreditAmount('');
-                fetchSubUsers();
-            } else {
-                toast.error(data.error || 'Failed to add credit');
-            }
-        } catch (e) {
-            toast.error('Error adding credit');
+            toast.success('Credit added successfully');
+            setCreditAmount('');
+            fetchSubUsers();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to add credit');
         }
     };
 

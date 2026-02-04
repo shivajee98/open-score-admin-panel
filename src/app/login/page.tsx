@@ -37,21 +37,15 @@ export default function AdminLogin() {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch('/api/proxy/auth/sub-user/login', {
+            const data = await apiFetch('/auth/sub-user/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            const data = await res.json();
-            if (res.ok) {
-                localStorage.setItem('token', data.access_token);
-                localStorage.setItem('user', JSON.stringify({ ...data.user, role: 'SUB_USER' }));
-                window.location.href = '/';
-            } else {
-                setError(data.error || 'Login failed');
-            }
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('user', JSON.stringify({ ...data.user, role: 'SUB_USER' }));
+            window.location.href = '/';
         } catch (err: any) {
-            setError('Connection failed');
+            setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }

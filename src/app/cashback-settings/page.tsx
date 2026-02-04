@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api';
 import { Settings, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface CashbackSetting {
@@ -22,11 +23,10 @@ export default function CashbackSettingsPage() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch('/api/proxy/admin/cashback-settings');
-            const data = await res.json();
-            setSettings(Array.isArray(data) ? data : []);
+            const data = await apiFetch('/admin/cashback-settings');
+            setSettings(data);
         } catch (e) {
-            toast.error('Failed to load cashback settings');
+            toast.error('Failed to load settings');
         } finally {
             setLoading(false);
         }
@@ -34,17 +34,12 @@ export default function CashbackSettingsPage() {
 
     const handleUpdate = async (role: string, amount: number) => {
         try {
-            const res = await fetch(`/api/proxy/admin/cashback-settings/${role.toLowerCase()}`, {
+            await apiFetch(`/admin/cashback-settings/${role.toLowerCase()}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cashback_amount: amount })
             });
-            if (res.ok) {
-                toast.success(`${role} cashback updated to ₹${amount}`);
-                fetchSettings();
-            } else {
-                toast.error('Failed to update setting');
-            }
+            toast.success('Settings updated successfully');
+            fetchSettings();
         } catch (e) {
             toast.error('Error updating setting');
         }
