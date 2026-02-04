@@ -138,6 +138,14 @@ export default function AdminLogin() {
                     {loginMode === 'ADMIN' ? 'System Control Center' : 'Network Management'}
                 </p>
 
+                {loginMode === 'ADMIN' && (
+                    <div className="mb-8 p-4 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-center">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-sky-400 mb-1">Demo Credentials</p>
+                        <p className="text-sm font-bold text-slate-300">Number: <span className="text-white">999999999</span></p>
+                        <p className="text-sm font-bold text-slate-300">OTP: <span className="text-white">123456</span></p>
+                    </div>
+                )}
+
                 {error && <p className="text-red-400 text-xs text-center mb-6 bg-red-400/10 py-3 rounded-xl border border-red-400/20 px-4">{error}</p>}
 
                 {loginMode === 'ADMIN' ? (
