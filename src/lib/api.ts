@@ -34,11 +34,11 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     });
 
     if (!response.ok) {
-        if (response.status === 401 && typeof window !== 'undefined') {
-            // Force sign out to clear stale session and prevent middleware loop
+        if (response.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) {
+            // Force sign out only for non-auth routes (expired session)
             signOut({ callbackUrl: '/login' });
-            return;
         }
+
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'API request failed');
     }
