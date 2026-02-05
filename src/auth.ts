@@ -104,7 +104,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
         async session({ session, token }) {
             if (token) {
-                console.log('[NextAuth Session] Creating session for:', token.user?.name, token.role);
                 (session as any).accessToken = token.accessToken;
                 (session as any).user = token.user;
             }
@@ -119,6 +118,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     secret: process.env.AUTH_SECRET,
-    debug: true, // Enable debug mode for better logging
+    debug: false, // Disabled in production for performance
     trustHost: true, // Required for localhost
 });

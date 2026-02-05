@@ -4,23 +4,17 @@ export default auth((req) => {
     const isAuth = !!req.auth;
     const isLoginPage = req.nextUrl.pathname.startsWith("/login");
     const isApi = req.nextUrl.pathname.startsWith("/api");
-    const isStatic = req.nextUrl.pathname.startsWith("/_next");
+    const isStatic = req.nextUrl.pathname.startsWith("/_next") ||
+        req.nextUrl.pathname.includes('.') || // Any file with extension
+        req.nextUrl.pathname === '/favicon.ico';
 
-    console.log('[Middleware]', {
-        path: req.nextUrl.pathname,
-        isAuth,
-        hasAuthData: !!req.auth,
-        userRole: (req.auth as any)?.user?.role || 'none'
-    });
-
-    // Allow public routes
+    // Allow public routes and static files without auth check
     if (isLoginPage || isApi || isStatic) {
         return;
     }
 
     // Redirect unauthenticated users to login
     if (!isAuth) {
-        console.log('[Middleware] Redirecting to login - not authenticated');
         return Response.redirect(new URL("/login", req.nextUrl));
     }
 
@@ -28,11 +22,20 @@ export default auth((req) => {
     if (isAuth && isLoginPage) {
         const userRole = (req.auth as any)?.user?.role;
         const redirectUrl = userRole === 'SUB_USER' ? '/sub-user-dashboard' : '/';
-        console.log('[Middleware] Redirecting authenticated user from login to:', redirectUrl);
         return Response.redirect(new URL(redirectUrl, req.nextUrl));
     }
 })
 
 export const config = {
-    matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+    matcher: [
+        /*
+         * Match all request paths except for:
+         * - api (API routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico, icon.*, manifest.*
+         * - Files with extensions (images, fonts, etc.)
+         */
+        "/((?!api|_next/static|_next/image|favicon.ico|icon|.*\\..*).*)"
+    ],
 }
