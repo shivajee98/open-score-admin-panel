@@ -33,14 +33,10 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     const url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
 
-    console.log(`[API Request] ${options.method || 'GET'} ${url}`);
-
     const response = await fetch(url, {
         ...options,
         headers,
     });
-
-    console.log(`[API Response] ${response.status} ${url}`);
 
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) {
