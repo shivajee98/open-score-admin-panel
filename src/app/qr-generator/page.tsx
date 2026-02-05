@@ -117,105 +117,166 @@ export default function QrGenerator() {
                         width: 100vw !important;
                         height: 100vh !important;
                         display: flex !important;
-                        flex-direction: column !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        padding: 1.5cm !important;
+                        gap: 0.8cm !important;
+                        padding: 0.5cm !important;
                         box-sizing: border-box !important;
                         page-break-after: always !important;
-                        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%) !important;
+                        background: white !important;
                     }
                     .print-page:last-child {
                         page-break-after: avoid !important;
                     }
-                    .print-header {
-                        text-align: center !important;
-                        margin-bottom: 1cm !important;
-                    }
-                    .print-header h1 {
-                        font-size: 32pt !important;
-                        font-weight: 900 !important;
-                        color: #0f172a !important;
-                        margin: 0 !important;
-                        letter-spacing: -0.02em !important;
-                    }
-                    .print-header p {
-                        font-size: 12pt !important;
-                        color: #64748b !important;
-                        margin: 0.3cm 0 0 0 !important;
-                        font-weight: 600 !important;
-                    }
-                    .print-qr-row {
-                        display: flex !important;
-                        justify-content: center !important;
-                        align-items: stretch !important;
-                        gap: 1.5cm !important;
-                        flex: 1 !important;
-                    }
-                    .print-qr-card {
-                        width: 7cm !important;
-                        background: white !important;
-                        border: 2px solid #e2e8f0 !important;
-                        border-radius: 1cm !important;
-                        padding: 0.8cm !important;
+                    .qr-card-branded {
+                        width: 8.5cm !important;
+                        height: 12cm !important;
+                        background: linear-gradient(165deg, #0a3d4f 0%, #0d5a6e 40%, #0f6b7a 70%, #1a8090 100%) !important;
+                        border-radius: 0.6cm !important;
+                        padding: 0.5cm !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
-                        justify-content: center !important;
-                        box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
+                        position: relative !important;
+                        overflow: hidden !important;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
                     }
-                    .print-qr-card .qr-wrapper {
-                        padding: 0.4cm !important;
-                        background: white !important;
-                        border: 2px solid #f1f5f9 !important;
-                        border-radius: 0.5cm !important;
-                        margin-bottom: 0.5cm !important;
+                    .qr-card-branded::before {
+                        content: '' !important;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        background: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h20v2H10zM40 30h30v2H40zM20 50h15v2H20zM60 60h25v2H60zM5 80h20v2H5z' fill='rgba(255,255,255,0.05)'/%3E%3C/svg%3E") !important;
+                        pointer-events: none !important;
                     }
-                    .print-qr-card .merchant-name {
-                        font-size: 11pt !important;
-                        font-weight: 800 !important;
-                        color: #0f172a !important;
-                        text-transform: uppercase !important;
-                        letter-spacing: 0.05em !important;
+                    .qr-brand-top {
                         text-align: center !important;
-                        margin-bottom: 0.2cm !important;
+                        margin-bottom: 0.3cm !important;
+                        position: relative !important;
+                        z-index: 1 !important;
                     }
-                    .print-qr-card .qr-id {
-                        font-size: 8pt !important;
-                        font-family: monospace !important;
-                        color: #94a3b8 !important;
-                        font-weight: 600 !important;
-                    }
-                    .print-qr-card .brand-footer {
-                        margin-top: 0.4cm !important;
-                        padding-top: 0.3cm !important;
-                        border-top: 1px solid #f1f5f9 !important;
-                        width: 100% !important;
-                        text-align: center !important;
-                    }
-                    .print-qr-card .brand-footer span {
-                        font-size: 8pt !important;
-                        font-weight: 700 !important;
-                        color: #3b82f6 !important;
-                        letter-spacing: 0.1em !important;
-                    }
-                    .print-footer {
-                        text-align: center !important;
-                        margin-top: 0.8cm !important;
-                    }
-                    .print-footer p {
+                    .qr-brand-top .msme {
                         font-size: 9pt !important;
-                        color: #94a3b8 !important;
-                        font-weight: 600 !important;
+                        font-weight: 700 !important;
+                        color: #d4af37 !important;
+                        letter-spacing: 0.15em !important;
+                        text-transform: uppercase !important;
+                    }
+                    .qr-brand-top .openscore {
+                        font-size: 18pt !important;
+                        font-weight: 900 !important;
+                        color: white !important;
+                        letter-spacing: 0.05em !important;
+                        margin-top: 0.1cm !important;
+                    }
+                    .qr-brand-top .tagline {
+                        font-size: 8pt !important;
+                        color: #5fd4d4 !important;
+                        font-style: italic !important;
+                        margin-top: 0.1cm !important;
+                    }
+                    .qr-ring-container {
+                        position: relative !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        gap: 0.3cm !important;
+                        flex: 1 !important;
+                        z-index: 1 !important;
                     }
-                    .print-footer .shield {
-                        width: 12pt !important;
-                        height: 12pt !important;
-                        color: #22c55e !important;
+                    .qr-ring {
+                        position: absolute !important;
+                        width: 6cm !important;
+                        height: 6cm !important;
+                        border: 3px solid #00d4d4 !important;
+                        border-radius: 50% !important;
+                        box-shadow: 0 0 20px rgba(0,212,212,0.4), inset 0 0 20px rgba(0,212,212,0.1) !important;
+                    }
+                    .qr-box {
+                        background: white !important;
+                        padding: 0.4cm !important;
+                        border-radius: 0.4cm !important;
+                        position: relative !important;
+                        z-index: 2 !important;
+                    }
+                    .qr-box .check-badge {
+                        position: absolute !important;
+                        top: -0.2cm !important;
+                        right: -0.2cm !important;
+                        width: 0.7cm !important;
+                        height: 0.7cm !important;
+                        background: #22c55e !important;
+                        border-radius: 50% !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        border: 2px solid white !important;
+                    }
+                    .qr-box .check-badge svg {
+                        width: 0.4cm !important;
+                        height: 0.4cm !important;
+                        color: white !important;
+                    }
+                    .qr-bottom {
+                        text-align: center !important;
+                        margin-top: 0.3cm !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                    }
+                    .qr-bottom .scan-pay {
+                        font-size: 14pt !important;
+                        font-weight: 900 !important;
+                        color: white !important;
+                        letter-spacing: 0.1em !important;
+                    }
+                    .qr-bottom .cashback-text {
+                        font-size: 8pt !important;
+                        color: white !important;
+                        margin-top: 0.1cm !important;
+                    }
+                    .qr-bottom .cashback-text span {
+                        color: #fcd34d !important;
+                        font-weight: 700 !important;
+                    }
+                    .qr-bottom .for-text {
+                        font-size: 7pt !important;
+                        color: rgba(255,255,255,0.5) !important;
+                        text-transform: uppercase !important;
+                        letter-spacing: 0.1em !important;
+                        margin-top: 0.15cm !important;
+                    }
+                    .qr-footer {
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: space-between !important;
+                        width: 100% !important;
+                        margin-top: 0.3cm !important;
+                        padding-top: 0.2cm !important;
+                        border-top: 1px solid rgba(255,255,255,0.1) !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                    }
+                    .qr-footer .powered {
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 0.15cm !important;
+                    }
+                    .qr-footer .powered .icon {
+                        width: 0.5cm !important;
+                        height: 0.5cm !important;
+                        background: #22c55e !important;
+                        border-radius: 50% !important;
+                    }
+                    .qr-footer .powered span {
+                        font-size: 6pt !important;
+                        color: rgba(255,255,255,0.7) !important;
+                        text-transform: uppercase !important;
+                        letter-spacing: 0.05em !important;
+                    }
+                    .qr-footer .date {
+                        font-size: 6pt !important;
+                        color: rgba(255,255,255,0.5) !important;
                     }
                 }
             `}</style>
@@ -353,40 +414,49 @@ export default function QrGenerator() {
                 )}
             </div>
 
-            {/* Print View - 3 QR per landscape page */}
+            {/* Print View - Branded MSME Shakti Cards (3 per page, individually cuttable) */}
             {filteredCodes.length > 0 && (
                 <div className="hidden print:block">
-                    {/* Group codes into chunks of 3 */}
                     {Array.from({ length: Math.ceil(filteredCodes.length / 3) }).map((_, pageIndex) => (
                         <div key={pageIndex} className="print-page">
-                            <div className="print-header">
-                                <h1>Pay Now</h1>
-                                <p>Scan any QR code to complete payment</p>
-                            </div>
+                            {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
+                                <div key={code.id} className="qr-card-branded">
+                                    {/* Top Branding */}
+                                    <div className="qr-brand-top">
+                                        <div className="msme">MSME SHAKTI</div>
+                                        <div className="openscore">OPEN SCORE</div>
+                                        <div className="tagline">Unlock Cashback Rewards!</div>
+                                    </div>
 
-                            <div className="print-qr-row">
-                                {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
-                                    <div key={code.id} className="print-qr-card">
-                                        <div className="qr-wrapper">
-                                            <QRCode value={code.code} size={180} level="H" />
-                                        </div>
-                                        <div className="merchant-name">
-                                            {code.status === 'assigned' ? (code.merchant_name || 'Merchant') : 'OpenScore Pay'}
-                                        </div>
-                                        <div className="qr-id">{code.code.substring(0, 16)}</div>
-                                        <div className="brand-footer">
-                                            <span>OPENSCORE PAY</span>
+                                    {/* QR with Glow Ring */}
+                                    <div className="qr-ring-container">
+                                        <div className="qr-ring"></div>
+                                        <div className="qr-box">
+                                            <QRCode value={code.code} size={160} level="H" />
+                                            <div className="check-badge">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                                    <path d="M20 6L9 17l-5-5" />
+                                                </svg>
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
 
-                            <div className="print-footer">
-                                <p>
-                                    <svg className="shield" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                                    100% Secure Payment • Powered by OpenScore
-                                </p>
-                            </div>
+                                    {/* Bottom Text */}
+                                    <div className="qr-bottom">
+                                        <div className="scan-pay">SCAN & PAY</div>
+                                        <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
+                                        <div className="for-text">For Businesses & Customers</div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="qr-footer">
+                                        <div className="powered">
+                                            <div className="icon"></div>
+                                            <span>Powered by MSME Shakti</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ))}
                 </div>
