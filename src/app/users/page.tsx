@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 // Sub-component for individual user rows to handle local input state
@@ -117,6 +118,13 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
             <td className="p-6 pr-8 text-right">
                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Link
+                        href={`/users/${user.id}`}
+                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="View Full Details"
+                    >
+                        <Eye className="w-5 h-5" />
+                    </Link>
                     <button
                         onClick={() => toggleStatus(user)}
                         className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
