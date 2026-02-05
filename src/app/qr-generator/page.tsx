@@ -114,13 +114,13 @@ export default function QrGenerator() {
                         display: none !important;
                     }
                     .print-page {
-                        width: 100vw !important;
-                        height: 100vh !important;
+                        width: 297mm !important;
+                        height: 210mm !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        gap: 0.8cm !important;
-                        padding: 0.5cm !important;
+                        gap: 3mm !important;
+                        padding: 3mm !important;
                         box-sizing: border-box !important;
                         page-break-after: always !important;
                         background: white !important;
@@ -129,11 +129,11 @@ export default function QrGenerator() {
                         page-break-after: avoid !important;
                     }
                     .qr-card-branded {
-                        width: 8.5cm !important;
-                        height: 12cm !important;
+                        width: 95mm !important;
+                        height: 200mm !important;
                         background: linear-gradient(165deg, #0a3d4f 0%, #0d5a6e 40%, #0f6b7a 70%, #1a8090 100%) !important;
-                        border-radius: 0.6cm !important;
-                        padding: 0.5cm !important;
+                        border-radius: 6mm !important;
+                        padding: 8mm !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
@@ -153,29 +153,29 @@ export default function QrGenerator() {
                     }
                     .qr-brand-top {
                         text-align: center !important;
-                        margin-bottom: 0.3cm !important;
+                        margin-bottom: 5mm !important;
                         position: relative !important;
                         z-index: 1 !important;
                     }
                     .qr-brand-top .msme {
-                        font-size: 9pt !important;
+                        font-size: 12pt !important;
                         font-weight: 700 !important;
                         color: #d4af37 !important;
                         letter-spacing: 0.15em !important;
                         text-transform: uppercase !important;
                     }
                     .qr-brand-top .openscore {
-                        font-size: 18pt !important;
+                        font-size: 26pt !important;
                         font-weight: 900 !important;
                         color: white !important;
                         letter-spacing: 0.05em !important;
-                        margin-top: 0.1cm !important;
+                        margin-top: 2mm !important;
                     }
                     .qr-brand-top .tagline {
-                        font-size: 8pt !important;
+                        font-size: 11pt !important;
                         color: #5fd4d4 !important;
                         font-style: italic !important;
-                        margin-top: 0.1cm !important;
+                        margin-top: 2mm !important;
                     }
                     .qr-ring-container {
                         position: relative !important;
@@ -184,93 +184,94 @@ export default function QrGenerator() {
                         justify-content: center !important;
                         flex: 1 !important;
                         z-index: 1 !important;
+                        width: 100% !important;
                     }
                     .qr-ring {
                         position: absolute !important;
-                        width: 6cm !important;
-                        height: 6cm !important;
-                        border: 3px solid #00d4d4 !important;
+                        width: 75mm !important;
+                        height: 75mm !important;
+                        border: 4px solid #00d4d4 !important;
                         border-radius: 50% !important;
-                        box-shadow: 0 0 20px rgba(0,212,212,0.4), inset 0 0 20px rgba(0,212,212,0.1) !important;
+                        box-shadow: 0 0 30px rgba(0,212,212,0.5), inset 0 0 30px rgba(0,212,212,0.15) !important;
                     }
                     .qr-box {
                         background: white !important;
-                        padding: 0.4cm !important;
-                        border-radius: 0.4cm !important;
+                        padding: 6mm !important;
+                        border-radius: 5mm !important;
                         position: relative !important;
                         z-index: 2 !important;
                     }
                     .qr-box .check-badge {
                         position: absolute !important;
-                        top: -0.2cm !important;
-                        right: -0.2cm !important;
-                        width: 0.7cm !important;
-                        height: 0.7cm !important;
+                        top: -3mm !important;
+                        right: -3mm !important;
+                        width: 10mm !important;
+                        height: 10mm !important;
                         background: #22c55e !important;
                         border-radius: 50% !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        border: 2px solid white !important;
+                        border: 3px solid white !important;
                     }
                     .qr-box .check-badge svg {
-                        width: 0.4cm !important;
-                        height: 0.4cm !important;
+                        width: 6mm !important;
+                        height: 6mm !important;
                         color: white !important;
                     }
                     .qr-bottom {
                         text-align: center !important;
-                        margin-top: 0.3cm !important;
+                        margin-top: 5mm !important;
                         position: relative !important;
                         z-index: 1 !important;
                     }
                     .qr-bottom .scan-pay {
-                        font-size: 14pt !important;
+                        font-size: 20pt !important;
                         font-weight: 900 !important;
                         color: white !important;
                         letter-spacing: 0.1em !important;
                     }
                     .qr-bottom .cashback-text {
-                        font-size: 8pt !important;
+                        font-size: 11pt !important;
                         color: white !important;
-                        margin-top: 0.1cm !important;
+                        margin-top: 2mm !important;
                     }
                     .qr-bottom .cashback-text span {
                         color: #fcd34d !important;
                         font-weight: 700 !important;
                     }
                     .qr-bottom .for-text {
-                        font-size: 7pt !important;
-                        color: rgba(255,255,255,0.5) !important;
+                        font-size: 9pt !important;
+                        color: rgba(255,255,255,0.6) !important;
                         text-transform: uppercase !important;
                         letter-spacing: 0.1em !important;
-                        margin-top: 0.15cm !important;
+                        margin-top: 3mm !important;
                     }
                     .qr-footer {
                         display: flex !important;
                         align-items: center !important;
-                        justify-content: space-between !important;
+                        justify-content: center !important;
                         width: 100% !important;
-                        margin-top: 0.3cm !important;
-                        padding-top: 0.2cm !important;
-                        border-top: 1px solid rgba(255,255,255,0.1) !important;
+                        margin-top: 5mm !important;
+                        padding-top: 4mm !important;
+                        border-top: 1px solid rgba(255,255,255,0.15) !important;
                         position: relative !important;
                         z-index: 1 !important;
                     }
                     .qr-footer .powered {
                         display: flex !important;
                         align-items: center !important;
-                        gap: 0.15cm !important;
+                        gap: 2mm !important;
                     }
                     .qr-footer .powered .icon {
-                        width: 0.5cm !important;
-                        height: 0.5cm !important;
+                        width: 6mm !important;
+                        height: 6mm !important;
                         background: #22c55e !important;
                         border-radius: 50% !important;
                     }
                     .qr-footer .powered span {
-                        font-size: 6pt !important;
-                        color: rgba(255,255,255,0.7) !important;
+                        font-size: 8pt !important;
+                        color: rgba(255,255,255,0.8) !important;
                         text-transform: uppercase !important;
                         letter-spacing: 0.05em !important;
                     }
@@ -432,7 +433,7 @@ export default function QrGenerator() {
                                     <div className="qr-ring-container">
                                         <div className="qr-ring"></div>
                                         <div className="qr-box">
-                                            <QRCode value={code.code} size={160} level="H" />
+                                            <QRCode value={code.code} size={220} level="H" />
                                             <div className="check-badge">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                                                     <path d="M20 6L9 17l-5-5" />
