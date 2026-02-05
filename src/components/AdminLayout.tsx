@@ -87,7 +87,6 @@ export default function AdminLayout({ children, title }: { children: React.React
     const allNavItems = [
         { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['ADMIN', 'SUB_USER'] },
         { label: 'Sub-User Stats', href: '/sub-user-dashboard', icon: <TrendingUp className="w-5 h-5" />, roles: ['SUB_USER'] },
-        { label: 'Analytics', href: '/analytics', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
