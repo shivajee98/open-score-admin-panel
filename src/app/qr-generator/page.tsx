@@ -101,32 +101,121 @@ export default function QrGenerator() {
                 @media print {
                     @page {
                         size: A4 landscape;
-                        margin: 0.5cm;
+                        margin: 0;
                     }
-                    body {
+                    html, body {
                         background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-                    .print-container {
-                        display: flex !important;
-                        flex-wrap: wrap !important;
+                    .no-print {
+                        display: none !important;
                     }
-                    .print-card {
-                        width: 30% !important;
-                        height: 45vh !important;
-                        margin: 0.5% !important;
-                        page-break-inside: avoid !important;
-                        border: 2px solid #e2e8f0 !important;
-                        border-radius: 1.5rem !important;
+                    .print-page {
+                        width: 100vw !important;
+                        height: 100vh !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        padding: 1rem !important;
-                        position: relative !important;
-                        -webkit-print-color-adjust: exact;
+                        padding: 1.5cm !important;
+                        box-sizing: border-box !important;
+                        page-break-after: always !important;
+                        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%) !important;
                     }
-                    .no-print {
-                        display: none !important;
+                    .print-page:last-child {
+                        page-break-after: avoid !important;
+                    }
+                    .print-header {
+                        text-align: center !important;
+                        margin-bottom: 1cm !important;
+                    }
+                    .print-header h1 {
+                        font-size: 32pt !important;
+                        font-weight: 900 !important;
+                        color: #0f172a !important;
+                        margin: 0 !important;
+                        letter-spacing: -0.02em !important;
+                    }
+                    .print-header p {
+                        font-size: 12pt !important;
+                        color: #64748b !important;
+                        margin: 0.3cm 0 0 0 !important;
+                        font-weight: 600 !important;
+                    }
+                    .print-qr-row {
+                        display: flex !important;
+                        justify-content: center !important;
+                        align-items: stretch !important;
+                        gap: 1.5cm !important;
+                        flex: 1 !important;
+                    }
+                    .print-qr-card {
+                        width: 7cm !important;
+                        background: white !important;
+                        border: 2px solid #e2e8f0 !important;
+                        border-radius: 1cm !important;
+                        padding: 0.8cm !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
+                    }
+                    .print-qr-card .qr-wrapper {
+                        padding: 0.4cm !important;
+                        background: white !important;
+                        border: 2px solid #f1f5f9 !important;
+                        border-radius: 0.5cm !important;
+                        margin-bottom: 0.5cm !important;
+                    }
+                    .print-qr-card .merchant-name {
+                        font-size: 11pt !important;
+                        font-weight: 800 !important;
+                        color: #0f172a !important;
+                        text-transform: uppercase !important;
+                        letter-spacing: 0.05em !important;
+                        text-align: center !important;
+                        margin-bottom: 0.2cm !important;
+                    }
+                    .print-qr-card .qr-id {
+                        font-size: 8pt !important;
+                        font-family: monospace !important;
+                        color: #94a3b8 !important;
+                        font-weight: 600 !important;
+                    }
+                    .print-qr-card .brand-footer {
+                        margin-top: 0.4cm !important;
+                        padding-top: 0.3cm !important;
+                        border-top: 1px solid #f1f5f9 !important;
+                        width: 100% !important;
+                        text-align: center !important;
+                    }
+                    .print-qr-card .brand-footer span {
+                        font-size: 8pt !important;
+                        font-weight: 700 !important;
+                        color: #3b82f6 !important;
+                        letter-spacing: 0.1em !important;
+                    }
+                    .print-footer {
+                        text-align: center !important;
+                        margin-top: 0.8cm !important;
+                    }
+                    .print-footer p {
+                        font-size: 9pt !important;
+                        color: #94a3b8 !important;
+                        font-weight: 600 !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        gap: 0.3cm !important;
+                    }
+                    .print-footer .shield {
+                        width: 12pt !important;
+                        height: 12pt !important;
+                        color: #22c55e !important;
                     }
                 }
             `}</style>
@@ -213,57 +302,93 @@ export default function QrGenerator() {
                 </div>
             </div>
 
-            {codes.length > 0 && (
-                <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 print:flex print:flex-wrap print:bg-white print:p-0 print-container">
-                        {filteredCodes.map((code) => (
-                            <div
-                                key={code.id}
-                                onClick={() => setSelectedCode(code)}
-                                className={cn(
-                                    "bg-white p-6 rounded-[2rem] border-2 flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl relative print-card",
-                                    code.status === 'assigned' ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-50'
-                                )}
-                            >
-                                <div className="no-print absolute top-3 right-3">
-                                    {code.status === 'assigned' ? (
-                                        <div className="bg-indigo-600 p-1.5 rounded-full text-white shadow-lg"><UserCheck size={12} strokeWidth={3} /></div>
-                                    ) : (
-                                        <div className="bg-emerald-500 p-1.5 rounded-full text-white shadow-lg"><CheckCircle size={12} strokeWidth={3} /></div>
+            {/* Screen View - Grid */}
+            <div className="no-print">
+                {codes.length > 0 && (
+                    <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+                            {filteredCodes.map((code) => (
+                                <div
+                                    key={code.id}
+                                    onClick={() => setSelectedCode(code)}
+                                    className={cn(
+                                        "bg-white p-6 rounded-[2rem] border-2 flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl relative",
+                                        code.status === 'assigned' ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-50'
                                     )}
-                                </div>
+                                >
+                                    <div className="absolute top-3 right-3">
+                                        {code.status === 'assigned' ? (
+                                            <div className="bg-indigo-600 p-1.5 rounded-full text-white shadow-lg"><UserCheck size={12} strokeWidth={3} /></div>
+                                        ) : (
+                                            <div className="bg-emerald-500 p-1.5 rounded-full text-white shadow-lg"><CheckCircle size={12} strokeWidth={3} /></div>
+                                        )}
+                                    </div>
 
-                                <div className="mb-4 mt-2 print:mt-0">
-                                    <div className="p-3 bg-white rounded-3xl shadow-lg border border-slate-100">
-                                        <QRCode value={code.code} size={160} level="H" />
+                                    <div className="mb-4 mt-2">
+                                        <div className="p-3 bg-white rounded-3xl shadow-lg border border-slate-100">
+                                            <QRCode value={code.code} size={160} level="H" />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-tighter truncate max-w-[140px]">
+                                            {code.status === 'assigned' ? (code.merchant_name || 'Assigned') : 'V.1 MAPPABLE'}
+                                        </h4>
+                                        <p className="text-[9px] font-mono text-slate-400 font-bold">{code.code.substring(0, 13)}</p>
+                                    </div>
+
+                                    <div className="mt-4 pt-4 border-t border-slate-100 w-full flex items-center justify-center gap-2 grayscale opacity-40">
+                                        <span className="text-[8px] font-black italic">OpenScore Pay</span>
                                     </div>
                                 </div>
-
-                                <div className="space-y-1">
-                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-tighter truncate max-w-[140px]">
-                                        {code.status === 'assigned' ? (code.merchant_name || 'Assigned') : 'V.1 MAPPABLE'}
-                                    </h4>
-                                    <p className="text-[9px] font-mono text-slate-400 font-bold">{code.code.substring(0, 13)}</p>
-                                </div>
-
-                                {/* UPI App Logos Mockup for styling */}
-                                <div className="mt-4 pt-4 border-t border-slate-100 w-full flex items-center justify-center gap-2 grayscale opacity-40">
-                                    <span className="text-[8px] font-black italic">OpenScore Pay</span>
-                                    <div className="flex gap-1">
-                                        <div className="w-4 h-2 bg-slate-300 rounded-sm" />
-                                        <div className="w-4 h-2 bg-slate-400 rounded-sm" />
-                                        <div className="w-4 h-2 bg-slate-200 rounded-sm" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {filteredCodes.length === 0 && (
-                        <div className="p-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200 no-print">
-                            <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                            <p className="font-black text-slate-400 uppercase tracking-widest text-sm">No matching QR found in this batch</p>
+                            ))}
                         </div>
-                    )}
+                        {filteredCodes.length === 0 && (
+                            <div className="p-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
+                                <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                <p className="font-black text-slate-400 uppercase tracking-widest text-sm">No matching QR found in this batch</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Print View - 3 QR per landscape page */}
+            {filteredCodes.length > 0 && (
+                <div className="hidden print:block">
+                    {/* Group codes into chunks of 3 */}
+                    {Array.from({ length: Math.ceil(filteredCodes.length / 3) }).map((_, pageIndex) => (
+                        <div key={pageIndex} className="print-page">
+                            <div className="print-header">
+                                <h1>Pay Now</h1>
+                                <p>Scan any QR code to complete payment</p>
+                            </div>
+
+                            <div className="print-qr-row">
+                                {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
+                                    <div key={code.id} className="print-qr-card">
+                                        <div className="qr-wrapper">
+                                            <QRCode value={code.code} size={180} level="H" />
+                                        </div>
+                                        <div className="merchant-name">
+                                            {code.status === 'assigned' ? (code.merchant_name || 'Merchant') : 'OpenScore Pay'}
+                                        </div>
+                                        <div className="qr-id">{code.code.substring(0, 16)}</div>
+                                        <div className="brand-footer">
+                                            <span>OPENSCORE PAY</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="print-footer">
+                                <p>
+                                    <svg className="shield" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                                    100% Secure Payment • Powered by OpenScore
+                                </p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 
