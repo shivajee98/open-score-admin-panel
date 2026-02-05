@@ -100,27 +100,28 @@ export default function QrGenerator() {
             <style jsx global>{`
                 @media print {
                     @page {
-                        size: A4;
-                        margin: 1cm;
+                        size: A4 landscape;
+                        margin: 0.5cm;
                     }
                     body {
                         background: white !important;
                     }
                     .print-container {
-                        display: block !important;
+                        display: flex !important;
+                        flex-wrap: wrap !important;
                     }
                     .print-card {
-                        width: 100% !important;
-                        height: 28vh !important; /* Approx 3 per page */
-                        margin-bottom: 2cm !important;
+                        width: 30% !important;
+                        height: 45vh !important;
+                        margin: 0.5% !important;
                         page-break-inside: avoid !important;
                         border: 2px solid #e2e8f0 !important;
-                        border-radius: 2rem !important;
+                        border-radius: 1.5rem !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        padding: 2rem !important;
+                        padding: 1rem !important;
                         position: relative !important;
                         -webkit-print-color-adjust: exact;
                     }
@@ -214,7 +215,7 @@ export default function QrGenerator() {
 
             {codes.length > 0 && (
                 <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 print:block print:bg-white print:p-0">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 print:flex print:flex-wrap print:bg-white print:p-0 print-container">
                         {filteredCodes.map((code) => (
                             <div
                                 key={code.id}
