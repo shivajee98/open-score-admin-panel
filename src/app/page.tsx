@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode } from 'lucide-react';
 import Link from 'next/link';
+import FundsCard from '@/components/dashboard/FundsCard';
 
 export default function AdminDashboard() {
     const { data: session, status } = useSession();
@@ -97,6 +98,7 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout title="System Overview">
+            <FundsCard />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
                     <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">

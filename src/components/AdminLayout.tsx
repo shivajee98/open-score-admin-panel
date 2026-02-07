@@ -7,6 +7,7 @@ import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldChe
 
 import { apiFetch } from '@/lib/api';
 import { useSession, signOut } from 'next-auth/react';
+import { Toaster } from 'sonner';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
     const { data: session, status } = useSession();
@@ -186,6 +187,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                     {children}
                 </div>
             </main>
+            <Toaster />
         </div>
     );
 }
