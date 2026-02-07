@@ -233,7 +233,41 @@ export default function CreateLoanPlan() {
                                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
                                 />
                             </div>
-                            {/* ... Color and Badge Text inputs remain same ... */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Color Theme</label>
+                                <select
+                                    value={formData.plan_color}
+                                    onChange={(e) => setFormData({ ...formData, plan_color: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
+                                >
+                                    <option value="bg-indigo-500">Indigo (Default)</option>
+                                    <option value="bg-blue-500">Blue</option>
+                                    <option value="bg-sky-500">Sky Blue</option>
+                                    <option value="bg-cyan-500">Cyan</option>
+                                    <option value="bg-teal-500">Teal</option>
+                                    <option value="bg-emerald-500">Emerald</option>
+                                    <option value="bg-lime-500">Lime</option>
+                                    <option value="bg-yellow-500">Yellow</option>
+                                    <option value="bg-amber-500">Amber</option>
+                                    <option value="bg-orange-500">Orange</option>
+                                    <option value="bg-rose-500">Rose Red</option>
+                                    <option value="bg-pink-500">Pink</option>
+                                    <option value="bg-fuchsia-500">Fuchsia</option>
+                                    <option value="bg-purple-500">Purple</option>
+                                    <option value="bg-violet-500">Violet</option>
+                                    <option value="bg-slate-900">Dark</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Badge Text (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={formData.tag_text}
+                                    onChange={(e) => setFormData({ ...formData, tag_text: e.target.value })}
+                                    placeholder="e.g. Popular, Best Value"
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
+                                />
+                            </div>
                         </div>
                     </div>
 
