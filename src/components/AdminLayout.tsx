@@ -94,6 +94,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Referrals', href: '/referrals', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'] },
