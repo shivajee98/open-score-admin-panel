@@ -249,7 +249,7 @@ export default function CreateLoanPlan() {
                         {formData.configurations.map((config, idx) => {
                             // Calculate Summary for Display
                             const totalFees = config.fees.reduce((acc, fee) => acc + (Number(fee.amount) || 0), 0);
-                            const estimatedGst = Math.round(totalFees * ((config.gst_rate || 18) / 100));
+                            const estimatedGst = Math.round(totalFees * ((config.gst_rate ?? 18) / 100));
 
                             return (
                                 <div key={idx} className="bg-white p-6 rounded-xl border-2 border-slate-200 shadow-sm relative group">
@@ -280,8 +280,11 @@ export default function CreateLoanPlan() {
                                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">GST Rate (%)</label>
                                             <input
                                                 type="number"
-                                                value={config.gst_rate ?? 18}
-                                                onChange={(e) => updateConfig(idx, 'gst_rate', parseFloat(e.target.value))}
+                                                value={config.gst_rate ?? ''}
+                                                onChange={(e) => {
+                                                    const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                                    updateConfig(idx, 'gst_rate', val);
+                                                }}
                                                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800"
                                                 placeholder="18"
                                             />
@@ -430,7 +433,7 @@ export default function CreateLoanPlan() {
                                         {/* Summary Display */}
                                         <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center text-xs font-bold text-slate-600">
                                             <span>Total Fees: ₹{totalFees}</span>
-                                            <span>+ Est. GST ({config.gst_rate ?? 18}%): ₹{estimatedGst}</span>
+                                            <span>+ Est. GST ({config.gst_rate ?? 18}%): ₹{isNaN(estimatedGst) ? 0 : estimatedGst}</span>
                                         </div>
                                     </div>
                                 </div>
