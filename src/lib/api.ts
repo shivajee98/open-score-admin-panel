@@ -1,6 +1,7 @@
 import { getSession, signOut } from 'next-auth/react';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+// Trigger redeploy to bake in new API URL: https://api.msmeloan.sbs/api
 
 // In-memory cache for token
 let cachedToken: string | null = null;
