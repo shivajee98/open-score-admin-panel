@@ -7,8 +7,9 @@ import {
     User, Wallet, History, CreditCard, ArrowLeft,
     Calendar, Shield, ShieldAlert, CheckCircle2,
     Clock, BadgeCheck, Phone, Mail, Building2,
-    ArrowUpRight, ArrowDownLeft
+    ArrowUpRight, ArrowDownLeft, Download
 } from 'lucide-react';
+import { toast } from '@/components/ui/Toast';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -246,69 +247,81 @@ export default function UserDetailsPage({ params }: { params: Promise<{ id: stri
                     )}
 
                     {activeTab === 'TXS' && (
-                        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity</th>
-                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Interaction</th>
-                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Timestamp</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {transactions.map((tx: any) => (
-                                        <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="p-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={cn(
-                                                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
-                                                        tx.type === 'CREDIT' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                                                    )}>
-                                                        {tx.type === 'CREDIT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-900 text-sm">{tx.source_type.replace('_', ' ')}</p>
-                                                        <p className="text-[10px] font-medium text-slate-500">{tx.description}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-6">
-                                                <span className={cn(
-                                                    "font-black text-base",
-                                                    tx.type === 'CREDIT' ? "text-emerald-600" : "text-rose-600"
-                                                )}>
-                                                    {tx.type === 'CREDIT' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString('en-IN')}
-                                                </span>
-                                            </td>
-                                            <td className="p-6">
-                                                {tx.paid_to ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">
-                                                            {tx.paid_to.name[0]}
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                            <div className="flex justify-between items-center px-2">
+                                <h3 className="text-lg font-black text-slate-900">Transaction Flow</h3>
+                                <button
+                                    onClick={() => toast.info("Preparing detailed statement for " + user.name)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+                                >
+                                    <Download className="w-3 h-3" /> Download Statement
+                                </button>
+                            </div>
+
+                            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity</th>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Interaction</th>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Timestamp</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {transactions.map((tx: any) => (
+                                            <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="p-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn(
+                                                            "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
+                                                            tx.type === 'CREDIT' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                                                        )}>
+                                                            {tx.type === 'CREDIT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs font-black text-slate-800">{tx.paid_to.business_name || tx.paid_to.name}</p>
-                                                            <p className="text-[10px] font-medium text-slate-400">{tx.paid_to.mobile}</p>
+                                                            <p className="font-bold text-slate-900 text-sm">{tx.source_type.replace(/_/g, ' ')}</p>
+                                                            <p className="text-[10px] font-medium text-slate-500">{tx.description}</p>
                                                         </div>
                                                     </div>
-                                                ) : (
-                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System</span>
-                                                )}
-                                            </td>
-                                            <td className="p-6 text-right">
-                                                <p className="text-xs font-bold text-slate-900">{new Date(tx.created_at).toLocaleDateString()}</p>
-                                                <p className="text-[10px] font-medium text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</p>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {transactions.length === 0 && (
-                                        <tr>
-                                            <td colSpan={4} className="p-12 text-center text-slate-400 font-bold">No transactions found</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                                </td>
+                                                <td className="p-6">
+                                                    <span className={cn(
+                                                        "font-black text-base",
+                                                        tx.type === 'CREDIT' ? "text-emerald-600" : "text-rose-600"
+                                                    )}>
+                                                        {tx.type === 'CREDIT' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString('en-IN')}
+                                                    </span>
+                                                </td>
+                                                <td className="p-6">
+                                                    {tx.paid_to ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">
+                                                                {tx.paid_to.name[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-black text-slate-800">{tx.paid_to.business_name || tx.paid_to.name}</p>
+                                                                <p className="text-[10px] font-medium text-slate-400">{tx.paid_to.mobile}</p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-6 text-right">
+                                                    <p className="text-xs font-bold text-slate-900">{new Date(tx.created_at).toLocaleDateString()}</p>
+                                                    <p className="text-[10px] font-medium text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</p>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {transactions.length === 0 && (
+                                            <tr>
+                                                <td colSpan={4} className="p-12 text-center text-slate-400 font-bold">No transactions found</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                 </div>
