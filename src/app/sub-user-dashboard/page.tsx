@@ -131,7 +131,7 @@ export default function SubUserDashboard() {
                         <p className="text-slate-500 text-sm mb-6 font-medium">Use this link to onboard new users. The signup bonus will be deducted from your credit wallet.</p>
                         <div className="flex bg-slate-50 p-2 rounded-2xl border border-slate-100 items-center gap-3">
                             <div className="flex-1 px-4 font-mono text-sm text-slate-600 truncate font-bold">
-                                https://openscore-kyc.vercel.app/?ref={user?.referral_code}
+                                https://openscore.msmeloan.sbs/?ref={user?.referral_code}
                             </div>
                             <button
                                 onClick={copyReferralLink}
