@@ -53,7 +53,7 @@ export default function SubUserDashboard() {
         const link = `${window.location.origin.replace('admin.', '')}/signup?ref=${user.referral_code}`;
         // Note: Replacing admin prefix if exists, assuming customer site is on main domain
         const finalLink = link.replace('admin-panel.', 'kyc.'); // Adjusted for this project's structure maybe
-        const shareLink = `https://openscore-kyc.vercel.app/?ref=${user.referral_code}`;
+        const shareLink = `https://openscore.msmeloan.sbs/?ref=${user.referral_code}`;
 
         navigator.clipboard.writeText(shareLink);
         toast.success('Referral link copied!');
