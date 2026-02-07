@@ -17,6 +17,7 @@ export default function QrGenerator() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCode, setSelectedCode] = useState<any>(null);
     const [displayLimit, setDisplayLimit] = useState(60);
+    const [isPreparingPrint, setIsPreparingPrint] = useState(false);
     const printRef = useRef<HTMLDivElement>(null);
 
     // Initial Fetch
@@ -104,7 +105,12 @@ export default function QrGenerator() {
     };
 
     const handlePrint = () => {
-        window.print();
+        setIsPreparingPrint(true);
+        // Give the browser time to render 500+ QRs before opening the print dialog
+        setTimeout(() => {
+            window.print();
+            setIsPreparingPrint(false);
+        }, 1500);
     };
 
     const filteredCodes = codes.filter(c =>
@@ -387,9 +393,11 @@ export default function QrGenerator() {
                     </div>
                     <button
                         onClick={handlePrint}
-                        className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                        disabled={loading || isPreparingPrint}
+                        className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
                     >
-                        <Printer size={18} /> Print Sheet
+                        {isPreparingPrint ? <Zap className="animate-pulse" size={18} /> : <Printer size={18} />}
+                        {isPreparingPrint ? 'Preparing QRs...' : 'Print Sheet'}
                     </button>
                 </div>
             </div>
@@ -459,13 +467,13 @@ export default function QrGenerator() {
                 )}
             </div>
 
-            {/* Print View - Branded MSME Shakti Cards (3 per page, individually cuttable) */}
-            {filteredCodes.length > 0 && (
-                <div className="hidden print:block">
+            {/* Print View - Renders ALL QRs regardless of displayLimit to ensure complete printing */}
+            {isPreparingPrint && filteredCodes.length > 0 && (
+                <div className="fixed inset-0 z-[-1] bg-white print:static print:z-auto">
                     {Array.from({ length: Math.ceil(filteredCodes.length / 3) }).map((_, pageIndex) => (
-                        <div key={pageIndex} className="print-page">
+                        <div key={pageIndex} className="print-page flex items-center justify-center gap-4 p-4">
                             {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
-                                <div key={code.id} className="qr-card-branded">
+                                <div key={code.id} className="qr-card-branded flex-1">
                                     {/* Top Branding */}
                                     <div className="qr-brand-top">
                                         <div className="msme">MSME SHAKTI</div>
