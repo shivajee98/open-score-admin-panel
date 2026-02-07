@@ -85,6 +85,23 @@ export default function QrGenerator() {
         }
     };
 
+    const handleDeleteAll = async () => {
+        if (!confirm('CRITICAL ACTION: Are you sure you want to delete ALL QR batches and codes? This cannot be undone and all existing physical QR codes will become invalid.')) return;
+
+        setLoading(true);
+        try {
+            await apiFetch('/admin/qr/delete-all', { method: 'DELETE' });
+            setBatches([]);
+            setCodes([]);
+            setSelectedBatchId('');
+            alert('All QR data has been wiped successfully.');
+        } catch (e: any) {
+            alert(e.message || 'Failed to delete all batches');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handlePrint = () => {
         window.print();
     };
@@ -325,21 +342,33 @@ export default function QrGenerator() {
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Quantity</label>
-                            <select
+                            <input
+                                type="number"
+                                min="1"
+                                max="1000"
                                 value={count}
                                 onChange={e => setCount(Number(e.target.value))}
-                                className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
-                            >
-                                {[3, 6, 9, 12, 15, 30, 60].map(n => <option key={n} value={n}>{n} Sheets</option>)}
-                            </select>
+                                className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                            />
                         </div>
-                        <button
-                            onClick={generateCodes}
-                            disabled={loading}
-                            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
-                        >
-                            {loading ? 'Processing...' : 'Generate New Batch'}
-                        </button>
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={generateCodes}
+                                disabled={loading}
+                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {loading ? 'Processing...' : 'Generate New Batch'}
+                            </button>
+                            {batches.length > 0 && (
+                                <button
+                                    onClick={handleDeleteAll}
+                                    disabled={loading}
+                                    className="w-full py-2 bg-rose-50 text-rose-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 size={12} /> Delete All Data
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
