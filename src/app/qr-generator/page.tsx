@@ -16,6 +16,7 @@ export default function QrGenerator() {
     const [batchName, setBatchName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCode, setSelectedCode] = useState<any>(null);
+    const [displayLimit, setDisplayLimit] = useState(60);
     const printRef = useRef<HTMLDivElement>(null);
 
     // Initial Fetch
@@ -398,7 +399,7 @@ export default function QrGenerator() {
                 {codes.length > 0 && (
                     <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-                            {filteredCodes.map((code) => (
+                            {filteredCodes.slice(0, displayLimit).map((code) => (
                                 <div
                                     key={code.id}
                                     onClick={() => setSelectedCode(code)}
@@ -434,6 +435,20 @@ export default function QrGenerator() {
                                 </div>
                             ))}
                         </div>
+
+                        {filteredCodes.length > displayLimit && (
+                            <div className="mt-12 text-center">
+                                <button
+                                    onClick={() => setDisplayLimit(displayLimit + 60)}
+                                    className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                                >
+                                    Load More ({filteredCodes.length - displayLimit} Remaining)
+                                </button>
+                                <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                    Displaying {displayLimit} of {filteredCodes.length} QR codes to preserve performance.
+                                </p>
+                            </div>
+                        )}
                         {filteredCodes.length === 0 && (
                             <div className="p-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
                                 <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
