@@ -106,7 +106,19 @@ export default function LoanPlansList() {
                                         <div className="flex items-center gap-3">
                                             <div className={`w-3 h-12 rounded-full ${plan.plan_color || 'bg-slate-200'}`}></div>
                                             <div>
-                                                <p className="font-bold text-slate-900">{plan.name}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-bold text-slate-900">{plan.name}</p>
+                                                    {plan.is_locked && (
+                                                        <span className="text-[9px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5">
+                                                            Locked
+                                                        </span>
+                                                    )}
+                                                    {plan.is_public ? (
+                                                        <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Public</span>
+                                                    ) : (
+                                                        <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase">Targeted</span>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs font-medium text-slate-500">{plan.tag_text || 'Standard'}</p>
                                             </div>
                                         </div>

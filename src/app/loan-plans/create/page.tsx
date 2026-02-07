@@ -41,6 +41,7 @@ export default function CreateLoanPlan() {
         tag_text: '',
         configurations: [] as TenureConfig[],
         is_public: true,
+        is_locked: false,
         assigned_user_ids: [] as number[]
     });
 
@@ -498,6 +499,26 @@ export default function CreateLoanPlan() {
                                     className={`w-12 h-6 rounded-full relative transition-colors ${formData.is_public ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                 >
                                     <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.is_public ? 'right-1' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Lock Feature Toggle */}
+                        <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-700">Lock for all users?</h4>
+                                <p className="text-[11px] font-medium text-slate-400">If locked, users will see the plan but won't be able to apply.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${formData.is_locked ? 'text-amber-500' : 'text-slate-400'}`}>
+                                    {formData.is_locked ? 'Locked' : 'Unlocked'}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, is_locked: !formData.is_locked })}
+                                    className={`w-12 h-6 rounded-full relative transition-colors ${formData.is_locked ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.is_locked ? 'right-1' : 'left-1'}`} />
                                 </button>
                             </div>
                         </div>
