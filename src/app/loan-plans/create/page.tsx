@@ -21,14 +21,25 @@ interface TenureConfig {
     gst_rate?: number; // Added GST Rate
 }
 
-const formatTenure = (days: number) => {
+const formatTenure = (days: number, type: string = 'months') => {
     if (!days) return "";
+
+    if (type === 'days') {
+        return `${days} ${days === 1 ? 'Day' : 'Days'}`;
+    }
+
+    if (type === 'decimal') {
+        const months = (days / 30).toFixed(1);
+        return `${months} ${months === '1.0' ? 'Month' : 'Months'}`;
+    }
+
+    // Default: months (rounded)
     if (days % 30 === 0) {
         const months = days / 30;
         return `${months} ${months === 1 ? 'Month' : 'Months'}`;
     }
-    const months = (days / 30).toFixed(1);
-    return `${days} Days (~${months} Months)`;
+    const months = Math.round(days / 30);
+    return `${months} ${months === 1 ? 'Month' : 'Months'}`;
 };
 
 export default function CreateLoanPlan() {
@@ -42,6 +53,7 @@ export default function CreateLoanPlan() {
         configurations: [] as TenureConfig[],
         is_public: true,
         is_locked: false,
+        tenure_type: 'months',
         assigned_user_ids: [] as number[]
     });
 
@@ -269,6 +281,18 @@ export default function CreateLoanPlan() {
                                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tenure Display Type</label>
+                                <select
+                                    value={formData.tenure_type}
+                                    onChange={(e) => setFormData({ ...formData, tenure_type: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
+                                >
+                                    <option value="months">Months (Rounded)</option>
+                                    <option value="decimal">Months (Decimal)</option>
+                                    <option value="days">Exact Days</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -301,7 +325,7 @@ export default function CreateLoanPlan() {
                                             <div className="flex justify-between items-center mb-1">
                                                 <label className="block text-xs font-bold text-slate-500 uppercase">Tenure (Days)</label>
                                                 <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tight">
-                                                    {formatTenure(config.tenure_days)}
+                                                    {formatTenure(config.tenure_days, formData.tenure_type)}
                                                 </span>
                                             </div>
                                             <input
