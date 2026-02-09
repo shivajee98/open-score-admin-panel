@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import { signIn } from 'next-auth/react';
 
 export default function AdminLogin() {
     const [mobile, setMobile] = useState('');
@@ -36,27 +35,32 @@ export default function AdminLogin() {
         setError('');
         try {
             console.log('[Agent Login] Attempting login with:', { mobile, role: 'SUB_USER' });
-            const res = await signIn('credentials', {
-                mobile: mobile,
-                otp: otp,
-                role: 'SUB_USER',
-                redirect: false
+
+            // Direct API call for Sub-User Login
+            const res = await apiFetch('/auth/sub-user/login', {
+                method: 'POST',
+                body: JSON.stringify({ mobile_number: mobile, otp }),
             });
 
             console.log('[Agent Login] Response:', res);
 
-            if (res?.error) {
-                console.error('[Agent Login] Error:', res.error);
-                setError('Invalid Agent Credentials');
-            } else if (res?.ok) {
+            if (res.access_token && res.sub_user) {
+                const user = {
+                    ...res.sub_user,
+                    role: 'SUB_USER',
+                    accessToken: res.access_token
+                };
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('token', res.access_token);
+
                 console.log('[Agent Login] Success! Redirecting to dashboard...');
-                window.location.href = '/sub-user-dashboard';
+                router.push('/sub-user-dashboard/');
             } else {
-                setError('Login failed - unexpected response');
+                setError('Invalid Agent Credentials');
             }
         } catch (err: any) {
             console.error('[Agent Login] Exception:', err);
-            setError('Login failed');
+            setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -66,48 +70,23 @@ export default function AdminLogin() {
         setLoading(true);
         setError('');
         try {
-            const res = await signIn('credentials', {
-                mobile: mobile,
-                otp: otp,
-                role: 'ADMIN',
-                redirect: false
+            // Direct verification for Admin
+            const data = await apiFetch('/auth/verify', {
+                method: 'POST',
+                body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
             });
 
-            if (res?.error) {
-                const data = await apiFetch('/auth/verify', {
-                    method: 'POST',
-                    body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
-                });
-
-                if (data.user.role !== 'ADMIN') {
-                    throw new Error('Access Denied: This number is not registered as an Administrator.');
-                }
-
-                const retry = await signIn('credentials', {
-                    mobile: mobile,
-                    otp: otp,
-                    role: 'ADMIN',
-                    redirect: false
-                });
-
-                if (retry?.ok) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token); // Store token for apiFetch
-                    window.location.href = '/';
-                } else {
-                    throw new Error('Login failed. Please try again.');
-                }
-
-            } else {
-                const data = await apiFetch('/auth/verify', {
-                    method: 'POST',
-                    body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
-                });
-
-                localStorage.setItem('user', JSON.stringify(data.user));
-                localStorage.setItem('token', data.token);
-                window.location.href = '/';
+            if (data.user.role !== 'ADMIN') {
+                throw new Error('Access Denied: This number is not registered as an Administrator.');
             }
+
+            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('token', data.token); // Store token for apiFetch
+
+            // Allow token propagation
+            setTimeout(() => {
+                router.push('/');
+            }, 100);
 
         } catch (err: any) {
             setError(err.message || 'Login Failed');

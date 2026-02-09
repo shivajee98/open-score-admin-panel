@@ -40,10 +40,10 @@ export default function DashboardLayout({
                 })
                 .catch(err => {
                     console.error("Hydration failed", err);
-                    if (!storedUser) router.push('/login');
+                    if (!storedUser) router.push('/login/');
                 });
         } else {
-            router.push('/login');
+            router.push('/login/');
         }
     }, [router]);
 
@@ -51,7 +51,7 @@ export default function DashboardLayout({
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
-        router.push('/login');
+        router.push('/login/');
     };
 
     return (

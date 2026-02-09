@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
 import { Gift, Users, TrendingUp, Settings, Save } from 'lucide-react';
 
 export default function ReferralSettingsPage() {
@@ -26,36 +27,28 @@ export default function ReferralSettingsPage() {
     const fetchData = async () => {
         try {
             // Fetch settings
-            const settingsRes = await fetch('/api/admin/referral-settings', {
-                credentials: 'include'
-            });
-            if (settingsRes.ok) {
-                const data = await settingsRes.json();
-                setSettings(data);
-            }
+            const settingsData = await apiFetch('/admin/referral-settings');
+            setSettings(settingsData);
 
             // Fetch all referrals
-            const referralsRes = await fetch('/api/admin/all-referrals', {
-                credentials: 'include'
+            const referralsData = await apiFetch('/admin/all-referrals');
+            const referralList = referralsData.data || [];
+            setReferrals(referralList);
+
+            // Calculate stats
+            const totalReferrals = referralList.length;
+            const totalSignupPaid = referralList.reduce((sum: number, r: any) =>
+                sum + (r.signup_bonus_paid ? Number(r.signup_bonus_earned) : 0), 0);
+            const totalLoanPaid = referralList.reduce((sum: number, r: any) =>
+                sum + (r.loan_bonus_paid ? Number(r.loan_bonus_earned) : 0), 0);
+
+            setStats({
+                total_referrals: totalReferrals,
+                total_signup_paid: totalSignupPaid,
+                total_loan_paid: totalLoanPaid,
+                total_amount_paid: totalSignupPaid + totalLoanPaid
             });
-            if (referralsRes.ok) {
-                const data = await referralsRes.json();
-                setReferrals(data.data || []);
 
-                // Calculate stats
-                const totalReferrals = data.data?.length || 0;
-                const totalSignupPaid = data.data?.reduce((sum: number, r: any) =>
-                    sum + (r.signup_bonus_paid ? Number(r.signup_bonus_earned) : 0), 0) || 0;
-                const totalLoanPaid = data.data?.reduce((sum: number, r: any) =>
-                    sum + (r.loan_bonus_paid ? Number(r.loan_bonus_earned) : 0), 0) || 0;
-
-                setStats({
-                    total_referrals: totalReferrals,
-                    total_signup_paid: totalSignupPaid,
-                    total_loan_paid: totalLoanPaid,
-                    total_amount_paid: totalSignupPaid + totalLoanPaid
-                });
-            }
         } catch (error) {
             console.error('Failed to fetch data:', error);
         } finally {
@@ -66,18 +59,11 @@ export default function ReferralSettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch('/api/admin/referral-settings', {
+            await apiFetch('/admin/referral-settings', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify(settings)
             });
-
-            if (res.ok) {
-                alert('Settings saved successfully!');
-            } else {
-                throw new Error('Failed to save settings');
-            }
+            alert('Settings saved successfully!');
         } catch (error) {
             console.error('Failed to save settings:', error);
             alert('Failed to save settings');

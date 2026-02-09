@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Search, Loader2, ArrowUpRight, ArrowDownLeft, Filter, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,7 +30,7 @@ interface Transaction {
 }
 
 export default function GlobalTransactionsPage() {
-    const { data: session, status } = useSession();
+    const { user, status } = useAuth();
     const router = useRouter();
 
     const [transactions, setTransactions] = useState<Transaction[]>([]);

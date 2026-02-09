@@ -16,8 +16,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 }
 
                 try {
-                    const endpoint = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
-                    const baseUrl = endpoint.startsWith('http') ? endpoint : `http://localhost:8001${endpoint}`;
+                    const endpoint = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
+                    const baseUrl = endpoint.startsWith('http') ? endpoint : `https://api.msmeloan.sbs/api${endpoint}`;
 
                     const isSubUser = credentials.role === 'SUB_USER';
                     const url = isSubUser ? `${baseUrl}/auth/sub-user/login` : `${baseUrl}/auth/verify`;

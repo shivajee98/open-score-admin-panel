@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 interface FundStats {
     total_funds: number;
@@ -26,16 +27,9 @@ export default function FundsCard() {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/funds/stats`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setStats(data);
-                setEditTotal(data.total_funds.toString());
-            }
+            const data = await apiFetch('/admin/funds/stats');
+            setStats(data);
+            setEditTotal(data.total_funds.toString());
         } catch (error) {
             console.error("Failed to fetch fund stats", error);
         } finally {
@@ -49,23 +43,15 @@ export default function FundsCard() {
 
     const handleAddFunds = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/funds/add`, {
+            await apiFetch('/admin/funds/add', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
                 body: JSON.stringify({ amount: parseFloat(addAmount) })
             });
 
-            if (res.ok) {
-                toast.success("Funds added successfully");
-                fetchStats();
-                setIsAddOpen(false);
-                setAddAmount('');
-            } else {
-                toast.error("Failed to add funds");
-            }
+            toast.success("Funds added successfully");
+            fetchStats();
+            setIsAddOpen(false);
+            setAddAmount('');
         } catch (error) {
             toast.error("Error adding funds");
         }
@@ -73,27 +59,17 @@ export default function FundsCard() {
 
     const handleUpdateFunds = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/funds/update`, {
+            const data = await apiFetch('/admin/funds/update', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
                 body: JSON.stringify({ total_funds: parseFloat(editTotal) })
             });
 
-            const data = await res.json();
-
-            if (res.ok) {
-                toast.success("Funds updated successfully");
-                if (data.message === 'No changes made') {
-                    toast.info(data.message);
-                }
-                fetchStats();
-                setIsEditOpen(false);
-            } else {
-                toast.error(data.error || "Failed to update funds");
+            toast.success("Funds updated successfully");
+            if (data.message === 'No changes made') {
+                toast.info(data.message);
             }
+            fetchStats();
+            setIsEditOpen(false);
         } catch (error) {
             toast.error("Error updating funds");
         }

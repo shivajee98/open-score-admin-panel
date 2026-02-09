@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
@@ -10,7 +10,7 @@ import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 
 export default function AdminDashboard() {
-    const { data: session, status } = useSession();
+    const { user: session, status } = useAuth();
     const router = useRouter();
     const [stats, setStats] = useState({
         totalUsers: 0,
@@ -29,9 +29,9 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (status === 'authenticated' && (session as any)?.user?.role === 'SUB_USER') {
+        if (status === 'authenticated' && session?.role === 'SUB_USER') {
             router.push('/sub-user-dashboard');
-        } else if (status === 'authenticated' && (session as any)?.user?.role === 'ADMIN') {
+        } else if (status === 'authenticated' && session?.role === 'ADMIN') {
             loadData();
         }
     }, [session, status, router]);

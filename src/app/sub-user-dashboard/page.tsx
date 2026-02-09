@@ -5,7 +5,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
 import { Wallet, Users, Link as LinkIcon, Copy, TrendingUp, QrCode, User, Shield, HelpCircle, FileText, Mail, LogOut, Lightbulb } from 'lucide-react';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 interface Stats {
@@ -24,7 +24,7 @@ interface Stats {
 }
 
 export default function SubUserDashboard() {
-    const { data: session, status } = useSession();
+    const { user: authUser, status } = useAuth();
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [stats, setStats] = useState<Stats | null>(null);
@@ -39,13 +39,13 @@ export default function SubUserDashboard() {
             return;
         }
 
-        if (status === 'authenticated' && session?.user) {
-            setUser(session.user);
-            if ((session.user as any).id) {
-                fetchStats((session.user as any).id);
+        if (status === 'authenticated' && authUser) {
+            setUser(authUser);
+            if (authUser.id) {
+                fetchStats(authUser.id);
             }
         }
-    }, [session, status, router]);
+    }, [authUser, status, router]);
 
     const fetchStats = async (id: number) => {
         try {
@@ -199,8 +199,8 @@ export default function SubUserDashboard() {
                                                 </td>
                                                 <td className="px-6 py-3">
                                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${loan.status === 'DISBURSED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                            loan.status === 'APPROVED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                                'bg-slate-50 text-slate-500 border-slate-100'
+                                                        loan.status === 'APPROVED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                            'bg-slate-50 text-slate-500 border-slate-100'
                                                         }`}>
                                                         {loan.status}
                                                     </span>

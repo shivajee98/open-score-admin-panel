@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { Plus, Users, Copy, CheckCircle2, Ticket, Link as LinkIcon } from 'lucide-react';
 
-const CUSTOMER_APP_URL = process.env.NEXT_PUBLIC_CUSTOMER_APP_URL || 'http://localhost:3001';
+const CUSTOMER_APP_URL = process.env.NEXT_PUBLIC_CUSTOMER_APP_URL || 'https://openscore.msmeloan.sbs';
 
 export default function ReferralsPage() {
     const [campaigns, setCampaigns] = useState([]);

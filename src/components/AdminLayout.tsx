@@ -6,11 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { Toaster } from 'sonner';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
-    const { data: session, status } = useSession();
+    const { user, status, logout } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -54,6 +54,10 @@ export default function AdminLayout({ children, title }: { children: React.React
             // If the user meant "Admin hears ALL transactions", that requires a new API endpoint like `/admin/transactions/latest`.
 
             // Let's stick to `/wallet/transactions` for now to be safe and consistent.
+            // If the Admin User itself receives money, it plays sound.
+            // If the user meant "Admin hears ALL transactions", that requires a new API endpoint like `/admin/transactions/latest`.
+
+            // Let's stick to `/wallet/transactions` for now to be safe and consistent.
 
             const res = await apiFetch('/wallet/transactions?limit=1');
             if (res && res.data && res.data.length > 0) {
@@ -80,15 +84,13 @@ export default function AdminLayout({ children, title }: { children: React.React
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        signOut({ callbackUrl: '/login' });
+        logout();
     };
 
     const allNavItems = [
         { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['ADMIN', 'SUB_USER'] },
         { label: 'Sub-User Stats', href: '/sub-user-dashboard', icon: <TrendingUp className="w-5 h-5" />, roles: ['SUB_USER'] },
-        { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Loan Plans', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
@@ -102,7 +104,8 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'] },
     ];
 
-    const user = (session as any)?.user;
+    //const user = (session as any)?.user;
+    //const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
     const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
 
     return (
