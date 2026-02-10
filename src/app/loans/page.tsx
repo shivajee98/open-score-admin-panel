@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
+import FormDetailsModal from '@/components/loans/FormDetailsModal';
 
 export default function LoanApprovals() {
     const [loans, setLoans] = useState<any[]>([]);
@@ -12,7 +13,9 @@ export default function LoanApprovals() {
     const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
     const [selectedLoan, setSelectedLoan] = useState<any>(null);
+    const [formDetailLoan, setFormDetailLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [exporting, setExporting] = useState(false);
 
     // Filters & Pagination
     const [search, setSearch] = useState('');
@@ -59,13 +62,120 @@ export default function LoanApprovals() {
         try {
             // Normalize path
             const path = endpoint ? (endpoint.startsWith('/') ? endpoint : `/${endpoint}`) : '';
-            await apiFetch(`/admin/loans/${id}${path}`, { method });
-            alert(successMsg);
+            const response = await apiFetch(`/admin/loans/${id}${path}`, { method });
+
+            if (response && response.data && response.data.kyc_link) {
+                prompt("KYC Link generated (Copy below):", response.data.kyc_link);
+            } else if (response && response.kyc_link) {
+                prompt("KYC Link generated (Copy below):", response.kyc_link);
+            } else {
+                alert(successMsg);
+            }
             loadLoans();
         } catch (e) {
             alert('Action failed');
         } finally {
             setActionLoading(null);
+        }
+    };
+
+    // Excel Export Handler
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            // Dynamically import xlsx
+            const XLSX = await import('xlsx');
+
+            // Fetch ALL loans (not paginated) for export
+            const endpoint = activeTab === 'requests' ? '/admin/loans' : '/admin/loans/history';
+            const query = new URLSearchParams({
+                search: search,
+                status: statusFilter,
+                page: '1',
+                per_page: '999'
+            });
+            const response = await apiFetch(`${endpoint}?${query}`);
+            const allLoans = response?.data || response || [];
+
+            if (!allLoans.length) {
+                alert('No data to export');
+                setExporting(false);
+                return;
+            }
+
+            // Flatten loan data for Excel
+            const rows = allLoans.map((loan: any) => {
+                const formData = loan.form_data || {};
+                const user = loan.user || {};
+
+                return {
+                    'Loan ID': loan.id,
+                    'Display ID': loan.display_id || loan.id,
+                    'Status': loan.status,
+                    'Applicant Name': user.name || '',
+                    'Mobile': user.mobile_number || '',
+                    'Email': user.email || formData.email || '',
+                    'Amount': loan.amount,
+                    'Tenure': loan.tenure,
+                    'Payout Frequency': loan.payout_frequency,
+                    'Application Date': loan.created_at ? new Date(loan.created_at).toLocaleDateString() : '',
+                    'Approved Date': loan.approved_at ? new Date(loan.approved_at).toLocaleDateString() : '',
+                    'Disbursed Date': loan.disbursed_at ? new Date(loan.disbursed_at).toLocaleDateString() : '',
+                    'Paid Amount': loan.paid_amount || 0,
+                    // KYC Form Fields
+                    'First Name': formData.first_name || '',
+                    'Last Name': formData.last_name || '',
+                    'Date of Birth': formData.birth_day && formData.birth_month && formData.birth_year
+                        ? `${formData.birth_day}/${formData.birth_month}/${formData.birth_year}` : '',
+                    'Marital Status': formData.marital_status || '',
+                    'Phone': formData.phone || '',
+                    'Street Address': formData.street_address || '',
+                    'City': formData.city || '',
+                    'State': formData.state || '',
+                    'PIN Code': formData.postal_code || '',
+                    'Aadhaar Number': formData.aadhar_number || '',
+                    'PAN Number': formData.pan_number || '',
+                    'Employer': formData.employer || '',
+                    'Occupation': formData.occupation || '',
+                    'Experience (Years)': formData.experience_years || '',
+                    'Gross Monthly Income': formData.gross_monthly_income || '',
+                    'Annual Income': formData.annual_income || '',
+                    'Rent/Mortgage': formData.rent_mortgage || '',
+                    'Loan Usage': formData.loan_usage || '',
+                    // Bank Details (from user model)
+                    'Bank Name': user.bank_name || formData.bank_name || '',
+                    'IFSC Code': user.ifsc_code || formData.ifsc_code || '',
+                    'Account Holder': user.account_holder_name || formData.account_holder_name || '',
+                    'Account Number': user.account_number || formData.account_number || '',
+                    // KYC Photo URLs
+                    'Aadhaar Front': formData.aadhar_front?.url || '',
+                    'Aadhaar Back': formData.aadhar_back?.url || '',
+                    'PAN Front': formData.pan_front?.url || '',
+                    'Selfie': formData.selfie?.url || '',
+                    'Property Photo 1': formData.prop_1?.url || '',
+                    'Property Photo 2': formData.prop_2?.url || '',
+                    'Property Photo 3': formData.prop_3?.url || '',
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+
+            // Auto-size columns
+            const colWidths = Object.keys(rows[0]).map(key => ({
+                wch: Math.max(key.length + 2, ...rows.map((r: any) => String(r[key] || '').length).slice(0, 20))
+            }));
+            ws['!cols'] = colWidths;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, activeTab === 'requests' ? 'Pending Loans' : 'Loan History');
+
+            const fileName = `openscore_${activeTab === 'requests' ? 'pending_loans' : 'loan_history'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        } catch (err) {
+            console.error('Export failed', err);
+            alert('Failed to export Excel file');
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -130,10 +240,21 @@ export default function LoanApprovals() {
                             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         />
                     </div>
+
+                    {/* Download Excel Button */}
+                    <button
+                        onClick={handleExportExcel}
+                        disabled={exporting || loans.length === 0}
+                        className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Download size={16} />
+                        {exporting ? 'Exporting...' : 'Excel'}
+                    </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+            {/* Pipeline Card - Full width with 8px margin */}
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden -mx-[8px] md:-mx-[24px]">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                     <div>
                         <h3 className="text-xl font-black text-slate-900">
@@ -262,14 +383,24 @@ export default function LoanApprovals() {
                                                     </button>
                                                 )}
 
-                                                {/* Universal Management Actions */}
+                                                {/* View Form Details Button */}
+                                                <button
+                                                    onClick={() => setFormDetailLoan(loan)}
+                                                    className="p-2.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
+                                                    title="View Form Details"
+                                                >
+                                                    <FileText size={18} />
+                                                </button>
+
+                                                {/* View Repayment Schedule Button */}
                                                 <button
                                                     onClick={() => setSelectedLoan(loan.id)}
                                                     className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                                    title="View Details"
+                                                    title="View Repayment Schedule"
                                                 >
                                                     <Eye size={18} />
                                                 </button>
+
                                                 <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity ml-4 border-l pl-4 border-slate-100">
                                                     {['DISBURSED'].includes(loan.status) && (
                                                         <button
@@ -321,7 +452,7 @@ export default function LoanApprovals() {
                 </div>
             </div>
 
-            {/* Preview Modal */}
+            {/* Preview Modal (legacy KYC preview) */}
             {previewLoan && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl">
@@ -372,6 +503,15 @@ export default function LoanApprovals() {
                 </div>
             )}
 
+            {/* Form Details Modal */}
+            {formDetailLoan && (
+                <FormDetailsModal
+                    loan={formDetailLoan}
+                    onClose={() => setFormDetailLoan(null)}
+                />
+            )}
+
+            {/* Repayment Schedule Modal */}
             {selectedLoan && (
                 <LoanDetailModal
                     loanId={selectedLoan}

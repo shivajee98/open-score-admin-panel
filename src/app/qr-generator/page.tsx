@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import AdminLayout from '@/components/AdminLayout';
 
 export default function QrGenerator() {
     const [count, setCount] = useState(12);
@@ -87,18 +88,34 @@ export default function QrGenerator() {
         }
     };
 
-    const handleDeleteAll = async () => {
-        if (!confirm('CRITICAL ACTION: Are you sure you want to delete ALL QR batches and codes? This cannot be undone and all existing physical QR codes will become invalid.')) return;
+    const handleDeleteUnmappedInBatch = async () => {
+        if (!selectedBatchId) return;
+        const batch = batches.find(b => b.id.toString() === selectedBatchId.toString());
+        if (!confirm(`Are you sure you want to delete ALL UNMAPPED QR codes in "${batch?.name || 'this batch'}"? Mapped QRs will be preserved.`)) return;
 
         setLoading(true);
         try {
-            await apiFetch('/admin/qr/delete-all', { method: 'DELETE' });
-            setBatches([]);
+            await apiFetch(`/admin/qr/batches/${selectedBatchId}/unmapped`, { method: 'DELETE' });
+            await fetchBatches();
+            if (selectedBatchId) fetchCodes(selectedBatchId);
+        } catch (e: any) {
+            alert(e.message || 'Failed to delete codes');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteUnmappedGlobal = async () => {
+        if (!confirm('CRITICAL ACTION: Are you sure you want to delete ALL UNMAPPED QR codes across ALL batches? Mapped QRs will be preserved.')) return;
+
+        setLoading(true);
+        try {
+            await apiFetch('/admin/qr/unmapped', { method: 'DELETE' });
+            await fetchBatches();
             setCodes([]);
             setSelectedBatchId('');
-            alert('All QR data has been wiped successfully.');
         } catch (e: any) {
-            alert(e.message || 'Failed to delete all batches');
+            alert(e.message || 'Failed to delete all unmapped codes');
         } finally {
             setLoading(false);
         }
@@ -120,8 +137,10 @@ export default function QrGenerator() {
     );
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 pb-24 print:p-0 print:bg-white shadow-inner">
-            <style jsx global>{`
+        <AdminLayout title="QR Control Center">
+            <title>QR Control Center | OpenScore</title>
+            <div className="min-h-screen bg-slate-50 p-6 pb-24 print:p-0 print:bg-white">
+                <style jsx global>{`
                 @media print {
                     @page {
                         size: A4 landscape;
@@ -306,275 +325,279 @@ export default function QrGenerator() {
                 }
             `}</style>
 
-            {/* Header - Hide on print */}
-            <div className="no-print">
-                <Link href="/" className="inline-flex items-center text-slate-400 hover:text-blue-600 mb-6 font-bold text-xs uppercase tracking-widest transition-colors">
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Back to Dashboard
-                </Link>
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">QR Control Center</h1>
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-2">
-                            <Zap size={14} /> Total Batches: {batches.length}
+                {/* Header - Hide on print */}
+                <div className="no-print">
+                    <div className="flex justify-between items-center mb-6">
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight invisible h-0">QR Control Center</h1>
+                        <div className="flex items-center gap-4">
+                            <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-2">
+                                <Zap size={14} /> Total Batches: {batches.length}
+                            </div>
+                            <button
+                                onClick={handleDeleteUnmappedGlobal}
+                                className="bg-rose-50 text-rose-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center gap-2"
+                            >
+                                <Trash2 size={12} /> Wipe All Unmapped
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 mb-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                        <div className="md:col-span-1">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Active Batch</label>
-                            <select
-                                value={selectedBatchId}
-                                onChange={e => handleBatchChange(e.target.value)}
-                                className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
-                            >
-                                {batches.map((b: any) => (
-                                    <option key={b.id} value={b.id}>
-                                        {b.name} ({b.count} QR)
-                                    </option>
-                                ))}
-                                {batches.length === 0 && <option value="">No batches found</option>}
-                            </select>
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                            <div className="md:col-span-1">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Active Batch</label>
+                                <select
+                                    value={selectedBatchId}
+                                    onChange={e => handleBatchChange(e.target.value)}
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
+                                >
+                                    {batches.map((b: any) => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name} ({b.count} QR)
+                                        </option>
+                                    ))}
+                                    {batches.length === 0 && <option value="">No batches found</option>}
+                                </select>
+                            </div>
+                            <div className="md:col-span-1">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">New Batch Label</label>
+                                <input
+                                    type="text"
+                                    value={batchName}
+                                    onChange={e => setBatchName(e.target.value)}
+                                    placeholder=" Pune Hub..."
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Quantity</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="1000"
+                                    value={count}
+                                    onChange={e => setCount(Number(e.target.value))}
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={generateCodes}
+                                    disabled={loading}
+                                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {loading ? 'Processing...' : 'Generate New Batch'}
+                                </button>
+                                {batches.length > 0 && (
+                                    <button
+                                        onClick={handleDeleteUnmappedInBatch}
+                                        disabled={loading || !selectedBatchId}
+                                        className="w-full py-2 bg-rose-50 text-rose-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Trash2 size={12} /> Delete Unmapped in Batch
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div className="md:col-span-1">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">New Batch Label</label>
+                    </div>
+
+                    {/* Local Search */}
+                    <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 type="text"
-                                value={batchName}
-                                onChange={e => setBatchName(e.target.value)}
-                                placeholder=" Pune Hub..."
-                                className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                                placeholder="Locate Specific QR / Merchant Mapping..."
+                                className="w-full pl-16 pr-8 py-4 bg-white border border-slate-100 rounded-3xl font-bold text-slate-900 placeholder:text-slate-300 shadow-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="md:col-span-1">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Quantity</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="1000"
-                                value={count}
-                                onChange={e => setCount(Number(e.target.value))}
-                                className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <button
-                                onClick={generateCodes}
-                                disabled={loading}
-                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
-                            >
-                                {loading ? 'Processing...' : 'Generate New Batch'}
-                            </button>
-                            {batches.length > 0 && (
-                                <button
-                                    onClick={handleDeleteAll}
-                                    disabled={loading}
-                                    className="w-full py-2 bg-rose-50 text-rose-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Trash2 size={12} /> Delete All Data
-                                </button>
-                            )}
-                        </div>
+                        <button
+                            onClick={handlePrint}
+                            disabled={loading || isPreparingPrint}
+                            className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
+                        >
+                            {isPreparingPrint ? <Zap className="animate-pulse" size={18} /> : <Printer size={18} />}
+                            {isPreparingPrint ? 'Preparing QRs...' : 'Print Sheet'}
+                        </button>
                     </div>
                 </div>
 
-                {/* Local Search */}
-                <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
-                    <div className="relative flex-1 group">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Locate Specific QR / Merchant Mapping..."
-                            className="w-full pl-16 pr-8 py-4 bg-white border border-slate-100 rounded-3xl font-bold text-slate-900 placeholder:text-slate-300 shadow-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <button
-                        onClick={handlePrint}
-                        disabled={loading || isPreparingPrint}
-                        className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
-                    >
-                        {isPreparingPrint ? <Zap className="animate-pulse" size={18} /> : <Printer size={18} />}
-                        {isPreparingPrint ? 'Preparing QRs...' : 'Print Sheet'}
-                    </button>
-                </div>
-            </div>
-
-            {/* Screen View - Grid */}
-            <div className="no-print">
-                {codes.length > 0 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-                            {filteredCodes.slice(0, displayLimit).map((code) => (
-                                <div
-                                    key={code.id}
-                                    onClick={() => setSelectedCode(code)}
-                                    className={cn(
-                                        "bg-white p-6 rounded-[2rem] border-2 flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl relative",
-                                        code.status === 'assigned' ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-50'
-                                    )}
-                                >
-                                    <div className="absolute top-3 right-3">
-                                        {code.status === 'assigned' ? (
-                                            <div className="bg-indigo-600 p-1.5 rounded-full text-white shadow-lg"><UserCheck size={12} strokeWidth={3} /></div>
-                                        ) : (
-                                            <div className="bg-emerald-500 p-1.5 rounded-full text-white shadow-lg"><CheckCircle size={12} strokeWidth={3} /></div>
+                {/* Screen View - Grid */}
+                <div className="no-print">
+                    {codes.length > 0 && (
+                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+                                {filteredCodes.slice(0, displayLimit).map((code) => (
+                                    <div
+                                        key={code.id}
+                                        onClick={() => setSelectedCode(code)}
+                                        className={cn(
+                                            "bg-white p-6 rounded-[2rem] border-2 flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl relative",
+                                            code.status === 'assigned' ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-50'
                                         )}
-                                    </div>
+                                    >
+                                        <div className="absolute top-3 right-3">
+                                            {code.status === 'assigned' ? (
+                                                <div className="bg-indigo-600 p-1.5 rounded-full text-white shadow-lg"><UserCheck size={12} strokeWidth={3} /></div>
+                                            ) : (
+                                                <div className="bg-emerald-500 p-1.5 rounded-full text-white shadow-lg"><CheckCircle size={12} strokeWidth={3} /></div>
+                                            )}
+                                        </div>
 
-                                    <div className="mb-4 mt-2">
-                                        <div className="p-3 bg-white rounded-3xl shadow-lg border border-slate-100">
-                                            <QRCode value={code.code} size={160} level="H" />
+                                        <div className="mb-4 mt-2">
+                                            <div className="p-3 bg-white rounded-3xl shadow-lg border border-slate-100">
+                                                <QRCode value={code.code} size={160} level="H" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-tighter truncate max-w-[140px]">
+                                                {code.status === 'assigned' ? (code.merchant_name || 'Assigned') : 'V.1 MAPPABLE'}
+                                            </h4>
+                                            <p className="text-[9px] font-mono text-slate-400 font-bold">{code.code.substring(0, 13)}</p>
+                                        </div>
+
+                                        <div className="mt-4 pt-4 border-t border-slate-100 w-full flex items-center justify-center gap-2 grayscale opacity-40">
+                                            <span className="text-[8px] font-black italic">OpenScore Pay</span>
                                         </div>
                                     </div>
+                                ))}
+                            </div>
 
-                                    <div className="space-y-1">
-                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-tighter truncate max-w-[140px]">
-                                            {code.status === 'assigned' ? (code.merchant_name || 'Assigned') : 'V.1 MAPPABLE'}
-                                        </h4>
-                                        <p className="text-[9px] font-mono text-slate-400 font-bold">{code.code.substring(0, 13)}</p>
-                                    </div>
-
-                                    <div className="mt-4 pt-4 border-t border-slate-100 w-full flex items-center justify-center gap-2 grayscale opacity-40">
-                                        <span className="text-[8px] font-black italic">OpenScore Pay</span>
-                                    </div>
+                            {filteredCodes.length > displayLimit && (
+                                <div className="mt-12 text-center">
+                                    <button
+                                        onClick={() => setDisplayLimit(displayLimit + 60)}
+                                        className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                                    >
+                                        Load More ({filteredCodes.length - displayLimit} Remaining)
+                                    </button>
+                                    <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                        Displaying {displayLimit} of {filteredCodes.length} QR codes to preserve performance.
+                                    </p>
                                 </div>
-                            ))}
+                            )}
+                            {filteredCodes.length === 0 && (
+                                <div className="p-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
+                                    <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                    <p className="font-black text-slate-400 uppercase tracking-widest text-sm">No matching QR found in this batch</p>
+                                </div>
+                            )}
                         </div>
+                    )}
+                </div>
 
-                        {filteredCodes.length > displayLimit && (
-                            <div className="mt-12 text-center">
-                                <button
-                                    onClick={() => setDisplayLimit(displayLimit + 60)}
-                                    className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
-                                >
-                                    Load More ({filteredCodes.length - displayLimit} Remaining)
-                                </button>
-                                <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                    Displaying {displayLimit} of {filteredCodes.length} QR codes to preserve performance.
-                                </p>
-                            </div>
-                        )}
-                        {filteredCodes.length === 0 && (
-                            <div className="p-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
-                                <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                                <p className="font-black text-slate-400 uppercase tracking-widest text-sm">No matching QR found in this batch</p>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                {/* Print View - Renders ALL QRs regardless of displayLimit to ensure complete printing */}
+                {isPreparingPrint && filteredCodes.length > 0 && (
+                    <div className="fixed inset-0 z-[-1] bg-white print:static print:z-auto">
+                        {Array.from({ length: Math.ceil(filteredCodes.length / 3) }).map((_, pageIndex) => (
+                            <div key={pageIndex} className="print-page flex items-center justify-center gap-4 p-4">
+                                {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
+                                    <div key={code.id} className="qr-card-branded flex-1">
+                                        {/* Top Branding */}
+                                        <div className="qr-brand-top">
+                                            <div className="msme">MSME SHAKTI</div>
+                                            <div className="openscore">OPEN SCORE</div>
+                                            <div className="tagline">Unlock Cashback Rewards!</div>
+                                        </div>
 
-            {/* Print View - Renders ALL QRs regardless of displayLimit to ensure complete printing */}
-            {isPreparingPrint && filteredCodes.length > 0 && (
-                <div className="fixed inset-0 z-[-1] bg-white print:static print:z-auto">
-                    {Array.from({ length: Math.ceil(filteredCodes.length / 3) }).map((_, pageIndex) => (
-                        <div key={pageIndex} className="print-page flex items-center justify-center gap-4 p-4">
-                            {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
-                                <div key={code.id} className="qr-card-branded flex-1">
-                                    {/* Top Branding */}
-                                    <div className="qr-brand-top">
-                                        <div className="msme">MSME SHAKTI</div>
-                                        <div className="openscore">OPEN SCORE</div>
-                                        <div className="tagline">Unlock Cashback Rewards!</div>
-                                    </div>
+                                        {/* QR with Glow Ring */}
+                                        <div className="qr-ring-container">
+                                            <div className="qr-ring"></div>
+                                            <div className="qr-box">
+                                                <QRCode value={code.code} size={220} level="H" />
+                                                <div className="check-badge">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                                        <path d="M20 6L9 17l-5-5" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                    {/* QR with Glow Ring */}
-                                    <div className="qr-ring-container">
-                                        <div className="qr-ring"></div>
-                                        <div className="qr-box">
-                                            <QRCode value={code.code} size={220} level="H" />
-                                            <div className="check-badge">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                                    <path d="M20 6L9 17l-5-5" />
-                                                </svg>
+                                        {/* Bottom Text */}
+                                        <div className="qr-bottom">
+                                            <div className="scan-pay">SCAN & PAY</div>
+                                            <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
+                                            <div className="for-text">For Businesses & Customers</div>
+                                        </div>
+
+                                        {/* Footer */}
+                                        <div className="qr-footer">
+                                            <div className="powered">
+                                                <div className="icon"></div>
+                                                <span>Powered by MSME Shakti</span>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Bottom Text */}
-                                    <div className="qr-bottom">
-                                        <div className="scan-pay">SCAN & PAY</div>
-                                        <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
-                                        <div className="for-text">For Businesses & Customers</div>
-                                    </div>
-
-                                    {/* Footer */}
-                                    <div className="qr-footer">
-                                        <div className="powered">
-                                            <div className="icon"></div>
-                                            <span>Powered by MSME Shakti</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Code Details Modal */}
-            {selectedCode && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6 no-print" onClick={() => setSelectedCode(null)}>
-                    <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-3xl animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
-                        <div className="flex flex-col items-center">
-                            <div className="p-4 bg-white rounded-[2rem] shadow-2xl border-4 border-slate-50 mb-8">
-                                <QRCode value={selectedCode.code} size={180} />
+                                ))}
                             </div>
+                        ))}
+                    </div>
+                )}
 
-                            <div className="w-full space-y-6 text-center">
-                                <div>
-                                    <span className={cn(
-                                        "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest inline-block",
-                                        selectedCode.status === 'assigned' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
-                                    )}>
-                                        {selectedCode.status}
-                                    </span>
-                                    <p className="mt-2 text-xs font-mono font-bold text-slate-400 break-all">{selectedCode.code}</p>
+                {/* Code Details Modal */}
+                {selectedCode && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6 no-print" onClick={() => setSelectedCode(null)}>
+                        <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-3xl animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
+                            <div className="flex flex-col items-center">
+                                <div className="p-4 bg-white rounded-[2rem] shadow-2xl border-4 border-slate-50 mb-8">
+                                    <QRCode value={selectedCode.code} size={180} />
                                 </div>
 
-                                {selectedCode.status === 'assigned' ? (
-                                    <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-4">
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Merchant Profile</p>
-                                            <h3 className="font-black text-slate-900 leading-tight">{selectedCode.merchant_name}</h3>
-                                            <p className="text-sm font-bold text-indigo-600">{selectedCode.merchant_mobile}</p>
-                                        </div>
-                                        <div className="pt-4 border-t border-slate-200/50">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activation Timeline</p>
-                                            <p className="text-xs font-bold text-slate-600">{new Date(selectedCode.updated_at).toLocaleString()}</p>
-                                        </div>
+                                <div className="w-full space-y-6 text-center">
+                                    <div>
+                                        <span className={cn(
+                                            "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest inline-block",
+                                            selectedCode.status === 'assigned' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
+                                        )}>
+                                            {selectedCode.status}
+                                        </span>
+                                        <p className="mt-2 text-xs font-mono font-bold text-slate-400 break-all">{selectedCode.code}</p>
                                     </div>
-                                ) : (
-                                    <div className="bg-blue-50/50 p-8 rounded-[2rem] border border-blue-100">
-                                        <Info className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-                                        <p className="text-sm font-bold text-blue-900">Unlinked Asset</p>
-                                        <p className="text-xs text-blue-600/70 mt-1">This code is ready for merchant deployment.</p>
-                                    </div>
-                                )}
 
-                                <div className="grid grid-cols-5 gap-3">
-                                    <button
-                                        onClick={() => setSelectedCode(null)}
-                                        className="col-span-4 py-5 bg-slate-900 text-white rounded-3xl font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
-                                    >
-                                        Dismiss
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteCode(selectedCode.id)}
-                                        className="col-span-1 py-5 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center hover:bg-rose-100 transition-all font-black"
-                                        title="Revoke QR permanent"
-                                    >
-                                        <Trash2 size={24} />
-                                    </button>
+                                    {selectedCode.status === 'assigned' ? (
+                                        <div className="bg-slate-50 p-6 rounded-[2rem] text-left space-y-4">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Merchant Profile</p>
+                                                <h3 className="font-black text-slate-900 leading-tight">{selectedCode.merchant_name}</h3>
+                                                <p className="text-sm font-bold text-indigo-600">{selectedCode.merchant_mobile}</p>
+                                            </div>
+                                            <div className="pt-4 border-t border-slate-200/50">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activation Timeline</p>
+                                                <p className="text-xs font-bold text-slate-600">{new Date(selectedCode.updated_at).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-blue-50/50 p-8 rounded-[2rem] border border-blue-100">
+                                            <Info className="w-8 h-8 text-blue-400 mx-auto mb-3" />
+                                            <p className="text-sm font-bold text-blue-900">Unlinked Asset</p>
+                                            <p className="text-xs text-blue-600/70 mt-1">This code is ready for merchant deployment.</p>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-5 gap-3">
+                                        <button
+                                            onClick={() => setSelectedCode(null)}
+                                            className="col-span-4 py-5 bg-slate-900 text-white rounded-3xl font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                                        >
+                                            Dismiss
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCode(selectedCode.id)}
+                                            className="col-span-1 py-5 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center hover:bg-rose-100 transition-all font-black"
+                                            title="Revoke QR permanent"
+                                        >
+                                            <Trash2 size={24} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </AdminLayout>
     );
 }

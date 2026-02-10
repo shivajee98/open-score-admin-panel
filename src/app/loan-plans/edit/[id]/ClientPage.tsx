@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
 import { apiFetch } from '@/lib/api';
 import { ArrowLeft } from 'lucide-react';
@@ -44,9 +44,10 @@ const formatTenure = (days: number, type: string = 'months') => {
 
 // Client Component only
 export default function EditLoanPlan() {
-    const { id } = useParams();
+    const params = useParams();
+    const searchParams = useSearchParams();
+    const id = params?.id || searchParams.get('id');
     const router = useRouter();
-    // id prop passed from server component
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -90,14 +90,17 @@ export default function AdminLayout({ children, title }: { children: React.React
     const allNavItems = [
         { label: 'Dashboard', href: '/', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['ADMIN', 'SUB_USER'] },
         { label: 'Sub-User Stats', href: '/sub-user-dashboard', icon: <TrendingUp className="w-5 h-5" />, roles: ['SUB_USER'] },
-        { label: 'Loan Plans', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'QR Control', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Referrals', href: '/referrals', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Support Categories', href: '/support/categories', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
@@ -188,7 +191,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                     </div>
                 </header>
 
-                <div className="p-4 md:p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="p-4 md:p-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {children}
                 </div>
             </main>

@@ -5,11 +5,13 @@ import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { ArrowLeft, Users, TrendingUp, AlertCircle, CheckCircle2, DollarSign, Wallet } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 
 // Client Component only
 export default function LoanPlanInsights() {
-    const { id } = useParams();
+    const params = useParams();
+    const searchParams = useSearchParams();
+    const id = params?.id || searchParams.get('id');
     const router = useRouter();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);

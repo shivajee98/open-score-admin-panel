@@ -9,6 +9,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const [authorized, setAuthorized] = useState(false);
 
     useEffect(() => {
+        // Version Check Logging
+        console.log("%c OpenScore Admin Version: 0.1.2 (Debug Mode) ", "background: #0f172a; color: #38bdf8; font-weight: bold; padding: 4px; border-radius: 4px;");
+    }, []);
+
+    useEffect(() => {
         const token = localStorage.getItem("token");
         // Remove trailing slash for comparison
         const normalizedPathname = pathname?.replace(/\/$/, '') || "";

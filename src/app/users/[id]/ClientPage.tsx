@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import {
@@ -16,8 +16,9 @@ import { cn } from '@/lib/utils';
 
 // Client Component only
 export default function UserDetailsPage() {
-    const { id } = useParams();
-    // id prop passed from server component
+    const params = useParams();
+    const searchParams = useSearchParams();
+    const id = params?.id || searchParams.get('id');
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('LOANS');

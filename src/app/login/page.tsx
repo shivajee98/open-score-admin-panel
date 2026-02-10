@@ -81,7 +81,7 @@ export default function AdminLogin() {
             }
 
             localStorage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('token', data.token); // Store token for apiFetch
+            localStorage.setItem('token', data.access_token); // Store token for apiFetch
 
             // Allow token propagation
             setTimeout(() => {

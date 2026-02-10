@@ -151,14 +151,14 @@ export default function LoanPlansList() {
                                     </td>
                                     <td className="p-6 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Link href={`/loan-plans/${plan.id}/insights`}>
+                                            <Link href={`/loan-plans/insights?id=${plan.id}`}>
                                                 <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View Insights">
                                                     <Info size={16} />
                                                 </button>
                                             </Link>
                                             {activeTab === 'active' ? (
                                                 <>
-                                                    <button onClick={() => router.push(`/loan-plans/edit/${plan.id}`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
+                                                    <button onClick={() => router.push(`/loan-plans/edit?id=${plan.id}`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
                                                         <Edit size={16} />
                                                     </button>
                                                     <button onClick={() => handleDelete(plan.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Archive">

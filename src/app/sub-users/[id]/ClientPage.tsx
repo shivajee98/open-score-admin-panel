@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 import { apiFetch } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
@@ -49,8 +49,9 @@ interface SubUserDetails {
 
 // Client Component only
 export default function SubUserDetailPage() {
-    const { id } = useParams();
-    // id prop passed from server component
+    const params = useParams();
+    const searchParams = useSearchParams();
+    const id = params?.id || searchParams.get('id');
     const router = useRouter();
     const [data, setData] = useState<SubUserDetails | null>(null);
     const [loading, setLoading] = useState(true);

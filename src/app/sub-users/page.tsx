@@ -115,7 +115,7 @@ export default function SubUsersPage() {
                                 <div
                                     key={subUser.id}
                                     className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer"
-                                    onClick={() => router.push(`/sub-users/${subUser.id}`)}
+                                    onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black group-hover:bg-blue-600 transition-colors">
@@ -169,7 +169,7 @@ export default function SubUsersPage() {
                                             Add Credit
                                         </button>
                                         <button
-                                            onClick={() => router.push(`/sub-users/${subUser.id}`)}
+                                            onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
                                             className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
                                         >
                                             <TrendingUp size={20} />

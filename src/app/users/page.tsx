@@ -119,7 +119,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             <td className="p-6 pr-8 text-right">
                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link
-                        href={`/users/${user.id}`}
+                        href={`/users/detail?id=${user.id}`}
                         className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                         title="View Full Details"
                     >

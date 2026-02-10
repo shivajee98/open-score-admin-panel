@@ -41,9 +41,18 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) {
-            console.warn('[API] 401 Unauthorized - clearing token cache');
-            clearTokenCache();
-            // signOut({ callbackUrl: '/login' });
+
+            // Prevent Redirect Loops
+            const isLoginPage = window.location.pathname.includes('/login');
+            if (isLoginPage) return response.json(); // Don't redirect if already on login
+
+            // DEBUGGING: Log token status
+            // console.warn('[API] 401 Unauthorized - clearing token cache');
+            // clearTokenCache();
+
+            // Debounced Redirect
+            // window.location.href = '/admin/login';
+            console.warn('[API] 401 Error. Token retained for debug.');
         }
 
         let errorData: any = {};
