@@ -93,7 +93,7 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
         'auto_approved', 'auto_approved_at'
     ];
 
-    const photoFields = ['aadhar_front', 'aadhar_back', 'pan_front', 'selfie', 'prop_1', 'prop_2', 'prop_3'];
+    const photoFields = ['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'];
     const bankFields = ['bank_name', 'ifsc_code', 'account_holder_name', 'account_number', 'location_url'];
 
     // Extract data categories
@@ -146,10 +146,10 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
                             <h2 className="text-2xl font-black text-slate-900">Form Details</h2>
                             <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">#{loan.display_id || loan.id}</span>
                             <span className={`px-2.5 py-1 text-[9px] font-black rounded-full uppercase tracking-wide border shadow-sm ${loan.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                    loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                        loan.status === 'FORM_SUBMITTED' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                                            loan.status === 'KYC_SENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                'bg-slate-50 text-slate-500 border-slate-100'
+                                loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                    loan.status === 'FORM_SUBMITTED' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                                        loan.status === 'KYC_SENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                            'bg-slate-50 text-slate-500 border-slate-100'
                                 }`}>{loan.status}</span>
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 font-medium">
