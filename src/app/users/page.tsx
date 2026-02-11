@@ -401,6 +401,12 @@ export default function UsersPage() {
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Request Amount</p>
                                             <p className="text-2xl font-black text-slate-900">₹{parseFloat(tx.amount).toLocaleString()}</p>
+                                            <span className={cn(
+                                                "inline-block mt-2 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest",
+                                                tx.type === 'CASHBACK' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                                            )}>
+                                                {tx.type === 'CASHBACK' ? 'System Cashback' : 'Wallet Deposit'}
+                                            </span>
                                         </div>
                                         <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                                             <Clock size={20} />
