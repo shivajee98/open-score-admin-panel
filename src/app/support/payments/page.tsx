@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BadgeCheck, Ban, Filter, Search, Eye, AlertCircle, CheckCircle2, DollarSign, Wallet } from 'lucide-react';
+import { BadgeCheck, Ban, Filter, Search, Eye, AlertCircle, CheckCircle2, DollarSign, Wallet, ShieldAlert } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import AdminLayout from '@/components/AdminLayout';
@@ -149,8 +149,8 @@ export default function PaymentTicketsPage() {
                                 key={s}
                                 onClick={() => setStatusFilter(s)}
                                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${statusFilter === s
-                                        ? 'bg-slate-900 text-white shadow-md'
-                                        : 'text-slate-500 hover:bg-slate-50'
+                                    ? 'bg-slate-900 text-white shadow-md'
+                                    : 'text-slate-500 hover:bg-slate-50'
                                     }`}
                             >
                                 {s.replace('_', ' ')}
@@ -279,28 +279,47 @@ export default function PaymentTicketsPage() {
                         <form onSubmit={handleProcess} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Action Type</label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-3">
                                     <button
                                         type="button"
                                         onClick={() => setProcessData({ ...processData, action: 'recharge' })}
-                                        className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${processData.action === 'recharge'
-                                                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                                : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                                        className={`w-full p-3 rounded-xl border-2 flex items-center gap-4 transition-all ${processData.action === 'recharge'
+                                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                            : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
                                             }`}
                                     >
-                                        <Wallet size={20} />
-                                        <span className="text-xs font-bold">Wallet Recharge</span>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${processData.action === 'recharge' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}>
+                                            <Wallet size={16} />
+                                        </div>
+                                        <span className="text-[11px] font-black uppercase tracking-tight">1. Wallet Recharge</span>
                                     </button>
+
                                     <button
                                         type="button"
                                         onClick={() => setProcessData({ ...processData, action: 'emi' })}
-                                        className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${processData.action === 'emi'
-                                                ? 'border-purple-600 bg-purple-50 text-purple-700'
-                                                : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                                        className={`w-full p-3 rounded-xl border-2 flex items-center gap-4 transition-all ${processData.action === 'emi'
+                                            ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                                            : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
                                             }`}
                                     >
-                                        <DollarSign size={20} />
-                                        <span className="text-xs font-bold">Pay EMI</span>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${processData.action === 'emi' ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}>
+                                            <BadgeCheck size={16} />
+                                        </div>
+                                        <span className="text-[11px] font-black uppercase tracking-tight">2. Loan EMI Payment</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setProcessData({ ...processData, action: 'platform_fee' })}
+                                        className={`w-full p-3 rounded-xl border-2 flex items-center gap-4 transition-all ${processData.action === 'platform_fee'
+                                            ? 'border-slate-900 bg-slate-900 text-white shadow-xl'
+                                            : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                                            }`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${processData.action === 'platform_fee' ? 'bg-white text-slate-900' : 'bg-slate-100'}`}>
+                                            <ShieldAlert size={16} />
+                                        </div>
+                                        <span className="text-[11px] font-black uppercase tracking-tight">3. Platform Fee</span>
                                     </button>
                                 </div>
                             </div>
