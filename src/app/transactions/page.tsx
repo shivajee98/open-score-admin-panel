@@ -107,6 +107,7 @@ export default function GlobalTransactionsPage() {
             case 'PENDING': return 'bg-amber-100 text-amber-700 border-amber-200';
             case 'FAILED': return 'bg-rose-100 text-rose-700 border-rose-200';
             case 'REJECTED': return 'bg-rose-100 text-rose-700 border-rose-200';
+            case 'AGENT_APPROVED': return 'bg-purple-100 text-purple-700 border-purple-200';
             default: return 'bg-slate-100 text-slate-700 border-slate-200';
         }
     };

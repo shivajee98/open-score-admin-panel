@@ -26,6 +26,7 @@ export default function AdminDashboard() {
         recentRepayments: []
     });
     const [pendingTx, setPendingTx] = useState<any[]>([]);
+    const [pendingRepayments, setPendingRepayments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -39,10 +40,11 @@ export default function AdminDashboard() {
     const loadData = async () => {
         try {
             // Parallel fetch for speed
-            const [analytics, pending, users] = await Promise.all([
+            const [analytics, pending, users, pendingRepays] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
-                apiFetch('/admin/users')
+                apiFetch('/admin/users'),
+                apiFetch('/admin/repayments/pending')
             ]);
 
             setStats({
@@ -59,6 +61,7 @@ export default function AdminDashboard() {
                 recentRepayments: analytics?.recent_repayments || []
             });
             setPendingTx(Array.isArray(pending) ? pending : []);
+            setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
         } catch (error) {
             console.error('Failed to load admin data', error);
         } finally {
@@ -85,6 +88,17 @@ export default function AdminDashboard() {
             loadData();
         } catch (e) {
             alert('Rejection failed');
+        }
+    };
+
+    const handleRepaymentApprove = async (id: number) => {
+        if (!confirm('Final Approve this repayment?')) return;
+        try {
+            await apiFetch(`/admin/repayments/${id}/approve`, { method: 'POST' });
+            alert('Repayment Approved!');
+            loadData();
+        } catch (e) {
+            alert('Approval failed');
         }
     };
 
