@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser }: any) => {
     const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage || '');
     const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -40,14 +41,18 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
         }
     };
 
+    const isAdmin = currentUser?.role === 'ADMIN';
+
     return (
         <tr className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
             <td className="p-6 text-center">
-                <button onClick={() => toggleSelect(user.id)}>
-                    {selectedIds.includes(user.id) ?
-                        <CheckSquare className="text-blue-600" /> : <Square className="text-slate-300 group-hover:text-slate-400" />
-                    }
-                </button>
+                {isAdmin && (
+                    <button onClick={() => toggleSelect(user.id)}>
+                        {selectedIds.includes(user.id) ?
+                            <CheckSquare className="text-blue-600" /> : <Square className="text-slate-300 group-hover:text-slate-400" />
+                        }
+                    </button>
+                )}
             </td>
             <td className="p-6 pl-2">
                 <div className="flex items-center gap-4">
@@ -72,42 +77,49 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
             </td>
 
-            {/* Inline Cashback Inputs */}
+            {/* Inline Cashback Inputs - Only for Admin */}
             <td className="p-6">
-                <div className="flex items-center gap-2">
-                    <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        placeholder="%"
-                        className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
-                        value={cashbackPercent}
-                        onChange={(e) => setCashbackPercent(e.target.value)}
-                    />
-                </div>
+                {isAdmin ? (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="%"
+                            className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
+                            value={cashbackPercent}
+                            onChange={(e) => setCashbackPercent(e.target.value)}
+                        />
+                    </div>
+                ) : (
+                    <span className="text-slate-400 font-mono text-sm">{user.cashback_percentage || 0}%</span>
+                )}
             </td>
             <td className="p-6">
-                <div className="flex items-center gap-2">
-                    <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="₹"
-                        className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
-                        value={cashbackFlat}
-                        onChange={(e) => setCashbackFlat(e.target.value)}
-                    />
-                    {/* Update Button for both fields */}
-                    <button
-                        onClick={handleSaveCashback}
-                        disabled={isSaving}
-                        className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors ml-2"
-                        title="Update Cashback Rules"
-                    >
-                        <Save className="w-4 h-4" />
-                    </button>
-                </div>
+                {isAdmin ? (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="₹"
+                            className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
+                            value={cashbackFlat}
+                            onChange={(e) => setCashbackFlat(e.target.value)}
+                        />
+                        <button
+                            onClick={handleSaveCashback}
+                            disabled={isSaving}
+                            className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors ml-2"
+                            title="Update Cashback Rules"
+                        >
+                            <Save className="w-4 h-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <span className="text-slate-400 font-mono text-sm">₹{user.cashback_flat_amount || 0}</span>
+                )}
             </td>
 
             <td className="p-6">
@@ -125,13 +137,17 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     >
                         <Eye className="w-5 h-5" />
                     </Link>
-                    <button
-                        onClick={() => toggleStatus(user)}
-                        className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
-                        title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
-                    >
-                        {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
-                    </button>
+
+                    {isAdmin && (
+                        <button
+                            onClick={() => toggleStatus(user)}
+                            className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                            title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
+                        >
+                            {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                        </button>
+                    )}
+
                     <button
                         onClick={() => { setSelectedUser(user); setIsCreditsModalOpen(true); }}
                         className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
@@ -139,13 +155,16 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     >
                         <Plus className="w-5 h-5" />
                     </button>
-                    <button
-                        onClick={() => handleDelete(user.id)}
-                        className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                        title="Delete User"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
+
+                    {isAdmin && (
+                        <button
+                            onClick={() => handleDelete(user.id)}
+                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
+                            title="Delete User"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
             </td>
         </tr>
@@ -153,11 +172,18 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
 };
 
 export default function UsersPage() {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
+    const [pendingTransactions, setPendingTransactions] = useState([]);
+    const [pendingServiceFees, setPendingServiceFees] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+
+    // Add Funds Modal State
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [amount, setAmount] = useState('');
+    const [creditType, setCreditType] = useState('WALLET_TOPUP');
+    const [description, setDescription] = useState('');
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
 
     // Bulk Cashback States
@@ -177,9 +203,33 @@ export default function UsersPage() {
         }
     };
 
+    const loadPendingTransactions = async () => {
+        if (currentUser?.role !== 'ADMIN') return;
+        try {
+            const data = await apiFetch('/admin/funds/pending');
+            setPendingTransactions(data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const loadPendingServiceFees = async () => {
+        if (currentUser?.role !== 'ADMIN') return;
+        try {
+            const data: any = await apiFetch('/admin/support/payment-tickets?status=AGENT_APPROVED');
+            setPendingServiceFees(data.data || []);
+        } catch (e) {
+            console.error("Failed to load service fee requests", e);
+        }
+    };
+
     useEffect(() => {
         loadUsers();
-    }, []);
+        if (currentUser?.role === 'ADMIN') {
+            loadPendingTransactions();
+            loadPendingServiceFees();
+        }
+    }, [currentUser]);
 
     const handleAddFunds = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -187,15 +237,74 @@ export default function UsersPage() {
             await apiFetch(`/admin/users/${selectedUser.id}/credit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: parseFloat(amount) })
+                body: JSON.stringify({
+                    amount: parseFloat(amount),
+                    type: creditType,
+                    description: description
+                })
             });
 
-            alert('Success! Funds added successfully.');
+            const msg = currentUser?.role === 'ADMIN'
+                ? 'Success! Funds added successfully.'
+                : 'Request Submitted! Pending Admin Approval.';
+
+            alert(msg);
             setIsCreditsModalOpen(false);
             setAmount('');
+            setDescription('');
+            setCreditType('WALLET_TOPUP');
+
             loadUsers();
+            if (currentUser?.role === 'ADMIN') loadPendingTransactions();
         } catch (e) {
             alert('Error adding funds');
+        }
+    };
+
+    const handleApproveFund = async (id: number) => {
+        if (!confirm('Approve this transaction?')) return;
+        try {
+            await apiFetch(`/admin/funds/${id}/approve`, { method: 'POST' });
+            loadPendingTransactions();
+            loadUsers(); // Update balances
+        } catch (e) {
+            alert('Failed to approve');
+        }
+    };
+
+    const handleRejectFund = async (id: number) => {
+        if (!confirm('Reject this transaction?')) return;
+        try {
+            await apiFetch(`/admin/funds/${id}/reject`, { method: 'POST' });
+            loadPendingTransactions();
+        } catch (e) {
+            alert('Failed to reject');
+        }
+    };
+
+    const handleApproveServiceFee = async (id: number) => {
+        if (!confirm('Approve this service fee payment?')) return;
+        try {
+            await apiFetch(`/admin/support/tickets/${id}/approve-payment`, { method: 'POST' });
+            loadPendingServiceFees();
+            loadUsers(); // Update balances as needed
+        } catch (e) {
+            alert('Failed to approve service fee');
+        }
+    };
+
+    const handleRejectServiceFee = async (id: number) => {
+        const reason = prompt("Enter rejection reason:");
+        if (!reason) return;
+        try {
+            await apiFetch(`/admin/support/tickets/${id}/reject-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+            loadPendingServiceFees();
+        } catch (e) {
+            alert('Failed to reject service fee');
         }
     };
 
@@ -267,8 +376,142 @@ export default function UsersPage() {
         (u.mobile_number || '').includes(search)
     );
 
+    const isAdmin = currentUser?.role === 'ADMIN';
+
     return (
         <AdminLayout title="User Management">
+
+            {/* Pending Approvals Section (Admin Only) */}
+            {isAdmin && pendingTransactions.length > 0 && (
+                <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Clock className="text-amber-500" />
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Fund Requests</h3>
+                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-black">{pendingTransactions.length}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pendingTransactions.map((tx: any) => (
+                            <div key={tx.id} className="bg-white p-6 rounded-[2rem] border border-amber-100 shadow-lg shadow-amber-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Clock size={48} className="text-amber-500" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Request Amount</p>
+                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(tx.amount).toLocaleString()}</p>
+                                        </div>
+                                        <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                                            <Clock size={20} />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-6">
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Beneficiary (User)</p>
+                                            <p className="font-bold text-slate-800 text-sm">{tx.user_name}</p>
+                                            <p className="font-mono text-xs text-slate-500">{tx.user_mobile}</p>
+                                        </div>
+                                        {tx.agent_name && (
+                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Requested By (Agent)</p>
+                                                <p className="font-bold text-blue-800 text-sm">{tx.agent_name}</p>
+                                                <p className="text-[10px] font-bold text-blue-500 uppercase">{tx.agent_role}</p>
+                                            </div>
+                                        )}
+                                        {tx.description && (
+                                            <div className="p-2">
+                                                <p className="text-[10px] text-slate-500 italic">"{tx.description}"</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleRejectFund(tx.id)}
+                                            className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleApproveFund(tx.id)}
+                                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                                        >
+                                            Approve
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Pending Service/Platform Fees Section (Admin Only) */}
+            {isAdmin && pendingServiceFees.length > 0 && (
+                <div className="mb-8 animate-in slide-in-from-top-4 duration-500 delay-100">
+                    <div className="flex items-center gap-3 mb-4">
+                        <CheckCircle className="text-indigo-500" />
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Service Fee Payment Approvals</h3>
+                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-black">{pendingServiceFees.length}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pendingServiceFees.map((ticket: any) => (
+                            <div key={ticket.id} className="bg-white p-6 rounded-[2rem] border border-indigo-100 shadow-lg shadow-indigo-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <ReceiptIndianRupee size={48} className="text-indigo-500" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fee Amount</p>
+                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(ticket.payment_amount).toLocaleString()}</p>
+                                        </div>
+                                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                                            <CheckCircle size={20} />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-6">
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">User Details</p>
+                                            <p className="font-bold text-slate-800 text-sm">{ticket.user?.name}</p>
+                                            <p className="font-mono text-xs text-slate-500">{ticket.user?.mobile_number}</p>
+                                        </div>
+                                        {ticket.assigned_agent && (
+                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Completed By (Agent)</p>
+                                                <p className="font-bold text-blue-800 text-sm">{ticket.assigned_agent.name}</p>
+                                                <p className="text-[10px] font-bold text-blue-500 uppercase">AGENT_APPROVED</p>
+                                            </div>
+                                        )}
+                                        <div className="p-2">
+                                            <p className="text-[10px] text-slate-500 italic">Action: {ticket.sub_action?.replace(/_/g, ' ') || 'Service Fee'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleRejectServiceFee(ticket.id)}
+                                            className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleApproveServiceFee(ticket.id)}
+                                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                                        >
+                                            Approve
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Header Actions */}
             <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -283,7 +526,7 @@ export default function UsersPage() {
                     />
                 </div>
 
-                {selectedIds.length > 0 && (
+                {isAdmin && selectedIds.length > 0 && (
                     <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
                         <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
                         <button
@@ -303,11 +546,13 @@ export default function UsersPage() {
                         <thead className="bg-slate-50/50">
                             <tr>
                                 <th className="p-6 w-16 text-center">
-                                    <button onClick={toggleSelectAll} className="opacity-50 hover:opacity-100">
-                                        {selectedIds.length > 0 && selectedIds.length === filteredUsers.length ?
-                                            <CheckSquare className="text-blue-600" /> : <Square className="text-slate-400" />
-                                        }
-                                    </button>
+                                    {isAdmin && (
+                                        <button onClick={toggleSelectAll} className="opacity-50 hover:opacity-100">
+                                            {selectedIds.length > 0 && selectedIds.length === filteredUsers.length ?
+                                                <CheckSquare className="text-blue-600" /> : <Square className="text-slate-400" />
+                                            }
+                                        </button>
+                                    )}
                                 </th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">User Details</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
@@ -330,6 +575,7 @@ export default function UsersPage() {
                                     setSelectedUser={setSelectedUser}
                                     setIsCreditsModalOpen={setIsCreditsModalOpen}
                                     reloadUsers={loadUsers}
+                                    currentUser={currentUser}
                                 />
                             ))}
                         </tbody>
@@ -341,22 +587,49 @@ export default function UsersPage() {
             {isCreditsModalOpen && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
-                        <h3 className="text-2xl font-black text-slate-900 mb-2">Add Funds</h3>
-                        <p className="text-slate-500 font-medium mb-6">Request funds for <span className="text-slate-900 font-bold">{selectedUser?.name}</span>. This will require approval.</p>
+                        <h3 className="text-2xl font-black text-slate-900 mb-2">{isAdmin ? 'Add Funds' : 'Request Funds'}</h3>
+                        <p className="text-slate-500 font-medium mb-6">
+                            {isAdmin ? 'Add funds directly to' : 'Submit a request to add funds for'} <span className="text-slate-900 font-bold">{selectedUser?.name}</span>.
+                        </p>
 
                         <form onSubmit={handleAddFunds}>
-                            <div className="mb-6">
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Amount (₹)</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="0.01"
-                                    required
-                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 text-2xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="0.00"
-                                    value={amount}
-                                    onChange={e => setAmount(e.target.value)}
-                                />
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Transaction Type</label>
+                                    <select
+                                        value={creditType}
+                                        onChange={(e) => setCreditType(e.target.value)}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
+                                    >
+                                        <option value="WALLET_TOPUP">Wallet Top-up</option>
+                                        <option value="SERVICE_FEE">Service Fee Payment</option>
+                                        <option value="OTHER">Other Adjustment</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="0.01"
+                                        required
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-2xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
+                                        placeholder="0.00"
+                                        value={amount}
+                                        onChange={e => setAmount(e.target.value)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Description / Note</label>
+                                    <textarea
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-medium text-slate-700 focus:ring-2 focus:ring-blue-100 min-h-[100px]"
+                                        placeholder="Reason for this credit..."
+                                        value={description}
+                                        onChange={e => setDescription(e.target.value)}
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -371,7 +644,7 @@ export default function UsersPage() {
                                     type="submit"
                                     className="py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
                                 >
-                                    Request
+                                    {isAdmin ? 'Add Funds' : 'Submit Request'}
                                 </button>
                             </div>
                         </form>
@@ -379,8 +652,8 @@ export default function UsersPage() {
                 </div>
             )}
 
-            {/* Bulk Cashback Modal */}
-            {isCashbackModalOpen && (
+            {/* Bulk Cashback Modal (Admin Only) */}
+            {isAdmin && isCashbackModalOpen && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
                         <h3 className="text-2xl font-black text-slate-900 mb-2">Cashback Settings</h3>
