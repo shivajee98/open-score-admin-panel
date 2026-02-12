@@ -34,9 +34,7 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     const getStorageUrl = (path: string) => {
         if (!path) return '';
         if (path.startsWith('http')) return path;
-        // Robust way to get base URL: split by /api and take first part
-        const base = API_BASE.split('/api')[0];
-        return `${base}/storage/${path}`;
+        return `https://api.msmeloan.sbs/storage/${path}`;
     };
 
     const loadDetails = async () => {
