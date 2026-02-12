@@ -19,11 +19,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     const endpoint = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
                     const baseUrl = endpoint.startsWith('http') ? endpoint : `https://api.msmeloan.sbs/api${endpoint}`;
 
-                    const isSubUser = credentials.role === 'SUB_USER';
-                    const url = isSubUser ? `${baseUrl}/auth/sub-user/login` : `${baseUrl}/auth/verify`;
-                    const body = isSubUser
-                        ? { mobile_number: credentials.mobile, otp: credentials.otp }
-                        : { mobile_number: credentials.mobile, otp: credentials.otp, role: 'ADMIN' };
+                    const url = `${baseUrl}/auth/verify`;
+                    const body = { mobile_number: credentials.mobile, otp: credentials.otp, role: 'ADMIN' };
 
                     console.log(`[NextAuth] Authorize attempt: ${url}`, body);
 
@@ -46,25 +43,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         ...data,
                         access_token: data.access_token ? '***' : undefined
                     });
-
-                    // For Sub-Users (Agents)
-                    if (isSubUser && data.access_token && data.sub_user) {
-                        const user = {
-                            id: String(data.sub_user.id), // NextAuth requires string ID
-                            name: data.sub_user.name,
-                            email: data.sub_user.email || data.sub_user.mobile_number + '@agent.local',
-                            mobile_number: data.sub_user.mobile_number,
-                            role: 'SUB_USER',
-                            referral_code: data.sub_user.referral_code,
-                            credit_balance: data.sub_user.credit_balance,
-                            credit_limit: data.sub_user.credit_limit,
-                            default_signup_amount: data.sub_user.default_signup_amount,
-                            is_active: data.sub_user.is_active,
-                            accessToken: data.access_token
-                        };
-                        console.log('[NextAuth] Sub-User authorized:', user.name, user.role);
-                        return user;
-                    }
 
                     // For Admins
                     if (data.access_token && data.user && data.user.role === 'ADMIN') {
