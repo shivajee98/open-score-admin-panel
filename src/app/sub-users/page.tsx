@@ -28,6 +28,7 @@ export default function SubUsersPage() {
     const [formData, setFormData] = useState({
         name: '',
         mobile_number: '',
+        password: '',
         credit_limit: '',
         default_signup_amount: ''
     });
@@ -85,7 +86,7 @@ export default function SubUsersPage() {
             });
             toast.success('Sub-user created successfully');
             setShowModal(false);
-            setFormData({ name: '', mobile_number: '', credit_limit: '', default_signup_amount: '' });
+            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '' });
             fetchSubUsers();
         } catch (e: any) {
             toast.error(e.message || 'Failed to create sub-user');
@@ -277,6 +278,17 @@ export default function SubUsersPage() {
                                     value={formData.mobile_number}
                                     placeholder="+91 xxxxxxxxxx"
                                     onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Login Password</label>
+                                <input
+                                    type="password"
+                                    required
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                    value={formData.password}
+                                    placeholder="••••••••"
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
