@@ -135,8 +135,8 @@ export default function SubUsersPage() {
                                 <Shield className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="font-black text-indigo-900 text-lg -mb-1">Agent Signup Reward</h3>
-                                <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-1">Default Commission per User Signup</p>
+                                <h3 className="font-black text-indigo-900 text-lg -mb-1">Agent Loan Commission</h3>
+                                <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-1">Default Commission per Loan Disbursal</p>
                             </div>
                         </div>
 
@@ -205,7 +205,7 @@ export default function SubUsersPage() {
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Signup Amount</p>
+                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Commission</p>
                                             <p className="font-black text-emerald-600">₹{parseFloat(subUser.default_signup_amount.toString()).toLocaleString()}</p>
                                         </div>
                                     </div>
@@ -292,7 +292,7 @@ export default function SubUsersPage() {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup Bonus</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Commission</label>
                                     <input
                                         type="number"
                                         required

@@ -343,7 +343,7 @@ export default function LoanApprovals() {
                                             <div className="space-y-1.5">
                                                 <div className="flex items-center gap-2 text-[11px] font-black text-slate-600">
                                                     <Clock size={12} className="text-slate-400" />
-                                                    {loan.tenure} Months Tenure
+                                                    {loan.tenure} {loan.tenure > 6 ? 'Days' : 'Months'} Tenure
                                                 </div>
                                                 <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg w-fit border border-blue-100 shadow-sm">
                                                     <Calculator size={12} />

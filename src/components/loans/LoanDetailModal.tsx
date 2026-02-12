@@ -34,7 +34,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     const getStorageUrl = (path: string) => {
         if (!path) return '';
         if (path.startsWith('http')) return path;
-        const base = API_BASE.replace('/api', '');
+        // Robust way to get base URL: split by /api and take first part
+        const base = API_BASE.split('/api')[0];
         return `${base}/storage/${path}`;
     };
 
@@ -223,8 +224,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                 <tbody className="divide-y divide-slate-100">
                                     {repayments.map((emi: any, index: number) => (
                                         <tr key={emi.id} className={`transition-colors ${emi.status === 'PENDING_VERIFICATION' || emi.status === 'AGENT_APPROVED'
-                                                ? 'bg-amber-50/40 hover:bg-amber-50/60'
-                                                : 'hover:bg-blue-50/30'
+                                            ? 'bg-amber-50/40 hover:bg-amber-50/60'
+                                            : 'hover:bg-blue-50/30'
                                             }`}>
                                             <td className="p-4 pl-6 font-mono text-slate-400">#{index + 1}</td>
                                             <td className="p-4 font-medium text-slate-900">
@@ -468,8 +469,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
                                     <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${viewingProof.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' :
-                                            viewingProof.status === 'AGENT_APPROVED' ? 'bg-blue-100 text-blue-700' :
-                                                'bg-amber-100 text-amber-700'
+                                        viewingProof.status === 'AGENT_APPROVED' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-amber-100 text-amber-700'
                                         }`}>
                                         {viewingProof.status === 'PENDING_VERIFICATION' ? 'Awaiting Approval' : viewingProof.status.replace(/_/g, ' ')}
                                     </span>
@@ -550,8 +551,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         key={reason}
                                         onClick={() => setRejectReason(reason)}
                                         className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${rejectReason === reason
-                                                ? 'bg-rose-600 text-white border-rose-600'
-                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-rose-200 hover:bg-rose-50'
+                                            ? 'bg-rose-600 text-white border-rose-600'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-rose-200 hover:bg-rose-50'
                                             }`}
                                     >
                                         {reason}
