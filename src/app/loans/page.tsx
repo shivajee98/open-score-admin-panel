@@ -299,6 +299,25 @@ export default function LoanApprovals() {
                                                 <div>
                                                     <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.id} • {loan.user?.mobile_number}</p>
+
+                                                    {/* Referral Info */}
+                                                    {loan.user?.sub_user && (
+                                                        <p className="text-[10px] font-bold text-indigo-500 mt-1">
+                                                            Ref: {loan.user.sub_user.name} ({loan.user.sub_user.referral_code})
+                                                        </p>
+                                                    )}
+
+                                                    {/* Approval Info */}
+                                                    {loan.sub_user_approver ? (
+                                                        <p className="text-[10px] font-bold text-emerald-600 mt-0.5">
+                                                            Approved by Agent: {loan.sub_user_approver.name}
+                                                        </p>
+                                                    ) : loan.approver ? (
+                                                        <p className="text-[10px] font-bold text-blue-600 mt-0.5">
+                                                            Approved by Support: {loan.approver.name}
+                                                        </p>
+                                                    ) : null}
+
                                                     <div className="mt-1">
                                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${loan.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                             loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
