@@ -11,7 +11,8 @@ export default function ReferralSettingsPage() {
     const [settings, setSettings] = useState({
         is_enabled: true,
         signup_bonus: 100,
-        loan_disbursement_bonus: 250
+        loan_disbursement_bonus: 250,
+        agent_signup_bonus: 50
     });
     const [referrals, setReferrals] = useState<any[]>([]);
     const [stats, setStats] = useState({
@@ -181,10 +182,31 @@ export default function ReferralSettingsPage() {
                             </p>
                         </div>
 
+                        {/* Agent Signup Bonus */}
+                        <div>
+                            <label className="block text-sm font-bold text-indigo-700 mb-2">
+                                Agent Signup Reward (Agent Earnings)
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500 font-bold">₹</span>
+                                <input
+                                    type="number"
+                                    value={settings.agent_signup_bonus}
+                                    onChange={(e) => setSettings({ ...settings, agent_signup_bonus: parseFloat(e.target.value) || 0 })}
+                                    className="w-full pl-8 pr-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl font-bold text-indigo-900 focus:outline-none focus:border-indigo-500 shadow-sm"
+                                    min="0"
+                                    step="10"
+                                />
+                            </div>
+                            <p className="text-xs text-indigo-400 mt-2 font-medium">
+                                Default cashback credited to Agent (Sub-User) when their referral code is used (default: ₹50)
+                            </p>
+                        </div>
+
                         {/* Loan Disbursement Bonus */}
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">
-                                Loan Disbursement Bonus Amount
+                                Loan Disbursement Bonus Amount (User Reward)
                             </label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
