@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Filter, MessageSquare, Clock, CheckCircle2, User, Send, Paperclip, ShieldAlert, Wallet, BadgeCheck, Ban, AlertCircle } from 'lucide-react';
+import { Search, Filter, MessageSquare, Clock, CheckCircle2, User, Send, Paperclip, ShieldAlert, Wallet, BadgeCheck, Ban, AlertCircle, Briefcase, PlayCircle, ExternalLink, Eye, XCircle, TrendingUp, IndianRupee } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import AdminLayout from '@/components/AdminLayout';
@@ -38,6 +38,14 @@ export default function SupportTicketsPage() {
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [processData, setProcessData] = useState({ action: 'recharge', amount: '', target_id: '' });
     const [rejectReason, setRejectReason] = useState('');
+    const [loanDetails, setLoanDetails] = useState<any>(null);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+
+    // Cashback state
+    const [cashbackModalOpen, setCashbackModalOpen] = useState(false);
+    const [cashbackAmount, setCashbackAmount] = useState('');
+    const [cashbackReason, setCashbackReason] = useState('Support Ticket Reward');
+    const [isProcessingCashback, setIsProcessingCashback] = useState(false);
 
     useEffect(() => {
         fetchTickets();
@@ -78,6 +86,22 @@ export default function SupportTicketsPage() {
     const selectTicket = async (ticket: Ticket) => {
         setSelectedTicket(ticket);
         fetchMessages(ticket.id);
+        fetchUserLoans(ticket.user.id);
+    };
+
+    const fetchUserLoans = async (userId: number) => {
+        try {
+            const loanRes: any = await apiFetch(`/admin/users/${userId}/active-loan`);
+            if (loanRes && loanRes.loan) {
+                const fullLoanRes: any = await apiFetch(`/admin/loans/${loanRes.loan.id}/details`);
+                setLoanDetails(fullLoanRes);
+            } else {
+                setLoanDetails(null);
+            }
+        } catch (error) {
+            console.error("Failed to fetch user loan details", error);
+            setLoanDetails(null);
+        }
     };
 
     const fetchMessages = async (ticketId: number, silent = false) => {
@@ -178,6 +202,76 @@ export default function SupportTicketsPage() {
             setSelectedTicket(null);
         } catch (error: any) {
             toast.error(error.message || 'Rejection failed');
+        }
+    };
+
+    const handleLoanAction = async (loanId: number, endpoint: string, successMsg: string) => {
+        if (!confirm(`Are you sure you want to ${endpoint.replace('-', ' ')}?`)) return;
+        setIsActionLoading(true);
+        try {
+            await apiFetch(`/admin/loans/${loanId}/${endpoint}`, { method: 'POST' });
+            toast.success(successMsg);
+            if (selectedTicket) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: any) {
+            toast.error(error.message || 'Action failed');
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const handleRejectLoan = async (loanId: number) => {
+        const reason = prompt('Enter rejection reason:');
+        if (!reason) return;
+        setIsActionLoading(true);
+        try {
+            await apiFetch(`/admin/loans/${loanId}/reject`, {
+                method: 'POST',
+                body: JSON.stringify({ reason })
+            });
+            toast.success('Loan rejected');
+            if (selectedTicket) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: any) {
+            toast.error(error.message || 'Rejection failed');
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const handleAddCashback = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedTicket) return;
+        if (!cashbackAmount || isNaN(Number(cashbackAmount))) {
+            toast.error('Enter valid amount');
+            return;
+        }
+        setIsProcessingCashback(true);
+        try {
+            await apiFetch(`/admin/users/${selectedTicket.user.id}/credit-cashback`, {
+                method: 'POST',
+                body: JSON.stringify({ amount: Number(cashbackAmount), description: cashbackReason })
+            });
+            toast.success('Cashback processed successfully');
+            setCashbackModalOpen(false);
+            setCashbackAmount('');
+            fetchUserLoans(selectedTicket.user.id);
+        } catch (error: any) {
+            toast.error(error.message || 'Cashback operation failed');
+        } finally {
+            setIsProcessingCashback(false);
+        }
+    };
+
+    const handleApproveEMI = async (repaymentId: number) => {
+        if (!confirm('Approve this EMI repayment?')) return;
+        setIsActionLoading(true);
+        try {
+            await apiFetch(`/admin/repayments/${repaymentId}/approve`, { method: 'POST' });
+            toast.success('EMI approved successfully');
+            if (selectedTicket) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: any) {
+            toast.error(error.message || 'EMI approval failed');
+        } finally {
+            setIsActionLoading(false);
         }
     };
 
@@ -314,6 +408,154 @@ export default function SupportTicketsPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Right: Portfolio Actions */}
+                {selectedTicket && (
+                    <div className="w-80 border-l border-slate-100 flex flex-col bg-slate-50/10">
+                        <div className="p-4 border-b border-slate-100">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">User Portfolio</h3>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                            {/* Loan Action Card */}
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="p-4 bg-slate-900 text-white">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Briefcase size={16} className="text-blue-400" />
+                                        <h4 className="text-xs font-black uppercase tracking-widest">Loan Management</h4>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-medium">Process current application</p>
+                                </div>
+
+                                <div className="p-4 space-y-4">
+                                    {!loanDetails ? (
+                                        <div className="text-center py-6">
+                                            <AlertCircle size={24} className="mx-auto text-slate-300 mb-2" />
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">No active loan found</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="space-y-2 mb-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                                    <span className="text-slate-400 tracking-tighter uppercase">Status</span>
+                                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[8px] tracking-widest font-black uppercase shadow-sm shadow-blue-200">{loanDetails.loan.status}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                                    <span className="text-slate-400 tracking-tighter uppercase">Amount</span>
+                                                    <span className="text-slate-900">₹{Number(loanDetails.loan.amount).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                                    <span className="text-slate-400 tracking-tighter uppercase">Applied</span>
+                                                    <span className="text-slate-900 font-mono">{new Date(loanDetails.loan.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {loanDetails.loan.status === 'PENDING' && (
+                                                    <button
+                                                        onClick={() => handleLoanAction(loanDetails.loan.id, 'proceed', 'Loan marked as proceed')}
+                                                        disabled={isActionLoading}
+                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50"
+                                                    >
+                                                        <PlayCircle size={14} /> Proceed Application
+                                                    </button>
+                                                )}
+
+                                                {(loanDetails.loan.status === 'PROCEEDED' || loanDetails.loan.status === 'KYC_SENT') && (
+                                                    <button
+                                                        onClick={() => handleLoanAction(loanDetails.loan.id, 'send-kyc', 'KYC link sent to customer')}
+                                                        disabled={isActionLoading}
+                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-indigo-200"
+                                                    >
+                                                        <ExternalLink size={14} /> {loanDetails.loan.status === 'KYC_SENT' ? 'Resend KYC Link' : 'Send KYC Link'}
+                                                    </button>
+                                                )}
+
+                                                {['FORM_SUBMITTED', 'PROCEEDED', 'KYC_SENT'].includes(loanDetails.loan.status) && (
+                                                    <button
+                                                        onClick={() => handleLoanAction(loanDetails.loan.id, 'approve', 'Loan approved successfully')}
+                                                        disabled={isActionLoading}
+                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-emerald-200"
+                                                    >
+                                                        <BadgeCheck size={14} /> Approve Loan
+                                                    </button>
+                                                )}
+
+                                                {['PENDING', 'PROCEEDED', 'KYC_SENT', 'FORM_SUBMITTED'].includes(loanDetails.loan.status) && (
+                                                    <button
+                                                        onClick={() => handleRejectLoan(loanDetails.loan.id)}
+                                                        disabled={isActionLoading}
+                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95 disabled:opacity-50"
+                                                    >
+                                                        <XCircle size={14} /> Reject Application
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    onClick={() => window.open(`/admin/loans/${loanDetails.loan.id}`, '_blank')}
+                                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                                                >
+                                                    <Eye size={14} /> View Full File
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* EMI Verification Card */}
+                            {loanDetails?.repayments?.some((r: any) => r.status === 'PENDING') && (
+                                <div className="bg-white rounded-2xl border-2 border-amber-100 shadow-sm overflow-hidden">
+                                    <div className="p-3 bg-amber-500 text-white flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Clock size={14} className="animate-pulse" />
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest">Pending EMI</h4>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 space-y-3">
+                                        {loanDetails.repayments.filter((r: any) => r.status === 'PENDING').map((rem: any) => (
+                                            <div key={rem.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-[11px] font-black text-slate-900">₹{Number(rem.amount).toLocaleString()}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(rem.due_date).toLocaleDateString()}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleApproveEMI(rem.id)}
+                                                    disabled={isActionLoading}
+                                                    className="w-full py-2 bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50"
+                                                >
+                                                    Verify & Approve EMI
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Wallet Insight Card */}
+                            <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-900/20 relative overflow-hidden">
+                                <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
+                                <div className="flex items-center gap-2 mb-4">
+                                    <TrendingUp size={16} className="text-blue-200" />
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest opacity-80">Customer Wallet</h4>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-blue-200 tracking-tighter uppercase leading-none">Available Balance</p>
+                                    <div className="flex items-end gap-1">
+                                        <span className="text-xl font-black tracking-tight">₹{loanDetails?.user?.wallet?.balance || '0.00'}</span>
+                                        <IndianRupee size={12} className="mb-1 opacity-50" />
+                                    </div>
+                                    <button
+                                        onClick={() => setCashbackModalOpen(true)}
+                                        className="mt-3 w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                        + Instantly Credit Cashback
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Process Modal */}
@@ -361,6 +603,46 @@ export default function SupportTicketsPage() {
                                 <button type="button" onClick={() => setRejectModalOpen(false)} className="py-3 bg-slate-100 text-slate-600 rounded-xl font-bold">Cancel</button>
                                 <button type="submit" className="py-3 bg-rose-600 text-white rounded-xl font-bold">Reject</button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Cashback Modal */}
+            {cashbackModalOpen && selectedTicket && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setCashbackModalOpen(false)}></div>
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative z-10">
+                        <h2 className="text-xl font-black text-slate-900 mb-1">Credit Wallet</h2>
+                        <p className="text-slate-500 text-xs mb-6">Instantly add funds to user's available balance.</p>
+                        <form onSubmit={handleAddCashback} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase">Amount (₹)</label>
+                                <input
+                                    type="number"
+                                    value={cashbackAmount}
+                                    onChange={e => setCashbackAmount(e.target.value)}
+                                    className="w-full p-3 rounded-xl border border-slate-200 font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="0"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase">Reason / Remark</label>
+                                <input
+                                    type="text"
+                                    value={cashbackReason}
+                                    onChange={e => setCashbackReason(e.target.value)}
+                                    className="w-full p-3 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={isProcessingCashback}
+                                className="w-full py-4 bg-slate-900 text-white rounded-xl font-black active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isProcessingCashback ? 'Processing...' : 'Verify & Credit Funds'}
+                            </button>
                         </form>
                     </div>
                 </div>
