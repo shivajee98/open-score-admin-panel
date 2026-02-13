@@ -44,6 +44,13 @@ export default function SupportTicketsPage() {
     }, [statusFilter]);
 
     useEffect(() => {
+        const interval = setInterval(() => {
+            fetchTickets(true);
+        }, 15000); // 15s poll for new tickets
+        return () => clearInterval(interval);
+    }, [statusFilter]);
+
+    useEffect(() => {
         if (selectedTicket) {
             const interval = setInterval(() => {
                 fetchMessages(selectedTicket.id, true);
@@ -56,8 +63,8 @@ export default function SupportTicketsPage() {
         scrollToBottom();
     }, [selectedTicket?.messages]);
 
-    const fetchTickets = async () => {
-        setIsLoading(true);
+    const fetchTickets = async (silent = false) => {
+        if (!silent) setIsLoading(true);
         try {
             const res = await apiFetch(`/admin/support/tickets?status=${statusFilter}`);
             setTickets(res.data || []);
@@ -77,9 +84,10 @@ export default function SupportTicketsPage() {
         if (!silent) setIsMessageLoading(true);
         try {
             const res = await apiFetch(`/support/tickets/${ticketId}/messages`);
+            const messages = Array.isArray(res) ? res : (res.messages || []);
             setSelectedTicket(prev => {
                 if (prev?.id === ticketId) {
-                    return { ...prev, messages: res.messages };
+                    return { ...prev, messages };
                 }
                 return prev;
             });
@@ -186,8 +194,8 @@ export default function SupportTicketsPage() {
                         <div className="flex gap-1 p-1 bg-white border border-slate-200 rounded-lg">
                             {[
                                 { id: 'active', label: 'ONGOING' },
-                                { id: 'RESOLVED', label: 'RESOLVED' },
-                                { id: 'CLOSED', label: 'CLOSED' }
+                                { id: 'resolved', label: 'RESOLVED' },
+                                { id: 'closed', label: 'CLOSED' }
                             ].map(s => (
                                 <button
                                     key={s.id}
@@ -221,7 +229,11 @@ export default function SupportTicketsPage() {
                                             <span className="text-[10px] text-slate-400">{new Date(ticket.updated_at).toLocaleDateString()}</span>
                                         </div>
                                         <h4 className="text-xs font-bold text-slate-900 truncate">{ticket.subject}</h4>
-                                        <p className="text-[11px] text-slate-500 truncate">{ticket.user.name}</p>
+                                        <p className="text-[11px] text-slate-500 truncate">
+                                            {ticket.messages && ticket.messages.length > 0
+                                                ? ticket.messages[0].message
+                                                : ticket.user.name}
+                                        </p>
                                     </div>
                                 </button>
                             ))
