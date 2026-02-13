@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,42 +23,8 @@ export default function AdminLayout({ children, title }: { children: React.React
         checkNewTransactions();
     }, [router, pathname]);
 
-    // Polling removed as per user request
-    /*
-    useEffect(() => {
-        const interval = setInterval(checkNewTransactions, 30000);
-        return () => clearInterval(interval);
-    }, []);
-    */
-
     const checkNewTransactions = async () => {
         try {
-            // Admin sees global transactions or maybe just recent ones?
-            // /admin/payouts is unrelated (withdrawals).
-            // /wallet/transactions might not work for admin if not acting as a user.
-            // But admin might want to hear about *any* credit to *any* user?
-            // The request said "making a sound that X amount of money is credited".
-            // Typically this is for the *receiver*.
-            // If Admin wants to hear it, maybe they want to hear *any* credit flow in the system?
-            // Or maybe Admin has their own wallet?
-            // Assuming Admin manages the system, maybe they want to know about successful Credits (Payments to Merchants)?
-
-            // If I look at the user request: "in customer and merchant and even in the admin panel"
-            // It suggests a global notification system or specific to the logged-in entity.
-
-            // Since Admin API might be different. 
-            // Let's assume hitting `/wallet/transactions` works for Admin's view (if admin has a wallet)
-            // OR if Admin should listen to global events.
-            // Given the complexity of "Global Listening", I will stick to the same endpoint `/wallet/transactions`.
-            // If the Admin User itself receives money, it plays sound.
-            // If the user meant "Admin hears ALL transactions", that requires a new API endpoint like `/admin/transactions/latest`.
-
-            // Let's stick to `/wallet/transactions` for now to be safe and consistent.
-            // If the Admin User itself receives money, it plays sound.
-            // If the user meant "Admin hears ALL transactions", that requires a new API endpoint like `/admin/transactions/latest`.
-
-            // Let's stick to `/wallet/transactions` for now to be safe and consistent.
-
             const res = await apiFetch('/wallet/transactions?limit=1');
             if (res && res.data && res.data.length > 0) {
                 const latestTx = res.data[0];
@@ -102,12 +68,11 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Cashback Requests', href: '/cashback-requests', icon: <DollarSign className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Agent Cashouts', href: '/agent-payouts', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'] },
     ];
 
-    //const user = (session as any)?.user;
-    //const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
     const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
 
     return (
