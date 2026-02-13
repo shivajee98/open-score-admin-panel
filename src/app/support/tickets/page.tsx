@@ -14,6 +14,7 @@ interface Ticket {
     payment_status?: 'PENDING_VERIFICATION' | 'AGENT_APPROVED' | 'ADMIN_APPROVED' | 'REJECTED';
     payment_amount?: string;
     sub_action?: string;
+    issue_type?: string;
     created_at: string;
     updated_at: string;
     user: {
@@ -204,6 +205,20 @@ export default function SupportTicketsPage() {
             toast.error(error.message || 'Rejection failed');
         }
     };
+
+    const isLoanRelated = selectedTicket?.subject?.toLowerCase().includes('loan') ||
+        selectedTicket?.sub_action?.toLowerCase().includes('loan') ||
+        selectedTicket?.issue_type?.toLowerCase().includes('loan') ||
+        selectedTicket?.subject?.toLowerCase().includes('disbursal') ||
+        selectedTicket?.subject?.toLowerCase().includes('release');
+
+    const isEmiRelated = selectedTicket?.subject?.toLowerCase().includes('emi') ||
+        selectedTicket?.subject?.toLowerCase().includes('verification') ||
+        selectedTicket?.sub_action === 'emi' ||
+        selectedTicket?.issue_type === 'emi_payment' ||
+        selectedTicket?.unique_ticket_id?.includes('EMI');
+
+    const hasAttachment = selectedTicket?.messages?.some(m => m.attachment_url);
 
     const handleLoanAction = async (loanId: number, endpoint: string, successMsg: string) => {
         if (!confirm(`Are you sure you want to ${endpoint.replace('-', ' ')}?`)) return;
