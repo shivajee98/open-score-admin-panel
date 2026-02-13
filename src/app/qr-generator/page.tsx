@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { apiFetch } from '@/lib/api';
-import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap } from 'lucide-react';
+import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap, ChevronLeft, ChevronRight, Filter, Settings, Copy, Plus, FolderPlus, CheckSquare, Square } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import AdminLayout from '@/components/AdminLayout';
@@ -20,6 +20,15 @@ export default function QrGenerator() {
     const [displayLimit, setDisplayLimit] = useState(60);
     const [isPreparingPrint, setIsPreparingPrint] = useState(false);
     const printRef = useRef<HTMLDivElement>(null);
+
+    // New states for selection, filtering and pagination
+    const [filterStatus, setFilterStatus] = useState<'all' | 'assigned' | 'active'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(12);
+    const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+    const [targetBatchId, setTargetBatchId] = useState<string>('');
+    const [newGroupName, setNewGroupName] = useState('');
 
     // Initial Fetch
     useEffect(() => {
@@ -55,6 +64,7 @@ export default function QrGenerator() {
 
     const handleBatchChange = (id: string) => {
         setSelectedBatchId(id);
+        setCurrentPage(1); // Reset to page 1 on batch change
         fetchCodes(id);
     };
 
@@ -130,11 +140,63 @@ export default function QrGenerator() {
         }, 1500);
     };
 
-    const filteredCodes = codes.filter(c =>
-        c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.merchant_name && c.merchant_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (c.merchant_mobile && c.merchant_mobile.includes(searchQuery))
-    );
+    const filteredCodes = codes.filter(c => {
+        const matchesSearch = c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (c.merchant_name && c.merchant_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (c.merchant_mobile && c.merchant_mobile.includes(searchQuery));
+
+        const matchesFilter = filterStatus === 'all' || c.status === filterStatus;
+
+        return matchesSearch && matchesFilter;
+    });
+
+    const totalPages = Math.ceil(filteredCodes.length / itemsPerPage);
+    const paginatedCodes = filteredCodes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const toggleCodeSelection = (id: number) => {
+        setSelectedCodes(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedCodes.length === paginatedCodes.length) {
+            setSelectedCodes([]);
+        } else {
+            setSelectedCodes(paginatedCodes.map(c => c.id));
+        }
+    };
+
+    const handleMoveToGroup = async () => {
+        if (selectedCodes.length === 0) return;
+        if (!targetBatchId && !newGroupName) {
+            alert('Please select a group or enter a new group name');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await apiFetch('/admin/qr/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    qr_ids: selectedCodes,
+                    batch_id: targetBatchId || null,
+                    new_batch_name: newGroupName || null
+                }),
+            });
+            await fetchBatches();
+            if (selectedBatchId) fetchCodes(selectedBatchId);
+            setSelectedCodes([]);
+            setIsGroupModalOpen(false);
+            setNewGroupName('');
+            setTargetBatchId('');
+        } catch (e: any) {
+            alert(e.message || 'Failed to move QR codes');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <AdminLayout title="QR Control Center">
@@ -329,7 +391,38 @@ export default function QrGenerator() {
                 <div className="no-print">
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-3xl font-black text-slate-900 tracking-tight invisible h-0">QR Control Center</h1>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            {/* Filter Buttons */}
+                            <div className="flex bg-white p-1 rounded-2xl border border-slate-100 shadow-sm mr-4">
+                                <button
+                                    onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                        filterStatus === 'all' ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    All
+                                </button>
+                                <button
+                                    onClick={() => { setFilterStatus('assigned'); setCurrentPage(1); }}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                        filterStatus === 'assigned' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    Mapped QR
+                                </button>
+                                <button
+                                    onClick={() => { setFilterStatus('active'); setCurrentPage(1); }}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                        filterStatus === 'active' ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    Unmapped
+                                </button>
+                            </div>
+
                             <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-2">
                                 <Zap size={14} /> Total Batches: {batches.length}
                             </div>
@@ -401,9 +494,9 @@ export default function QrGenerator() {
                         </div>
                     </div>
 
-                    {/* Local Search */}
+                    {/* Local Search and Controls */}
                     <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
-                        <div className="relative flex-1 group">
+                        <div className="relative flex-1 group w-full">
                             <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 type="text"
@@ -413,32 +506,94 @@ export default function QrGenerator() {
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <button
-                            onClick={handlePrint}
-                            disabled={loading || isPreparingPrint}
-                            className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
-                        >
-                            {isPreparingPrint ? <Zap className="animate-pulse" size={18} /> : <Printer size={18} />}
-                            {isPreparingPrint ? 'Preparing QRs...' : 'Print Sheet'}
-                        </button>
+
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <div className="flex items-center bg-white border border-slate-100 rounded-3xl px-4 py-2 shadow-sm">
+                                <Settings size={16} className="text-slate-400 mr-2" />
+                                <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                                <select
+                                    value={itemsPerPage}
+                                    onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                    className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                                >
+                                    <option value={12}>12</option>
+                                    <option value={24}>24</option>
+                                    <option value={60}>60</option>
+                                    <option value={100}>100</option>
+                                </select>
+                            </div>
+
+                            <button
+                                onClick={handlePrint}
+                                disabled={loading || isPreparingPrint}
+                                className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50 flex-1 md:flex-initial justify-center"
+                            >
+                                {isPreparingPrint ? <Zap className="animate-pulse" size={18} /> : <Printer size={18} />}
+                                {isPreparingPrint ? 'Preparing...' : 'Print'}
+                            </button>
+                        </div>
                     </div>
+
+                    {/* Selection Actions Header */}
+                    {selectedCodes.length > 0 && (
+                        <div className="mb-6 bg-blue-600 p-4 rounded-3xl flex items-center justify-between text-white shadow-xl shadow-blue-600/20 animate-in slide-in-from-top-4 duration-300">
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm font-black">{selectedCodes.length} QR Codes Selected</span>
+                                <button
+                                    onClick={() => setSelectedCodes([])}
+                                    className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1.5 rounded-xl hover:bg-white/30 transition-all"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setIsGroupModalOpen(true)}
+                                    className="bg-white text-blue-600 px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center gap-2"
+                                >
+                                    <FolderPlus size={16} /> Move to Group
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Screen View - Grid */}
                 <div className="no-print">
                     {codes.length > 0 && (
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
+                            <div className="flex justify-between items-center mb-6 px-1">
+                                <button
+                                    onClick={toggleSelectAll}
+                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all"
+                                >
+                                    {selectedCodes.length === paginatedCodes.length && paginatedCodes.length > 0 ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
+                                    Select All on Page
+                                </button>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    Page {currentPage} of {totalPages || 1}
+                                </span>
+                            </div>
+
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-                                {filteredCodes.slice(0, displayLimit).map((code) => (
+                                {paginatedCodes.map((code) => (
                                     <div
                                         key={code.id}
-                                        onClick={() => setSelectedCode(code)}
+                                        onClick={() => toggleCodeSelection(code.id)}
                                         className={cn(
-                                            "bg-white p-6 rounded-[2rem] border-2 flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl relative",
-                                            code.status === 'assigned' ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-50'
+                                            "bg-white p-6 rounded-[2rem] border-2 flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl relative group",
+                                            selectedCodes.includes(code.id) ? 'border-blue-500 shadow-xl shadow-blue-500/10' :
+                                                (code.status === 'assigned' ? 'border-indigo-100 bg-indigo-50/10' : 'border-slate-50')
                                         )}
                                     >
-                                        <div className="absolute top-3 right-3">
+                                        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); toggleCodeSelection(code.id); }}>
+                                            {selectedCodes.includes(code.id) ? (
+                                                <div className="bg-blue-600 p-1.5 rounded-full text-white shadow-lg"><CheckSquare size={12} strokeWidth={3} /></div>
+                                            ) : (
+                                                <div className="bg-slate-200 p-1.5 rounded-full text-slate-500 border border-white"><Plus size={12} strokeWidth={3} /></div>
+                                            )}
+                                        </div>
+
+                                        <div className="absolute top-3 right-3" onClick={e => { e.stopPropagation(); setSelectedCode(code); }}>
                                             {code.status === 'assigned' ? (
                                                 <div className="bg-indigo-600 p-1.5 rounded-full text-white shadow-lg"><UserCheck size={12} strokeWidth={3} /></div>
                                             ) : (
@@ -462,27 +617,70 @@ export default function QrGenerator() {
                                         <div className="mt-4 pt-4 border-t border-slate-100 w-full flex items-center justify-center gap-2 grayscale opacity-40">
                                             <span className="text-[8px] font-black italic">OpenScore Pay</span>
                                         </div>
+
+                                        {selectedCodes.includes(code.id) && (
+                                            <div className="absolute -top-2 -right-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-white scale-110 animate-in zoom-in">
+                                                <CheckSquare size={12} />
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
 
-                            {filteredCodes.length > displayLimit && (
-                                <div className="mt-12 text-center">
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="mt-12 flex items-center justify-center gap-4">
                                     <button
-                                        onClick={() => setDisplayLimit(displayLimit + 60)}
-                                        className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
                                     >
-                                        Load More ({filteredCodes.length - displayLimit} Remaining)
+                                        <ChevronLeft size={20} />
                                     </button>
-                                    <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                        Displaying {displayLimit} of {filteredCodes.length} QR codes to preserve performance.
-                                    </p>
+
+                                    <div className="flex items-center gap-2">
+                                        {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+                                            let pageNum = i + 1;
+                                            if (totalPages > 5 && currentPage > 3) {
+                                                pageNum = currentPage - 2 + i;
+                                                if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => setCurrentPage(pageNum)}
+                                                    className={cn(
+                                                        "w-12 h-12 rounded-2xl font-black text-xs transition-all shadow-sm",
+                                                        currentPage === pageNum ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-100"
+                                                    )}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
                                 </div>
                             )}
+
+                            <div className="mt-6 text-center">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                    Displaying {paginatedCodes.length} of {filteredCodes.length} results
+                                </p>
+                            </div>
+
                             {filteredCodes.length === 0 && (
                                 <div className="p-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
                                     <Info className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                                    <p className="font-black text-slate-400 uppercase tracking-widest text-sm">No matching QR found in this batch</p>
+                                    <p className="font-black text-slate-400 uppercase tracking-widest text-sm">No matching QR found with current filters</p>
                                 </div>
                             )}
                         </div>
@@ -590,6 +788,72 @@ export default function QrGenerator() {
                                             title="Revoke QR permanent"
                                         >
                                             <Trash2 size={24} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {/* Move to Group Modal */}
+                {isGroupModalOpen && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-6 no-print" onClick={() => setIsGroupModalOpen(false)}>
+                        <div className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-3xl animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
+                            <div className="flex flex-col">
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Move to Group</h1>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8">Selected {selectedCodes.length} QR Codes</p>
+
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Select Existing Group</label>
+                                        <select
+                                            value={targetBatchId}
+                                            onChange={e => { setTargetBatchId(e.target.value); if (e.target.value) setNewGroupName(''); }}
+                                            className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
+                                        >
+                                            <option value="">Choose an existing batch...</option>
+                                            {batches.map((b: any) => (
+                                                <option key={b.id} value={b.id}>{b.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                            <div className="w-full border-t border-slate-100"></div>
+                                        </div>
+                                        <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+                                            <span className="bg-white px-4 text-slate-300">Or</span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Create New (e.g. Pincode)</label>
+                                        <div className="relative">
+                                            <FolderPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                            <input
+                                                type="text"
+                                                value={newGroupName}
+                                                onChange={e => { setNewGroupName(e.target.value); if (e.target.value) setTargetBatchId(''); }}
+                                                placeholder="Enter New Group Name or Pincode..."
+                                                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 flex gap-3">
+                                        <button
+                                            onClick={() => setIsGroupModalOpen(false)}
+                                            className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            disabled={loading || (!targetBatchId && !newGroupName)}
+                                            onClick={handleMoveToGroup}
+                                            className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all disabled:opacity-50"
+                                        >
+                                            {loading ? 'Moving...' : 'Confirm Move'}
                                         </button>
                                     </div>
                                 </div>
