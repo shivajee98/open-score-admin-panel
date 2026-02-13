@@ -6,7 +6,7 @@ import AdminLayout from '@/components/AdminLayout';
 import {
     Search, Filter, TrendingUp, Award, DollarSign, Store,
     ChevronDown, CheckCircle, Clock, XCircle, Download,
-    Calendar, Plus, Edit2, Eye
+    Calendar, Plus, Edit2, Eye, Trash2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface Merchant {
@@ -41,6 +41,10 @@ export default function MerchantsPage() {
     const [selectedTier, setSelectedTier] = useState('ALL');
     const [businessNature, setBusinessNature] = useState('');
     const [cashbackStatus, setCashbackStatus] = useState('PENDING');
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(12);
 
     // UI State
     const [loading, setLoading] = useState(true);
@@ -177,6 +181,23 @@ export default function MerchantsPage() {
         return tierColors[tier.tier_name] || 'bg-slate-100 text-slate-600';
     };
 
+    const totalPages = Math.ceil(merchants.length / itemsPerPage);
+    const paginatedMerchants = merchants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const totalCashbackPages = Math.ceil(cashbacks.length / itemsPerPage);
+    const paginatedCashbacks = cashbacks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const handleDeleteMerchant = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this merchant record?')) return;
+        try {
+            await apiFetch(`/admin/merchants/${id}`, { method: 'DELETE' });
+            alert('Merchant deleted successfully');
+            loadData();
+        } catch (e: any) {
+            alert(e.message || 'Failed to delete merchant');
+        }
+    };
+
     return (
         <AdminLayout title="Merchant Cashback Management">
             {/* Header Stats */}
@@ -229,8 +250,8 @@ export default function MerchantsPage() {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-6 py-3 rounded-xl font-bold capitalize transition-all ${activeTab === tab
-                                ? 'bg-white text-slate-900 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         {tab}
@@ -251,25 +272,41 @@ export default function MerchantsPage() {
                                     placeholder="Search by name, mobile, or business..."
                                     className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100"
                                     value={search}
-                                    onChange={e => setSearch(e.target.value)}
+                                    onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                                 />
                             </div>
 
-                            <div className="relative min-w-[250px]">
-                                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                <select
-                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer"
-                                    value={selectedTier}
-                                    onChange={e => setSelectedTier(e.target.value)}
-                                >
-                                    <option value="ALL">All Turnover Tiers</option>
-                                    {tiers.map(tier => (
-                                        <option key={tier.id} value={tier.id}>
-                                            {tier.tier_name} (₹{tier.min_turnover.toLocaleString('en-IN')} - ₹{tier.max_turnover.toLocaleString('en-IN')})
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                            <div className="flex gap-2">
+                                <div className="relative min-w-[200px]">
+                                    <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <select
+                                        className="w-full pl-11 pr-10 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer text-sm"
+                                        value={selectedTier}
+                                        onChange={e => { setSelectedTier(e.target.value); setCurrentPage(1); }}
+                                    >
+                                        <option value="ALL">All Turnover Tiers</option>
+                                        {tiers.map(tier => (
+                                            <option key={tier.id} value={tier.id}>
+                                                {tier.tier_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                </div>
+
+                                <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
+                                    <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                                    <select
+                                        value={itemsPerPage}
+                                        onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                        className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                                    >
+                                        <option value={12}>12</option>
+                                        <option value={24}>24</option>
+                                        <option value={60}>60</option>
+                                        <option value={100}>100</option>
+                                    </select>
+                                </div>
                             </div>
 
                             {selectedMerchants.length > 0 && (
@@ -312,7 +349,7 @@ export default function MerchantsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {merchants.map(merchant => (
+                                {paginatedMerchants.map(merchant => (
                                     <tr key={merchant.id} className="hover:bg-slate-50/80 transition-colors group">
                                         <td className="p-6">
                                             <input
@@ -349,20 +386,54 @@ export default function MerchantsPage() {
                                             <p className="font-mono font-bold text-slate-700">₹{parseFloat(merchant.wallet_balance || '0').toLocaleString('en-IN')}</p>
                                         </td>
                                         <td className="p-6">
-                                            {merchant.latest_cashback ? (
-                                                <div>
-                                                    <p className="font-bold text-emerald-600">₹{parseFloat(merchant.latest_cashback.cashback_amount).toLocaleString('en-IN')}</p>
-                                                    <p className="text-xs text-slate-400">{new Date(merchant.latest_cashback.created_at).toLocaleDateString()}</p>
-                                                </div>
-                                            ) : (
-                                                <p className="text-slate-400 text-sm">Never</p>
-                                            )}
+                                            <div className="flex items-center justify-between group">
+                                                {merchant.latest_cashback ? (
+                                                    <div>
+                                                        <p className="font-bold text-emerald-600">₹{parseFloat(merchant.latest_cashback.cashback_amount).toLocaleString('en-IN')}</p>
+                                                        <p className="text-xs text-slate-400">{new Date(merchant.latest_cashback.created_at).toLocaleDateString()}</p>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-slate-400 text-sm">Never</p>
+                                                )}
+
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMerchant(merchant.id); }}
+                                                    className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Page {currentPage} of {totalPages}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -374,15 +445,28 @@ export default function MerchantsPage() {
                             {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
                                 <button
                                     key={status}
-                                    onClick={() => setCashbackStatus(status)}
+                                    onClick={() => { setCashbackStatus(status); setCurrentPage(1); }}
                                     className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${cashbackStatus === status
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
                                     {status}
                                 </button>
                             ))}
+                        </div>
+                        <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value={12}>12</option>
+                                <option value={24}>24</option>
+                                <option value={60}>60</option>
+                                <option value={100}>100</option>
+                            </select>
                         </div>
                     </div>
 
@@ -399,7 +483,7 @@ export default function MerchantsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {cashbacks.map(cashback => (
+                                {paginatedCashbacks.map(cashback => (
                                     <tr key={cashback.id} className="hover:bg-slate-50/80 transition-colors">
                                         <td className="p-6">
                                             <p className="font-bold text-slate-900">{cashback.merchant?.name}</p>
@@ -416,8 +500,8 @@ export default function MerchantsPage() {
                                         </td>
                                         <td className="p-6">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${cashback.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
-                                                    cashback.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                                                        'bg-rose-100 text-rose-700'
+                                                cashback.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                                    'bg-rose-100 text-rose-700'
                                                 }`}>
                                                 {cashback.status === 'APPROVED' && <CheckCircle className="w-3 h-3" />}
                                                 {cashback.status === 'PENDING' && <Clock className="w-3 h-3" />}
@@ -440,6 +524,31 @@ export default function MerchantsPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Cashback Pagination Controls */}
+                    {totalCashbackPages > 1 && (
+                        <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Page {currentPage} of {totalCashbackPages}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalCashbackPages, prev + 1))}
+                                    disabled={currentPage === totalCashbackPages}
+                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -22,6 +22,7 @@ export default function LoanApprovals() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
 
     const loadLoans = async () => {
         setLoading(true);
@@ -31,7 +32,7 @@ export default function LoanApprovals() {
                 search: search,
                 status: statusFilter,
                 page: page.toString(),
-                per_page: '20'
+                per_page: itemsPerPage.toString()
             });
             const response = await apiFetch(`${endpoint}?${query}`);
             if (response && response.data) {
@@ -53,7 +54,7 @@ export default function LoanApprovals() {
     useEffect(() => {
         const timeout = setTimeout(loadLoans, 300);
         return () => clearTimeout(timeout);
-    }, [activeTab, search, statusFilter, page]);
+    }, [activeTab, search, statusFilter, page, itemsPerPage]);
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
         if (!confirm('Are you sure you want to perform this action?')) return;
@@ -228,6 +229,20 @@ export default function LoanApprovals() {
                                     <option value="CANCELLED">Cancelled</option>
                                 </>
                             )}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setPage(1); }}
+                            className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none cursor-pointer"
+                        >
+                            <option value={12}>12</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
                         </select>
                     </div>
                     <div className="relative flex-1 md:flex-none">

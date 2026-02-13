@@ -40,6 +40,7 @@ export default function GlobalTransactionsPage() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
 
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -57,14 +58,14 @@ export default function GlobalTransactionsPage() {
         } else if (status === 'authenticated') {
             fetchTransactions();
         }
-    }, [status, page, debouncedSearch, typeFilter, statusFilter]);
+    }, [status, page, debouncedSearch, typeFilter, statusFilter, itemsPerPage]);
 
     const fetchTransactions = async () => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams({
                 page: page.toString(),
-                per_page: '20',
+                per_page: itemsPerPage.toString(),
                 search: debouncedSearch,
                 type: typeFilter,
                 status: statusFilter
@@ -162,6 +163,20 @@ export default function GlobalTransactionsPage() {
                                 <option value="PENDING">Pending</option>
                                 <option value="FAILED">Failed</option>
                                 <option value="REJECTED">Rejected</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-1 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setPage(1); }}
+                                className="bg-transparent border-none text-sm font-bold text-slate-600 focus:outline-none cursor-pointer"
+                            >
+                                <option value={12}>12</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
                             </select>
                         </div>
                     </div>

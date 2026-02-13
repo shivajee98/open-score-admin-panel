@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -178,6 +178,10 @@ export default function UsersPage() {
     const [pendingServiceFees, setPendingServiceFees] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(12);
 
     // Add Funds Modal State
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -363,18 +367,21 @@ export default function UsersPage() {
         }
     };
 
-    const toggleSelectAll = () => {
-        if (selectedIds.length === filteredUsers.length && filteredUsers.length > 0) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(filteredUsers.map((u: any) => u.id));
-        }
-    };
-
     const filteredUsers = users.filter((u: any) =>
         (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (u.mobile_number || '').includes(search)
     );
+
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(paginatedUsers.map((u: any) => u.id));
+        }
+    };
 
     const isAdmin = currentUser?.role === 'ADMIN';
 
@@ -528,22 +535,38 @@ export default function UsersPage() {
                         placeholder="Search users..."
                         className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                     />
                 </div>
 
-                {isAdmin && selectedIds.length > 0 && (
-                    <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
-                        <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
-                        <button
-                            onClick={() => setIsCashbackModalOpen(true)}
-                            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                <div className="flex gap-2">
+                    <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
+                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
                         >
-                            <ReceiptIndianRupee size={20} />
-                            Set Cashback
-                        </button>
+                            <option value={12}>12</option>
+                            <option value={24}>24</option>
+                            <option value={60}>60</option>
+                            <option value={100}>100</option>
+                        </select>
                     </div>
-                )}
+
+                    {isAdmin && selectedIds.length > 0 && (
+                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
+                            <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                            <button
+                                onClick={() => setIsCashbackModalOpen(true)}
+                                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                            >
+                                <ReceiptIndianRupee size={20} />
+                                Set Cashback
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -570,7 +593,7 @@ export default function UsersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredUsers.map((user: any) => (
+                            {paginatedUsers.map((user: any) => (
                                 <UserRow
                                     key={user.id}
                                     user={user}
@@ -587,6 +610,31 @@ export default function UsersPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Page {currentPage} of {totalPages}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Add Funds Modal */}

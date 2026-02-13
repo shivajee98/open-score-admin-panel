@@ -15,7 +15,9 @@ import {
     ArrowRight,
     Ban,
     DollarSign,
-    ExternalLink
+    ExternalLink,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
@@ -27,6 +29,10 @@ export default function PayoutsAdminPage() {
     const [selectedPayout, setSelectedPayout] = useState<any>(null);
     const [adminNote, setAdminNote] = useState('');
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(12);
 
     const fetchPayouts = async () => {
         setLoading(true);
@@ -78,6 +84,9 @@ export default function PayoutsAdminPage() {
         return matchesSearch && matchesStatus;
     });
 
+    const totalPages = Math.ceil(filteredPayouts.length / itemsPerPage);
+    const paginatedPayouts = filteredPayouts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     const getStatusStyle = (status: string) => {
         switch (status) {
             case 'PAID': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
@@ -123,13 +132,27 @@ export default function PayoutsAdminPage() {
                             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                             <select
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none font-bold text-slate-600"
+                                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                                className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none font-bold text-slate-600 cursor-pointer"
                             >
                                 <option value="ALL">All Status</option>
                                 <option value="PENDING">Pending Approval</option>
                                 <option value="PAID">Already Paid</option>
                                 <option value="REJECTED">Rejected</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center bg-white border border-slate-100 rounded-2xl px-6 py-4 shadow-sm">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-transparent border-none text-sm font-black text-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value={12}>12</option>
+                                <option value={24}>24</option>
+                                <option value={60}>60</option>
+                                <option value={100}>100</option>
                             </select>
                         </div>
                     </div>
@@ -162,7 +185,7 @@ export default function PayoutsAdminPage() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredPayouts.map((payout) => (
+                                        paginatedPayouts.map((payout) => (
                                             <tr key={payout.id} className="group hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-8 py-6">
                                                     <div className="flex items-center gap-3">
@@ -219,6 +242,31 @@ export default function PayoutsAdminPage() {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Page {currentPage} of {totalPages}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
