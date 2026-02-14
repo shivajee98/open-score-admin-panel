@@ -8,7 +8,7 @@ import { Settings, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface CashbackSetting {
     id: number;
-    role: 'CUSTOMER' | 'MERCHANT';
+    role: 'CUSTOMER' | 'MERCHANT' | 'STUDENT';
     cashback_amount: number;
     is_active: boolean;
 }
@@ -69,7 +69,7 @@ export default function CashbackSettingsPage() {
                                 <div key={setting.id} className="group bg-slate-50 hover:bg-white p-6 rounded-3xl border border-transparent hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${setting.role === 'MERCHANT' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${setting.role === 'MERCHANT' ? 'bg-amber-100 text-amber-600' : setting.role === 'STUDENT' ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'}`}>
                                                 {setting.role[0]}
                                             </div>
                                             <div>

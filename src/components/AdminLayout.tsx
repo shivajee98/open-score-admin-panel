@@ -83,7 +83,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                     <div className="p-8 border-b border-slate-800">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-blue-500/30">
-                                <img src="/admin/logo.svg" alt="OpenScore" className="w-full h-full" />
+                                <img src="/icon.png" alt="OpenScore" className="w-full h-full object-cover" />
                             </div>
                             <div>
                                 <h1 className="text-xl font-black tracking-tight">{user?.role === 'SUB_USER' ? 'Agent Panel' : 'OpenScore'}</h1>
