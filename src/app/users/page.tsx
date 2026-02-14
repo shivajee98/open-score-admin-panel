@@ -68,7 +68,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             <td className="p-6">
                 <span className={cn(
                     "inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : user.role === 'MERCHANT' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : user.role === 'MERCHANT' ? 'bg-blue-100 text-blue-700' : user.role === 'STUDENT' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'
                 )}>
                     {user.role}
                 </span>
