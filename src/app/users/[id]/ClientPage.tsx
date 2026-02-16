@@ -98,7 +98,13 @@ export default function UserDetailsPage() {
                                 {user.referred_by && (
                                     <span className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
                                         <Users className="w-3.5 h-3.5 text-blue-400" />
-                                        Ref By: {user.referred_by.name} ({user.referred_by.code})
+                                        User Ref: {user.referred_by.name} ({user.referred_by.code})
+                                    </span>
+                                )}
+                                {user.agent_referral && (
+                                    <span className="flex items-center gap-1.5 text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
+                                        <Shield className="w-3.5 h-3.5 text-purple-400" />
+                                        Agent: {user.agent_referral.name} ({user.agent_referral.referral_code})
                                     </span>
                                 )}
                                 <span className="flex items-center gap-1.5"><Shield className="w-4 h-4" /> Role: {user.role}</span>
