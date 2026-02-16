@@ -8,7 +8,7 @@ import {
     User, Wallet, History, CreditCard, ArrowLeft,
     Calendar, Shield, ShieldAlert, CheckCircle2,
     Clock, BadgeCheck, Phone, Mail, Building2,
-    ArrowUpRight, ArrowDownLeft, Download
+    ArrowUpRight, ArrowDownLeft, Download, Users
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import Link from 'next/link';
@@ -95,6 +95,12 @@ export default function UserDetailsPage() {
                                 <span className="flex items-center gap-1.5"><Phone className="w-4 h-4" /> {user.mobile_number}</span>
                                 {user.email && <span className="flex items-center gap-1.5"><Mail className="w-4 h-4" /> {user.email}</span>}
                                 <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Joined {new Date(user.created_at).toLocaleDateString()}</span>
+                                {user.referred_by && (
+                                    <span className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                                        <Users className="w-3.5 h-3.5 text-blue-400" />
+                                        Ref By: {user.referred_by.name} ({user.referred_by.code})
+                                    </span>
+                                )}
                                 <span className="flex items-center gap-1.5"><Shield className="w-4 h-4" /> Role: {user.role}</span>
                             </div>
                         </div>
@@ -184,6 +190,15 @@ export default function UserDetailsPage() {
                         >
                             <History className="w-4 h-4" /> Transaction Flow
                         </button>
+                        <button
+                            onClick={() => setActiveTab('REFERRALS')}
+                            className={cn(
+                                "flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all",
+                                activeTab === 'REFERRALS' ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-500 hover:bg-slate-50"
+                            )}
+                        >
+                            <Users className="w-4 h-4" /> Referral History
+                        </button>
                     </div>
 
                     {activeTab === 'LOANS' && (
@@ -250,84 +265,145 @@ export default function UserDetailsPage() {
                         </div>
                     )}
 
-                    {activeTab === 'TXS' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                            <div className="flex justify-between items-center px-2">
-                                <h3 className="text-lg font-black text-slate-900">Transaction Flow</h3>
-                                <button
-                                    onClick={() => toast.info("Preparing detailed statement for " + user.name)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all"
-                                >
-                                    <Download className="w-3 h-3" /> Download Statement
-                                </button>
-                            </div>
+                    {activeTab === 'REFERRALS' && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2 px-2">
+                                Network Expansion Details ({data?.referral_history?.length || 0})
+                            </h3>
 
-                            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity</th>
-                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Interaction</th>
-                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Timestamp</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {transactions.map((tx: any) => (
-                                            <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                                                <td className="p-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn(
-                                                            "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
-                                                            tx.type === 'CREDIT' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                                                        )}>
-                                                            {tx.type === 'CREDIT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-slate-900 text-sm">{tx.source_type.replace(/_/g, ' ')}</p>
-                                                            <p className="text-[10px] font-medium text-slate-500">{tx.description}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    <span className={cn(
-                                                        "font-black text-base",
-                                                        tx.type === 'CREDIT' ? "text-emerald-600" : "text-rose-600"
-                                                    )}>
-                                                        {tx.type === 'CREDIT' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString('en-IN')}
-                                                    </span>
-                                                </td>
-                                                <td className="p-6">
-                                                    {tx.paid_to ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">
-                                                                {tx.paid_to.name?.[0] || '?'}
+                            {data?.referral_history?.length > 0 ? (
+                                <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 border-b border-slate-100">
+                                            <tr>
+                                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">User Details</th>
+                                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Onboarding</th>
+                                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Loan Activity</th>
+                                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Joined At</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {data.referral_history.map((ref: any) => (
+                                                <tr key={ref.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="p-4 pl-8">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black">
+                                                                {ref.name?.[0] || 'U'}
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs font-black text-slate-800">{tx.paid_to.business_name || tx.paid_to.name}</p>
-                                                                <p className="text-[10px] font-medium text-slate-400">{tx.paid_to.mobile}</p>
+                                                                <p className="text-sm font-black text-slate-900">{ref.name || 'Incognito User'}</p>
+                                                                <p className="text-[10px] font-bold text-slate-400">{ref.mobile}</p>
                                                             </div>
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6 text-right">
-                                                    <p className="text-xs font-bold text-slate-900">{new Date(tx.created_at).toLocaleDateString()}</p>
-                                                    <p className="text-[10px] font-medium text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</p>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {transactions.length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="p-12 text-center text-slate-400 font-bold">No transactions found</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tight",
+                                                            ref.is_onboarded ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                                                        )}>
+                                                            {ref.is_onboarded ? 'Completed' : 'Pending'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            <div className={cn("w-1.5 h-1.5 rounded-full", ref.has_taken_loan ? "bg-emerald-500" : "bg-slate-300")} />
+                                                            <span className="text-[10px] font-black text-slate-600 uppercase">
+                                                                {ref.has_taken_loan ? 'Active User' : 'Passive User'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-right pr-8">
+                                                        <p className="text-xs font-bold text-slate-600">{new Date(ref.joined_at).toLocaleDateString()}</p>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 p-12 text-center">
+                                    <User className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                                    <p className="text-slate-500 font-bold">No friends joined via referral code yet.</p>
+                                </div>
+                            )}
                         </div>
                     )}
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                        <div className="flex justify-between items-center px-2">
+                            <h3 className="text-lg font-black text-slate-900">Transaction Flow</h3>
+                            <button
+                                onClick={() => toast.info("Preparing detailed statement for " + user.name)}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+                            >
+                                <Download className="w-3 h-3" /> Download Statement
+                            </button>
+                        </div>
+
+                        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity</th>
+                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Interaction</th>
+                                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {transactions.map((tx: any) => (
+                                        <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="p-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn(
+                                                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
+                                                        tx.type === 'CREDIT' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                                                    )}>
+                                                        {tx.type === 'CREDIT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-slate-900 text-sm">{tx.source_type.replace(/_/g, ' ')}</p>
+                                                        <p className="text-[10px] font-medium text-slate-500">{tx.description}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-6">
+                                                <span className={cn(
+                                                    "font-black text-base",
+                                                    tx.type === 'CREDIT' ? "text-emerald-600" : "text-rose-600"
+                                                )}>
+                                                    {tx.type === 'CREDIT' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString('en-IN')}
+                                                </span>
+                                            </td>
+                                            <td className="p-6">
+                                                {tx.paid_to ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">
+                                                            {tx.paid_to.name?.[0] || '?'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-black text-slate-800">{tx.paid_to.business_name || tx.paid_to.name}</p>
+                                                            <p className="text-[10px] font-medium text-slate-400">{tx.paid_to.mobile}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System</span>
+                                                )}
+                                            </td>
+                                            <td className="p-6 text-right">
+                                                <p className="text-xs font-bold text-slate-900">{new Date(tx.created_at).toLocaleDateString()}</p>
+                                                <p className="text-[10px] font-medium text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</p>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {transactions.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="p-12 text-center text-slate-400 font-bold">No transactions found</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </AdminLayout>

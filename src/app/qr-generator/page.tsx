@@ -439,18 +439,35 @@ export default function QrGenerator() {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                             <div className="md:col-span-1">
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Active Batch</label>
-                                <select
-                                    value={selectedBatchId}
-                                    onChange={e => handleBatchChange(e.target.value)}
-                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
-                                >
-                                    {batches.map((b: any) => (
-                                        <option key={b.id} value={b.id}>
-                                            {b.name} ({b.count} QR)
-                                        </option>
-                                    ))}
-                                    {batches.length === 0 && <option value="">No batches found</option>}
-                                </select>
+                                <div className="space-y-2">
+                                    <div className="relative group">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search Folder..."
+                                            className="w-full bg-slate-50 border-none rounded-2xl pl-10 pr-4 py-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest"
+                                            onChange={(e) => {
+                                                const query = e.target.value.toLowerCase();
+                                                const found = batches.find(b => b.name.toLowerCase().includes(query));
+                                                if (found && query.length > 2) {
+                                                    handleBatchChange(found.id);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <select
+                                        value={selectedBatchId}
+                                        onChange={e => handleBatchChange(e.target.value)}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
+                                    >
+                                        {batches.map((b: any) => (
+                                            <option key={b.id} value={b.id}>
+                                                {b.name} ({b.count} QR)
+                                            </option>
+                                        ))}
+                                        {batches.length === 0 && <option value="">No batches found</option>}
+                                    </select>
+                                </div>
                             </div>
                             <div className="md:col-span-1">
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">New Batch Label</label>

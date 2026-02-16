@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -540,6 +540,26 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex gap-2">
+                    <button
+                        onClick={async () => {
+                            try {
+                                const res = await apiFetch('/admin/users/export?search=' + search);
+                                const url = window.URL.createObjectURL(new Blob([res]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+                                document.body.appendChild(link);
+                                link.click();
+                            } catch (e) {
+                                alert('Export failed. Please try again.');
+                            }
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                    >
+                        <Download className="w-5 h-5" />
+                        Bulk Data Download
+                    </button>
+
                     <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
                         <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
                         <select

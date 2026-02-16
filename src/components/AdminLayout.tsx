@@ -58,12 +58,15 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Loan Approvals', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
-        { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        // { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'QR Control', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
-        { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
-        { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+
+        // Internal Users Group
+        { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Internal Users' },
+        { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Internal Users' },
+
         { label: 'Support Inbox', href: '/support/tickets', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Requests', href: '/cashback-requests', icon: <DollarSign className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
@@ -94,20 +97,29 @@ export default function AdminLayout({ children, title }: { children: React.React
 
                     <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
                         <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">{user?.role === 'SUB_USER' ? 'Agent Menu' : 'Main Menu'}</p>
-                        {navItems.map((item) => {
+                        {navItems.map((item, index) => {
                             const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+                            const prevItem = navItems[index - 1];
+                            const showGroupHeader = item.group && (!prevItem || prevItem.group !== item.group);
+
                             return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-200 group ${isActive ? (user?.role === 'SUB_USER' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/50') : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                                >
-                                    <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-                                        {item.icon}
-                                    </div>
-                                    {item.label}
-                                </Link>
+                                <div key={item.href}>
+                                    {showGroupHeader && (
+                                        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 mt-6">
+                                            {item.group}
+                                        </p>
+                                    )}
+                                    <Link
+                                        href={item.href}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-200 group ${isActive ? (user?.role === 'SUB_USER' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/50') : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                                    >
+                                        <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                                            {item.icon}
+                                        </div>
+                                        {item.label}
+                                    </Link>
+                                </div>
                             );
                         })}
                     </nav>
