@@ -171,7 +171,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     );
 };
 
-export default function UsersPage() {
+export default function InternalUsersPage() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [pendingTransactions, setPendingTransactions] = useState([]);
@@ -198,7 +198,7 @@ export default function UsersPage() {
 
     const loadUsers = async () => {
         try {
-            const data = await apiFetch('/admin/users?type=customer');
+            const data = await apiFetch('/admin/users?type=internal');
             setUsers(data);
         } catch (e) {
             console.error(e);
@@ -386,7 +386,7 @@ export default function UsersPage() {
     const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
-        <AdminLayout title="User Management">
+        <AdminLayout title="Internal Team & Funds">
 
             {/* Pending Approvals Section (Admin Only) */}
             {isAdmin && pendingTransactions.length > 0 && (

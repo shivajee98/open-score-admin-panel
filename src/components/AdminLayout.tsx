@@ -61,6 +61,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         // { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'QR Control', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Internal Team & Funds', href: '/internal-users', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
 
         // Internal Users Group
