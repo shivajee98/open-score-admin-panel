@@ -78,12 +78,12 @@ export default function UserDetailsPage() {
 
                     <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
                         <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-blue-200">
-                            {user.name[0]}
+                            {user.name?.[0] || 'U'}
                         </div>
 
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1">
-                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">{user.name}</h1>
+                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">{user.name || 'Unknown User'}</h1>
                                 <span className={cn(
                                     "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
                                     user.status === 'ACTIVE' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
@@ -301,7 +301,7 @@ export default function UserDetailsPage() {
                                                     {tx.paid_to ? (
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">
-                                                                {tx.paid_to.name[0]}
+                                                                {tx.paid_to.name?.[0] || '?'}
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs font-black text-slate-800">{tx.paid_to.business_name || tx.paid_to.name}</p>

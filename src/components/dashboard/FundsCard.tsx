@@ -152,14 +152,14 @@ export default function FundsCard() {
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white border-none shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">Available to Lend</CardTitle>
-                    <IndianRupee className="h-4 w-4 text-emerald-500" />
+                    <CardTitle className="text-sm font-medium text-blue-100">Available to Lend</CardTitle>
+                    <IndianRupee className="h-4 w-4 text-blue-100" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-emerald-600">₹{stats?.available_funds.toLocaleString()}</div>
-                    <p className="text-xs text-slate-500 mt-1">Ready for immediate allocation</p>
+                    <div className="text-2xl font-bold">₹{stats?.available_funds.toLocaleString()}</div>
+                    <p className="text-xs text-blue-200 mt-1">Remaining amount in the reserve</p>
                 </CardContent>
             </Card>
 
