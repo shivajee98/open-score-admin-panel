@@ -229,8 +229,15 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                             <td className="p-4 font-medium text-slate-900">
                                                 {new Date(emi.due_date).toLocaleDateString()}
                                             </td>
-                                            <td className="p-4 font-black text-slate-900">
-                                                {parseFloat(emi.amount).toLocaleString()}
+                                            <td className="p-4">
+                                                <div className="font-black text-slate-900">
+                                                    ₹{parseFloat(emi.amount).toLocaleString()}
+                                                </div>
+                                                <div className="flex gap-2 mt-1">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter" title="Principal">P: ₹{parseFloat(emi.principal_component || 0).toLocaleString()}</span>
+                                                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter" title="Interest (Profit)">I: ₹{parseFloat(emi.interest_component || 0).toLocaleString()}</span>
+                                                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter" title="Fees">F: ₹{parseFloat(emi.fee_component || 0).toLocaleString()}</span>
+                                                </div>
                                             </td>
                                             <td className="p-4">
                                                 {emi.status === 'PAID' ? (
