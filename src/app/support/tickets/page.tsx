@@ -261,11 +261,11 @@ export default function SupportTicketsPage() {
         }
         setIsProcessingCashback(true);
         try {
-            await apiFetch(`/admin/users/${selectedTicket.user.id}/credit-cashback`, {
+            const res: any = await apiFetch(`/admin/users/${selectedTicket.user.id}/credit-cashback`, {
                 method: 'POST',
                 body: JSON.stringify({ amount: Number(cashbackAmount), description: cashbackReason })
             });
-            toast.success('Cashback processed successfully');
+            toast.success(res.message || 'Cashback processed successfully');
             setCashbackModalOpen(false);
             setCashbackAmount('');
             fetchUserLoans(selectedTicket.user.id);
