@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 interface FundStats {
     total_funds: number;
@@ -24,6 +25,7 @@ interface FundStats {
 }
 
 export default function FundsCard() {
+    const router = useRouter();
     const [stats, setStats] = useState<FundStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [addAmount, setAddAmount] = useState('');
@@ -238,7 +240,7 @@ export default function FundsCard() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-purple-100 bg-purple-50/30">
+                <Card className="border-purple-100 bg-purple-50/30 cursor-pointer hover:bg-purple-100/50 transition-colors" onClick={() => router.push('/cashback-logs')}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-purple-700">Cashback Transfer</CardTitle>
                         <TrendingDown className="h-4 w-4 text-purple-600" />
