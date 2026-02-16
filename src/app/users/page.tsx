@@ -123,6 +123,22 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
 
             <td className="p-6">
+                <div className="flex flex-col">
+                    <p className="text-xs font-bold text-slate-700">{new Date(user.date_of_join).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-[10px] text-slate-400 font-mono italic">{new Date(user.date_of_join).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+            </td>
+            <td className="p-6">
+                {user.referred_by ? (
+                    <div className="flex flex-col">
+                        <p className="text-xs font-black text-blue-600">{user.referred_by.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{user.referred_by.mobile}</p>
+                    </div>
+                ) : (
+                    <span className="text-xs text-slate-300 font-medium italic">Direct Join</span>
+                )}
+            </td>
+            <td className="p-6">
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                     <span className="text-sm font-bold text-slate-600">{user.status}</span>
@@ -608,6 +624,8 @@ export default function UsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback %</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Flat Bonus</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
