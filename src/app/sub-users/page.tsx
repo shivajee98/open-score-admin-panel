@@ -281,6 +281,22 @@ export default function SubUsersPage() {
                                                             Edit
                                                         </button>
                                                         <button
+                                                            onClick={async () => {
+                                                                if (window.confirm(`Are you sure you want to delete ${subUser.name}?`)) {
+                                                                    try {
+                                                                        await apiFetch(`/admin/sub-users/${subUser.id}`, { method: 'DELETE' });
+                                                                        toast.success('Agent deleted successfully');
+                                                                        fetchSubUsers();
+                                                                    } catch (e: any) {
+                                                                        toast.error(e.message || 'Deletion failed');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs hover:bg-red-100 transition-colors"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                        <button
                                                             onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
                                                             className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors group/btn"
                                                         >
@@ -326,12 +342,17 @@ export default function SubUsersPage() {
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mobile Number</label>
                                 <input
-                                    type="tel"
+                                    type="text"
                                     required
+                                    maxLength={10}
+                                    pattern="[0-9]{10}"
                                     className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
                                     value={formData.mobile_number}
-                                    placeholder="+91 xxxxxxxxxx"
-                                    onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                                    placeholder="10-digit mobile number"
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                        setFormData({ ...formData, mobile_number: value });
+                                    }}
                                     readOnly={isEditMode} // Cannot change mobile as it matches ID often
                                 />
                             </div>
