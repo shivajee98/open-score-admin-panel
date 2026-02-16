@@ -29,6 +29,8 @@ export default function QrGenerator() {
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
     const [targetBatchId, setTargetBatchId] = useState<string>('');
     const [newGroupName, setNewGroupName] = useState('');
+    const [isBatchDropdownOpen, setIsBatchDropdownOpen] = useState(false);
+    const [batchSearchText, setBatchSearchText] = useState('');
 
     // Initial Fetch
     useEffect(() => {
@@ -437,37 +439,78 @@ export default function QrGenerator() {
 
                     <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-blue-900/5 mb-8">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                            <div className="md:col-span-1">
+                            <div className="md:col-span-1 relative">
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Active Batch</label>
-                                <div className="space-y-2">
-                                    <div className="relative group">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search Folder..."
-                                            className="w-full bg-slate-50 border-none rounded-2xl pl-10 pr-4 py-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest"
-                                            onChange={(e) => {
-                                                const query = e.target.value.toLowerCase();
-                                                const found = batches.find(b => b.name.toLowerCase().includes(query));
-                                                if (found && query.length > 2) {
-                                                    handleBatchChange(found.id);
-                                                }
-                                            }}
-                                        />
+
+                                {/* Custom Dropdown Trigger */}
+                                <button
+                                    onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
+                                    className="w-full bg-slate-50 rounded-2xl p-4 flex items-center justify-between font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all text-left"
+                                >
+                                    <span className="truncate">
+                                        {selectedBatchId
+                                            ? `${batches.find(b => b.id.toString() === selectedBatchId.toString())?.name || 'Unknown'} (${batches.find(b => b.id.toString() === selectedBatchId.toString())?.count || 0})`
+                                            : 'Select Batch...'}
+                                    </span>
+                                    <div className="flex flex-col gap-0.5">
+                                        <ChevronLeft className="w-2.5 h-2.5 rotate-90 text-slate-400" />
                                     </div>
-                                    <select
-                                        value={selectedBatchId}
-                                        onChange={e => handleBatchChange(e.target.value)}
-                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer appearance-none"
-                                    >
-                                        {batches.map((b: any) => (
-                                            <option key={b.id} value={b.id}>
-                                                {b.name} ({b.count} QR)
-                                            </option>
-                                        ))}
-                                        {batches.length === 0 && <option value="">No batches found</option>}
-                                    </select>
-                                </div>
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {isBatchDropdownOpen && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+                                        {/* Search Input inside Dropdown */}
+                                        <div className="p-3 border-b border-slate-100 relative">
+                                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                placeholder="Search batches..."
+                                                className="w-full bg-slate-50 pl-10 pr-4 py-2 rounded-xl text-sm font-bold text-slate-900 outline-none"
+                                                value={batchSearchText}
+                                                onChange={(e) => setBatchSearchText(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="max-h-60 overflow-y-auto p-2 space-y-1">
+                                            {batches.filter(b => b.name.toLowerCase().includes(batchSearchText.toLowerCase())).length === 0 && (
+                                                <p className="text-center text-xs font-bold text-slate-400 py-4">No matching batches</p>
+                                            )}
+
+                                            {batches.filter(b => b.name.toLowerCase().includes(batchSearchText.toLowerCase())).map((b: any) => (
+
+
+
+
+
+
+
+
+                                                <button
+                                                    key={b.id}
+                                                    onClick={() => {
+                                                        handleBatchChange(b.id);
+                                                        setIsBatchDropdownOpen(false);
+                                                    }}
+                                                    className={cn(
+                                                        "w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-between group",
+                                                        selectedBatchId === b.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    <span>{b.name}</span>
+                                                    <span className={cn(
+                                                        "text-xs px-2 py-0.5 rounded-lg",
+                                                        selectedBatchId === b.id ? "bg-blue-200 text-blue-800" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                                                    )}>
+                                                        {b.count}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="md:col-span-1">
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">New Batch Label</label>

@@ -77,19 +77,49 @@ export default function SubUsersPage() {
         }
     };
 
-    const handleCreateSubUser = async (e: React.FormEvent) => {
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+
+    // ... existing state ...
+
+    const handleEditSubUser = (subUser: SubUser) => {
+        setFormData({
+            name: subUser.name,
+            mobile_number: subUser.mobile_number,
+            password: '', // Leave blank to keep current
+            credit_limit: subUser.credit_limit.toString(),
+            default_signup_amount: subUser.default_signup_amount.toString()
+        });
+        setEditingId(subUser.id);
+        setIsEditMode(true);
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await apiFetch('/admin/sub-users', {
-                method: 'POST',
-                body: JSON.stringify(formData)
+            const url = isEditMode ? `/admin/sub-users/${editingId}` : '/admin/sub-users';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            // For edit, remove password if empty
+            const payload: any = { ...formData };
+            if (isEditMode && !payload.password) {
+                delete payload.password;
+            }
+
+            await apiFetch(url, {
+                method,
+                body: JSON.stringify(payload)
             });
-            toast.success('Sub-user created successfully');
+
+            toast.success(isEditMode ? 'Agent updated successfully' : 'Agent created successfully');
             setShowModal(false);
             setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '' });
+            setIsEditMode(false);
+            setEditingId(null);
             fetchSubUsers();
         } catch (e: any) {
-            toast.error(e.message || 'Failed to create sub-user');
+            toast.error(e.message || 'Operation failed');
         }
     };
 
@@ -114,17 +144,21 @@ export default function SubUsersPage() {
     return (
         <AdminLayout title="Sub-Users Management">
             <div className="space-y-6">
-                <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
                     <div>
                         <h2 className="text-xl font-black text-slate-900 px-1">Agent Network</h2>
                         <p className="text-slate-500 text-sm font-medium px-1">Manage sub-users and their credit limits.</p>
                     </div>
                     <button
-                        onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                        onClick={() => {
+                            setIsEditMode(false);
+                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '' });
+                            setShowModal(true);
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
                     >
                         <Plus className="w-5 h-5" />
-                        Create Sub-User
+                        Create Agent
                     </button>
                 </div>
 
@@ -167,97 +201,117 @@ export default function SubUsersPage() {
                         <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                        {subUsers.length === 0 ? (
-                            <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 italic text-slate-400 font-bold uppercase tracking-widest text-sm">
-                                No agents created in the system yet.
-                            </div>
-                        ) : (
-                            subUsers.map((subUser) => (
-                                <div
-                                    key={subUser.id}
-                                    className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer"
-                                    onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black group-hover:bg-blue-600 transition-colors">
-                                            {subUser.name[0]}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">{subUser.name}</h3>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                                <UsersIcon className="w-3 h-3 text-blue-500" />
-                                                Agent #{subUser.id} • {subUser.mobile_number}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 flex-1 max-w-2xl px-4">
-                                        <div>
-                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Referral Code</p>
-                                            <p className="font-mono text-sm bg-slate-100 px-3 py-1 rounded-lg text-slate-900 inline-block font-black">{subUser.referral_code}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Credit Wallet</p>
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-black text-slate-900">₹{parseFloat(subUser.credit_balance.toString()).toLocaleString()}</p>
-                                                <span className="text-slate-300">/</span>
-                                                <p className="text-xs font-bold text-slate-500">₹{parseFloat(subUser.credit_limit.toString()).toLocaleString()}</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Commission</p>
-                                            <p className="font-black text-emerald-600">₹{parseFloat(subUser.default_signup_amount.toString()).toLocaleString()}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                placeholder="Amount"
-                                                className="w-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-900 transition-all"
-                                                value={selectedSubUser?.id === subUser.id ? creditAmount : ''}
-                                                onChange={(e) => {
-                                                    setSelectedSubUser(subUser);
-                                                    setCreditAmount(e.target.value);
-                                                }}
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={() => handleAddCredit(subUser.id)}
-                                            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 whitespace-nowrap"
-                                        >
-                                            Add Credit
-                                        </button>
-                                        <button
-                                            onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
-                                            className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
-                                        >
-                                            <TrendingUp size={20} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                    <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50/50">
+                                    <tr>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-8">Agent Details</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {subUsers.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
+                                                No agents created in the system yet.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        subUsers.map((subUser) => (
+                                            <tr key={subUser.id} className="hover:bg-slate-50/80 transition-colors group">
+                                                <td className="p-6 pl-8">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black group-hover:bg-blue-600 transition-colors shadow-lg shadow-slate-200 group-hover:shadow-blue-200">
+                                                            {subUser.name[0]}
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
+                                                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                                                                <UsersIcon className="w-3 h-3 text-blue-500" />
+                                                                Agent #{subUser.id} • {subUser.mobile_number}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-6">
+                                                    <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
+                                                        {subUser.referral_code}
+                                                    </span>
+                                                </td>
+                                                <td className="p-6">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-slate-900">₹{parseFloat(subUser.credit_balance.toString()).toLocaleString()}</span>
+                                                        <span className="text-slate-300">/</span>
+                                                        <span className="text-xs font-bold text-slate-400">₹{parseFloat(subUser.credit_limit.toString()).toLocaleString()}</span>
+                                                    </div>
+                                                    {/* Inline Credit Add */}
+                                                    <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Add..."
+                                                            className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                                            value={selectedSubUser?.id === subUser.id ? creditAmount : ''}
+                                                            onChange={(e) => {
+                                                                setSelectedSubUser(subUser);
+                                                                setCreditAmount(e.target.value);
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={() => handleAddCredit(subUser.id)}
+                                                            className="p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shadow-md"
+                                                            title="Add Credit"
+                                                        >
+                                                            <Plus size={14} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="p-6">
+                                                    <span className="font-black text-emerald-600">₹{parseFloat(subUser.default_signup_amount.toString()).toLocaleString()}</span>
+                                                </td>
+                                                <td className="p-6 pr-8 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleEditSubUser(subUser)}
+                                                            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
+                                                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors group/btn"
+                                                        >
+                                                            View <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>
 
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border border-white/20">
+                    <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95">
                         <div className="flex items-center gap-4 mb-8">
                             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
                                 <UserPlus size={24} />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Agent</h2>
-                                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">New Sub-User Profile</p>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight">{isEditMode ? 'Edit Agent' : 'Create Agent'}</h2>
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">{isEditMode ? 'Update Profile Details' : 'New Sub-User Profile'}</p>
                             </div>
                         </div>
 
-                        <form onSubmit={handleCreateSubUser} className="space-y-5">
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
                                 <input
@@ -278,16 +332,19 @@ export default function SubUsersPage() {
                                     value={formData.mobile_number}
                                     placeholder="+91 xxxxxxxxxx"
                                     onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                                    readOnly={isEditMode} // Cannot change mobile as it matches ID often
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Login Password</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    {isEditMode ? 'New Password (Optional)' : 'Login Password'}
+                                </label>
                                 <input
                                     type="password"
-                                    required
+                                    required={!isEditMode}
                                     className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
                                     value={formData.password}
-                                    placeholder="••••••••"
+                                    placeholder={isEditMode ? "Leave blank to keep current" : "••••••••"}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                             </div>
@@ -327,7 +384,7 @@ export default function SubUsersPage() {
                                     type="submit"
                                     className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-200"
                                 >
-                                    Confirm Create
+                                    {isEditMode ? 'Update Agent' : 'Confirm Create'}
                                 </button>
                             </div>
                         </form>

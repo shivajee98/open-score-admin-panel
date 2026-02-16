@@ -230,7 +230,7 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                 {new Date(emi.due_date).toLocaleDateString()}
                                             </td>
                                             <td className="p-4 font-black text-slate-900">
-                                                ₹{parseFloat(emi.amount).toLocaleString()}
+                                                {parseFloat(emi.amount).toLocaleString()}
                                             </td>
                                             <td className="p-4">
                                                 {emi.status === 'PAID' ? (
