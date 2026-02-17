@@ -22,6 +22,7 @@ interface FundStats {
     overdue_amount: number;
     profit_collection: number;
     fee_collection: number;
+    total_profit: number;
     cashback_transfer: number;
 }
 
@@ -58,7 +59,7 @@ export default function FundsCard() {
                 body: JSON.stringify({ amount: parseFloat(addAmount) })
             });
 
-            toast.success("Funds added successfully");
+            toast.success("Capital added successfully");
             fetchStats();
             setIsAddOpen(false);
             setAddAmount('');
@@ -74,7 +75,7 @@ export default function FundsCard() {
                 body: JSON.stringify({ total_funds: parseFloat(editTotal) })
             });
 
-            toast.success("Funds updated successfully");
+            toast.success("Capital pool updated successfully");
             if (data.message === 'No changes made') {
                 toast.info(data.message);
             }
@@ -89,15 +90,15 @@ export default function FundsCard() {
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <Card className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white border-none shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-indigo-100">Total Capital Pool</CardTitle>
+                        <CardTitle className="text-sm font-medium text-indigo-100">Total Capital (Principal)</CardTitle>
                         <Wallet className="h-4 w-4 text-indigo-100" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{stats?.total_funds.toLocaleString()}</div>
-                        <p className="text-xs text-indigo-200 mt-1">Source of Truth</p>
+                        <p className="text-xs text-indigo-200 mt-1">Lendable Capital</p>
                         <div className="mt-4 flex gap-2">
                             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                                 <DialogTrigger asChild>
@@ -108,7 +109,7 @@ export default function FundsCard() {
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Add Capital to Pool</DialogTitle>
-                                        <DialogDescription>Increase the total available liquidity. This does not affect existing allocations.</DialogDescription>
+                                        <DialogDescription>Increase the total lendable principal capital. This does not affect interest/profit buckets.</DialogDescription>
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4">
                                         <div className="grid gap-2">
@@ -137,21 +138,21 @@ export default function FundsCard() {
                                     <DialogHeader>
                                         <DialogTitle className="text-red-600 flex items-center gap-2">
                                             <AlertTriangle className="h-5 w-5" />
-                                            Adjust Total Funds
+                                            Adjust Capital Pool
                                         </DialogTitle>
                                         <DialogDescription className="text-red-900 bg-red-50 p-3 rounded-md mt-2 border border-red-100">
-                                            <strong>Warning:</strong> Reducing the total fund pool will <u>proportionally reduce</u> the reserved amounts for all pending loans. Disbursed loans will not be affected.
+                                            <strong>Warning:</strong> Reducing the total capital pool will <u>proportionally reduce</u> the reserved amounts for all pending loans. Profit amounts are not affected.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4">
                                         <div className="grid gap-2">
-                                            <Label>New Total Fund Value (₹)</Label>
+                                            <Label>New Total Capital Value (₹)</Label>
                                             <Input
                                                 type="number"
                                                 value={editTotal}
                                                 onChange={(e) => setEditTotal(e.target.value)}
                                             />
-                                            <p className="text-xs text-slate-500">Current: ₹{stats?.total_funds.toLocaleString()}</p>
+                                            <p className="text-xs text-slate-500">Current Capital: ₹{stats?.total_funds.toLocaleString()}</p>
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -176,6 +177,17 @@ export default function FundsCard() {
                     onClose={() => setIsHistoryOpen(false)}
                 />
 
+                <Card className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-none shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-emerald-100">Total Profit Collection</CardTitle>
+                        <TrendingDown className="h-4 w-4 text-emerald-100 rotate-180" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">₹{stats?.total_profit.toLocaleString()}</div>
+                        <p className="text-xs text-emerald-200 mt-1">Total (Interest + Fees)</p>
+                    </CardContent>
+                </Card>
+
                 <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white border-none shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-blue-100">Available to Lend</CardTitle>
@@ -183,7 +195,7 @@ export default function FundsCard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{stats?.available_funds.toLocaleString()}</div>
-                        <p className="text-xs text-blue-200 mt-1">Remaining in reserve</p>
+                        <p className="text-xs text-blue-200 mt-1">Remaining principal reserve</p>
                     </CardContent>
                 </Card>
 
@@ -194,7 +206,7 @@ export default function FundsCard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{stats?.sub_user_capitals_pool?.toLocaleString()}</div>
-                        <p className="text-xs text-cyan-200 mt-1">Total limits assigned to agents</p>
+                        <p className="text-xs text-cyan-200 mt-1">Total limits assigned</p>
                     </CardContent>
                 </Card>
 
@@ -205,7 +217,7 @@ export default function FundsCard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{stats?.disbursed_funds.toLocaleString()}</div>
-                        <p className="text-xs text-slate-300 mt-1">Successfully lent out</p>
+                        <p className="text-xs text-slate-300 mt-1">Principal out in market</p>
                     </CardContent>
                 </Card>
             </div>
@@ -213,23 +225,23 @@ export default function FundsCard() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-1">
                 <Card className="border-green-100 bg-green-50/30">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-green-700">Profit Collection</CardTitle>
+                        <CardTitle className="text-sm font-medium text-green-700">Interest Yield</CardTitle>
                         <ArrowUpRight className="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-700">₹{stats?.profit_collection?.toLocaleString()}</div>
-                        <p className="text-xs text-green-600 mt-1">Total interest collected</p>
+                        <p className="text-xs text-green-600 mt-1">Net interest earned</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-emerald-100 bg-emerald-50/30">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-700">Fee Collection</CardTitle>
+                        <CardTitle className="text-sm font-medium text-emerald-700">Fee Income</CardTitle>
                         <ArrowUpRight className="h-4 w-4 text-emerald-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-emerald-700">₹{stats?.fee_collection?.toLocaleString()}</div>
-                        <p className="text-xs text-emerald-600 mt-1">Processing fees & GST</p>
+                        <p className="text-xs text-emerald-600 mt-1">Processing & System fees</p>
                     </CardContent>
                 </Card>
 
