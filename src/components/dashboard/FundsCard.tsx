@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown } from 'lucide-react';
+import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown, History } from 'lucide-react';
+import FundHistoryModal from './FundHistoryModal';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -32,6 +33,7 @@ export default function FundsCard() {
     const [editTotal, setEditTotal] = useState('');
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     const fetchStats = async () => {
         try {
@@ -157,9 +159,22 @@ export default function FundsCard() {
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setIsHistoryOpen(true)}
+                                className="w-full text-xs h-7 bg-white/10 hover:bg-white/20 text-white border-0"
+                            >
+                                <History className="w-3 h-3 mr-1" /> History
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
+
+                <FundHistoryModal
+                    isOpen={isHistoryOpen}
+                    onClose={() => setIsHistoryOpen(false)}
+                />
 
                 <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white border-none shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
