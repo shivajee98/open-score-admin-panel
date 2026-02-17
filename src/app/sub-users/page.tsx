@@ -87,8 +87,8 @@ export default function SubUsersPage() {
             name: subUser.name,
             mobile_number: subUser.mobile_number,
             password: '', // Leave blank to keep current
-            credit_limit: subUser.credit_limit.toString(),
-            default_signup_amount: subUser.default_signup_amount.toString()
+            credit_limit: (subUser.credit_limit ?? 0).toString(),
+            default_signup_amount: (subUser.default_signup_amount ?? 0).toString()
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -226,7 +226,7 @@ export default function SubUsersPage() {
                                                 <td className="p-6 pl-8">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black group-hover:bg-blue-600 transition-colors shadow-lg shadow-slate-200 group-hover:shadow-blue-200">
-                                                            {subUser.name[0]}
+                                                            {subUser.name?.[0] || '?'}
                                                         </div>
                                                         <div>
                                                             <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
@@ -244,9 +244,9 @@ export default function SubUsersPage() {
                                                 </td>
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-black text-slate-900">₹{parseFloat(subUser.credit_balance.toString()).toLocaleString()}</span>
+                                                        <span className="font-black text-slate-900">₹{(subUser.credit_balance ?? 0).toLocaleString()}</span>
                                                         <span className="text-slate-300">/</span>
-                                                        <span className="text-xs font-bold text-slate-400">₹{parseFloat(subUser.credit_limit.toString()).toLocaleString()}</span>
+                                                        <span className="text-xs font-bold text-slate-400">₹{(subUser.credit_limit ?? 0).toLocaleString()}</span>
                                                     </div>
                                                     {/* Inline Credit Add */}
                                                     <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -270,7 +270,7 @@ export default function SubUsersPage() {
                                                     </div>
                                                 </td>
                                                 <td className="p-6">
-                                                    <span className="font-black text-emerald-600">₹{parseFloat(subUser.default_signup_amount.toString()).toLocaleString()}</span>
+                                                    <span className="font-black text-emerald-600">₹{(subUser.default_signup_amount ?? 0).toLocaleString()}</span>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">
                                                     <div className="flex justify-end gap-2">

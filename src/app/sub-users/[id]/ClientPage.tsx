@@ -99,13 +99,13 @@ export default function SubUserDetailPage() {
                         </button>
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">{data.sub_user.name}</h1>
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${data.sub_user.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                                    {data.sub_user.is_active ? 'Active Agent' : 'Inactive'}
+                                <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">{data.sub_user?.name || 'Unknown Agent'}</h1>
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${data.sub_user?.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                    {data.sub_user?.is_active ? 'Active Agent' : 'Inactive'}
                                 </span>
                             </div>
                             <p className="text-slate-500 font-bold mt-1 uppercase tracking-widest text-xs">
-                                Global Referral ID: <span className="text-indigo-600 font-black">{data.sub_user.referral_code}</span> • {data.sub_user.mobile_number}
+                                Global Referral ID: <span className="text-indigo-600 font-black">{data.sub_user?.referral_code}</span> • {data.sub_user?.mobile_number}
                             </p>
                         </div>
                     </div>
@@ -113,7 +113,7 @@ export default function SubUserDetailPage() {
                     <div className="flex items-center gap-4 relative">
                         <div className="text-right">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Credit Availability</p>
-                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(data.sub_user.credit_balance.toString()).toLocaleString()}</p>
+                            <p className="text-2xl font-black text-slate-900">₹{(data.sub_user?.credit_balance ?? 0).toLocaleString()}</p>
                             <div className="w-32 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
                                 <div
                                     className="h-full bg-indigo-500"
