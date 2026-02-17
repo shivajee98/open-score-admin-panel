@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown, History } from 'lucide-react';
+import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown, History, Sparkles } from 'lucide-react';
 import FundHistoryModal from './FundHistoryModal';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -222,26 +222,26 @@ export default function FundsCard() {
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-1">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 lg:grid-rows-1">
                 <Card className="border-green-100 bg-green-50/30">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-green-700">Interest Yield</CardTitle>
+                        <CardTitle className="text-sm font-medium text-green-700">Interest Earned</CardTitle>
                         <ArrowUpRight className="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-700">₹{stats?.profit_collection?.toLocaleString()}</div>
-                        <p className="text-xs text-green-600 mt-1">Net interest earned</p>
+                        <p className="text-xs text-green-600 mt-1">Interest collected from loans</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-emerald-100 bg-emerald-50/30">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-700">Fee Income</CardTitle>
+                        <CardTitle className="text-sm font-medium text-emerald-700">Loan Fee Income</CardTitle>
                         <ArrowUpRight className="h-4 w-4 text-emerald-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-emerald-700">₹{stats?.fee_collection?.toLocaleString()}</div>
-                        <p className="text-xs text-emerald-600 mt-1">Processing & System fees</p>
+                        <p className="text-xs text-emerald-600 mt-1">Processing fees + Platform charges</p>
                     </CardContent>
                 </Card>
 
@@ -252,7 +252,7 @@ export default function FundsCard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-blue-700">₹{stats?.outstanding_amount?.toLocaleString()}</div>
-                        <p className="text-xs text-blue-600 mt-1">Remaining principal to collect</p>
+                        <p className="text-xs text-blue-600 mt-1">Pending principal recovery</p>
                     </CardContent>
                 </Card>
 
@@ -263,18 +263,18 @@ export default function FundsCard() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-red-700">₹{stats?.overdue_amount?.toLocaleString()}</div>
-                        <p className="text-xs text-red-600 mt-1">Total past due installments</p>
+                        <p className="text-xs text-red-600 mt-1">Total past due EMI</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-purple-100 bg-purple-50/30 cursor-pointer hover:bg-purple-100/50 transition-colors" onClick={() => router.push('/cashback-logs')}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-purple-700">Cashback Transfer</CardTitle>
+                        <CardTitle className="text-sm font-medium text-purple-700">Cashback Paid</CardTitle>
                         <TrendingDown className="h-4 w-4 text-purple-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-purple-700">₹{stats?.cashback_transfer?.toLocaleString()}</div>
-                        <p className="text-xs text-purple-600 mt-1">Total cashback & rewards paid</p>
+                        <p className="text-xs text-purple-600 mt-1">Rewards & Bonuses</p>
                     </CardContent>
                 </Card>
             </div>

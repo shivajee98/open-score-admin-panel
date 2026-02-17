@@ -199,8 +199,11 @@ export default function AdminDashboard() {
                                                 </span>
                                             </td>
                                             <td className="p-4">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${rp.mode === 'MANUAL' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
-                                                    }`}>{rp.mode}</span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase ${rp.mode === 'MANUAL' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                                                        }`}>{rp.mode}</span>
+                                                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 pl-1">{rp.type}</span>
+                                                </div>
                                             </td>
                                             <td className="p-4 text-right pr-6 text-[10px] font-bold text-slate-400">
                                                 {new Date(rp.paid_at).toLocaleString()}
