@@ -165,15 +165,6 @@ export default function SubUsersPage() {
                 {/* Global Agent Bonus Setting */}
                 {globalReferralSettings && (
                     <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
-                                <Shield className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="font-black text-indigo-900 text-lg -mb-1">Agent Loan Commission</h3>
-                                <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-1">Default Commission per Loan Disbursal</p>
-                            </div>
-                        </div>
 
                         <div className="flex items-center gap-4 w-full md:w-auto">
                             <div className="relative flex-1 md:w-40">
