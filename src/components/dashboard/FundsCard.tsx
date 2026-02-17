@@ -189,7 +189,7 @@ export default function FundsCard() {
 
                 <Card className="bg-gradient-to-br from-cyan-600 to-cyan-700 text-white border-none shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-cyan-100">Sub User Capital Pool</CardTitle>
+                        <CardTitle className="text-sm font-medium text-cyan-100">Sub-User Limit Pool</CardTitle>
                         <IndianRupee className="h-4 w-4 text-cyan-100" />
                     </CardHeader>
                     <CardContent>
