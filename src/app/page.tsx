@@ -8,6 +8,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
+import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
 
 export default function AdminDashboard() {
     const { user: session, status } = useAuth();
@@ -112,6 +113,9 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout title="System Overview">
+            <div className="flex justify-end mb-6">
+                <SystemResetDialog />
+            </div>
             <FundsCard />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">

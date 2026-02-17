@@ -156,7 +156,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                         <Plus className="w-5 h-5" />
                     </button>
 
-                    {isAdmin && (
+                    {isAdmin && user.role !== 'SYSTEM' && user.role !== 'ADMIN' && (
                         <button
                             onClick={() => handleDelete(user.id)}
                             className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
