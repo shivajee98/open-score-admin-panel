@@ -308,8 +308,9 @@ export default function UsersPage() {
             await apiFetch(`/admin/support/tickets/${id}/approve-payment`, { method: 'POST' });
             loadPendingServiceFees();
             loadUsers(); // Update balances as needed
-        } catch (e) {
-            alert('Failed to approve service fee');
+        } catch (e: any) {
+            alert('Service Fee Processing: ' + e.message);
+            loadPendingServiceFees(); // Refresh anyway to remove stale cards
         }
     };
 
@@ -513,7 +514,7 @@ export default function UsersPage() {
                                             <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
                                                 <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Completed By (Agent)</p>
                                                 <p className="font-bold text-blue-800 text-sm">{ticket.assigned_agent.name}</p>
-                                                <p className="text-[10px] font-bold text-blue-500 uppercase">AGENT_APPROVED</p>
+                                                <p className="text-[10px] font-bold text-blue-500 uppercase">{ticket.payment_status}</p>
                                             </div>
                                         )}
                                         <div className="p-2">
