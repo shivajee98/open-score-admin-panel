@@ -255,7 +255,11 @@ export default function UserDetailsPage() {
                                             min="0"
                                             value={cashbackPercent}
                                             onChange={e => handleSenderPercentChange(e.target.value)}
-                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200"
+                                            disabled={parseFloat(cashbackFlat) > 0}
+                                            className={cn(
+                                                "w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200",
+                                                parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="%"
                                         />
                                     </div>
@@ -266,7 +270,11 @@ export default function UserDetailsPage() {
                                             min="0"
                                             value={cashbackFlat}
                                             onChange={e => handleSenderFlatChange(e.target.value)}
-                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200"
+                                            disabled={parseFloat(cashbackPercent) > 0}
+                                            className={cn(
+                                                "w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200",
+                                                parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="₹"
                                         />
                                     </div>
@@ -283,7 +291,11 @@ export default function UserDetailsPage() {
                                             min="0"
                                             value={receivePercent}
                                             onChange={e => handleReceiverPercentChange(e.target.value)}
-                                            className="w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200"
+                                            disabled={parseFloat(receiveFlat) > 0}
+                                            className={cn(
+                                                "w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200",
+                                                parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="%"
                                         />
                                     </div>
@@ -294,7 +306,11 @@ export default function UserDetailsPage() {
                                             min="0"
                                             value={receiveFlat}
                                             onChange={e => handleReceiverFlatChange(e.target.value)}
-                                            className="w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200"
+                                            disabled={parseFloat(receivePercent) > 0}
+                                            className={cn(
+                                                "w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200",
+                                                parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="₹"
                                         />
                                     </div>

@@ -119,15 +119,23 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     <div className="flex flex-col gap-1">
                         <input
                             type="number" min="0" max="100" step="0.01" placeholder="Pay %"
-                            className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
+                            className={cn(
+                                "w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-purple-600 focus:ring-2 focus:ring-purple-200",
+                                parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed"
+                            )}
                             value={cashbackPercent}
                             onChange={(e) => handleSenderPercentChange(e.target.value)}
+                            disabled={parseFloat(cashbackFlat) > 0}
                         />
                         <input
                             type="number" min="0" max="100" step="0.01" placeholder="Rec %"
-                            className="w-20 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200"
+                            className={cn(
+                                "w-20 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200",
+                                parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed"
+                            )}
                             value={receivePercent}
                             onChange={(e) => handleReceiverPercentChange(e.target.value)}
+                            disabled={parseFloat(receiveFlat) > 0}
                         />
                     </div>
                 ) : (
@@ -143,15 +151,23 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                         <div className="flex flex-col gap-1">
                             <input
                                 type="number" min="0" step="0.01" placeholder="Pay ₹"
-                                className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
+                                className={cn(
+                                    "w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200",
+                                    parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed"
+                                )}
                                 value={cashbackFlat}
                                 onChange={(e) => handleSenderFlatChange(e.target.value)}
+                                disabled={parseFloat(cashbackPercent) > 0}
                             />
                             <input
                                 type="number" min="0" step="0.01" placeholder="Rec ₹"
-                                className="w-24 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-200"
+                                className={cn(
+                                    "w-24 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-200",
+                                    parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed"
+                                )}
                                 value={receiveFlat}
                                 onChange={(e) => handleReceiverFlatChange(e.target.value)}
+                                disabled={parseFloat(receivePercent) > 0}
                             />
                         </div>
                         <button
