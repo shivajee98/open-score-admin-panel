@@ -232,96 +232,99 @@ export default function UserDetailsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 flex items-center justify-between">
-                            Cashback Config
-                            <button
-                                onClick={handleSaveCashback}
-                                disabled={isSaving}
-                                className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all font-black uppercase tracking-widest active:scale-95"
-                            >
-                                {isSaving ? '...' : 'Save'}
-                            </button>
-                        </h3>
+                    {/* Cashback Settings - Hidden for internal users except Agents */}
+                    {!(user.role !== 'SUPPORT_AGENT' && ['ADMIN', 'SUPPORT', 'SYSTEM', 'SUPPORT_AGENT'].includes(user.role)) || user.role === 'SUPPORT_AGENT' ? (
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 flex items-center justify-between">
+                                Cashback Config
+                                <button
+                                    onClick={handleSaveCashback}
+                                    disabled={isSaving}
+                                    className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all font-black uppercase tracking-widest active:scale-95"
+                                >
+                                    {isSaving ? '...' : 'Save'}
+                                </button>
+                            </h3>
 
-                        <div className="space-y-6">
-                            <div>
-                                <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3 px-1">Sender Rules (Payer)</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={cashbackPercent}
-                                            onChange={e => handleSenderPercentChange(e.target.value)}
-                                            disabled={parseFloat(cashbackFlat) > 0}
-                                            className={cn(
-                                                "w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200",
-                                                parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed"
-                                            )}
-                                            placeholder="%"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={cashbackFlat}
-                                            onChange={e => handleSenderFlatChange(e.target.value)}
-                                            disabled={parseFloat(cashbackPercent) > 0}
-                                            className={cn(
-                                                "w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200",
-                                                parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed"
-                                            )}
-                                            placeholder="₹"
-                                        />
+                            <div className="space-y-6">
+                                <div>
+                                    <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3 px-1">Sender Rules (Payer)</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={cashbackPercent}
+                                                onChange={e => handleSenderPercentChange(e.target.value)}
+                                                disabled={parseFloat(cashbackFlat) > 0}
+                                                className={cn(
+                                                    "w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200",
+                                                    parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed"
+                                                )}
+                                                placeholder="%"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={cashbackFlat}
+                                                onChange={e => handleSenderFlatChange(e.target.value)}
+                                                disabled={parseFloat(cashbackPercent) > 0}
+                                                className={cn(
+                                                    "w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200",
+                                                    parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed"
+                                                )}
+                                                placeholder="₹"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div>
-                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 px-1">Receiver Rules (Payee)</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={receivePercent}
-                                            onChange={e => handleReceiverPercentChange(e.target.value)}
-                                            disabled={parseFloat(receiveFlat) > 0}
-                                            className={cn(
-                                                "w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200",
-                                                parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed"
-                                            )}
-                                            placeholder="%"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={receiveFlat}
-                                            onChange={e => handleReceiverFlatChange(e.target.value)}
-                                            disabled={parseFloat(receivePercent) > 0}
-                                            className={cn(
-                                                "w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200",
-                                                parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed"
-                                            )}
-                                            placeholder="₹"
-                                        />
+                                <div>
+                                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 px-1">Receiver Rules (Payee)</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={receivePercent}
+                                                onChange={e => handleReceiverPercentChange(e.target.value)}
+                                                disabled={parseFloat(receiveFlat) > 0}
+                                                className={cn(
+                                                    "w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200",
+                                                    parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed"
+                                                )}
+                                                placeholder="%"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={receiveFlat}
+                                                onChange={e => handleReceiverFlatChange(e.target.value)}
+                                                disabled={parseFloat(receivePercent) > 0}
+                                                className={cn(
+                                                    "w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200",
+                                                    parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed"
+                                                )}
+                                                placeholder="₹"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <p className="text-[9px] font-medium text-slate-400 px-1 leading-relaxed">
-                                Dual rewards are instant. User gets credited from the capital pool based on these rules during payment transactions.
-                            </p>
+                                <p className="text-[9px] font-medium text-slate-400 px-1 leading-relaxed">
+                                    Dual rewards are instant. User gets credited from the capital pool based on these rules during payment transactions.
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    ) : null}
 
                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Internal Notes</h3>
@@ -352,15 +355,17 @@ export default function UserDetailsPage() {
                         >
                             <History className="w-4 h-4" /> Transaction Flow
                         </button>
-                        <button
-                            onClick={() => setActiveTab('REFERRALS')}
-                            className={cn(
-                                "flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all",
-                                activeTab === 'REFERRALS' ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-500 hover:bg-slate-50"
-                            )}
-                        >
-                            <Users className="w-4 h-4" /> Referral History
-                        </button>
+                        {(!(user.role !== 'SUPPORT_AGENT' && ['ADMIN', 'SUPPORT', 'SYSTEM', 'SUPPORT_AGENT'].includes(user.role)) || user.role === 'SUPPORT_AGENT') && (
+                            <button
+                                onClick={() => setActiveTab('REFERRALS')}
+                                className={cn(
+                                    "flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all",
+                                    activeTab === 'REFERRALS' ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-500 hover:bg-slate-50"
+                                )}
+                            >
+                                <Users className="w-4 h-4" /> Referral History
+                            </button>
+                        )}
                     </div>
 
                     {activeTab === 'LOANS' && (

@@ -279,6 +279,26 @@ export default function UsersPage() {
     const [receivePercent, setReceivePercent] = useState('');
     const [receiveFlat, setReceiveFlat] = useState('');
 
+    const handleModalSenderPercentChange = (val: string) => {
+        setCashbackPercent(val);
+        if (parseFloat(val) > 0) setCashbackFlat('');
+    };
+
+    const handleModalSenderFlatChange = (val: string) => {
+        setCashbackFlat(val);
+        if (parseFloat(val) > 0) setCashbackPercent('');
+    };
+
+    const handleModalReceiverPercentChange = (val: string) => {
+        setReceivePercent(val);
+        if (parseFloat(val) > 0) setReceiveFlat('');
+    };
+
+    const handleModalReceiverFlatChange = (val: string) => {
+        setReceiveFlat(val);
+        if (parseFloat(val) > 0) setReceivePercent('');
+    };
+
     const loadUsers = async () => {
         try {
             const data = await apiFetch('/admin/users?type=customer');
@@ -830,17 +850,25 @@ export default function UsersPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <input
                                             type="number" min="0" step="0.01"
-                                            className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100"
+                                            className={cn(
+                                                "w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100",
+                                                parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="Flat ₹"
                                             value={cashbackFlat}
-                                            onChange={e => setCashbackFlat(e.target.value)}
+                                            onChange={e => handleModalSenderFlatChange(e.target.value)}
+                                            disabled={parseFloat(cashbackPercent) > 0}
                                         />
                                         <input
                                             type="number" min="0" max="100" step="0.01"
-                                            className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100"
+                                            className={cn(
+                                                "w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100",
+                                                parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="Percent %"
                                             value={cashbackPercent}
-                                            onChange={e => setCashbackPercent(e.target.value)}
+                                            onChange={e => handleModalSenderPercentChange(e.target.value)}
+                                            disabled={parseFloat(cashbackFlat) > 0}
                                         />
                                     </div>
                                 </div>
@@ -850,17 +878,25 @@ export default function UsersPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <input
                                             type="number" min="0" step="0.01"
-                                            className="w-full bg-blue-50/50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
+                                            className={cn(
+                                                "w-full bg-blue-50/50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100",
+                                                parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="Flat ₹"
                                             value={receiveFlat}
-                                            onChange={e => setReceiveFlat(e.target.value)}
+                                            onChange={e => handleModalReceiverFlatChange(e.target.value)}
+                                            disabled={parseFloat(receivePercent) > 0}
                                         />
                                         <input
                                             type="number" min="0" max="100" step="0.01"
-                                            className="w-full bg-blue-50/50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
+                                            className={cn(
+                                                "w-full bg-blue-50/50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100",
+                                                parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed"
+                                            )}
                                             placeholder="Percent %"
                                             value={receivePercent}
-                                            onChange={e => setReceivePercent(e.target.value)}
+                                            onChange={e => handleModalReceiverPercentChange(e.target.value)}
+                                            disabled={parseFloat(receiveFlat) > 0}
                                         />
                                     </div>
                                     <p className="text-[10px] text-slate-400 mt-4 font-bold px-1">
