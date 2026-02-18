@@ -428,6 +428,12 @@ export default function QrGenerator() {
                             <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-2">
                                 <Zap size={14} /> Total Batches: {batches.length}
                             </div>
+                            <Link
+                                href="/qr-control"
+                                className="bg-indigo-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2"
+                            >
+                                <FolderPlus size={14} /> All QR
+                            </Link>
                             <button
                                 onClick={handleDeleteUnmappedGlobal}
                                 className="bg-rose-50 text-rose-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center gap-2"

@@ -1,7 +1,17 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
+import { apiFetch } from '@/lib/api';
+import QRCode from 'react-qr-code';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from 'sonner';
 import {
     Folder,
     FileText,
@@ -16,9 +26,9 @@ import {
     Search,
     Grid,
     List as ListIcon,
-    CornerUpLeft
+    CornerUpLeft,
+    Zap
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 // --- Types ---
 interface FileItem {
@@ -32,30 +42,16 @@ interface FileItem {
     parentId: string | null; // null = root
 }
 
-// --- Mock Initial Data ---
-const MOCK_DB: FileItem[] = [
-    { id: 'f1', name: 'Merchant QRs', type: 'folder', size: '12 items', date: '2024-01-15', color: 'text-blue-500', parentId: null },
-    { id: 'f2', name: 'Agent QRs', type: 'folder', size: '5 items', date: '2024-02-10', color: 'text-purple-500', parentId: null },
-    { id: 'f3', name: 'System QRs', type: 'folder', size: '3 items', date: '2024-02-01', color: 'text-slate-500', parentId: null },
-    { id: 'file1', name: 'Default_Payment.png', type: 'file', size: '156 KB', date: '2024-02-20', url: '/placeholder-qr.png', parentId: null },
-
-    // Inside f1
-    { id: 'm1', name: 'Shop_A_QR.png', type: 'file', size: '200 KB', date: '2024-01-15', parentId: 'f1' },
-    { id: 'm2', name: 'Shop_B_QR.png', type: 'file', size: '210 KB', date: '2024-01-16', parentId: 'f1' },
-
-    // Inside f2
-    { id: 'a1', name: 'Agent_007.png', type: 'file', size: '180 KB', date: '2024-02-10', parentId: 'f2' },
-
-    // Inside f3
-    { id: 's1', name: 'Main_UPI.png', type: 'file', size: '120 KB', date: '2024-02-01', parentId: 'f3' }
-];
-
 export default function QRControlClient() {
     // --- State ---
-    const [fileSystem, setFileSystem] = useState<FileItem[]>(MOCK_DB);
+    const [fileSystem, setFileSystem] = useState<FileItem[]>([]);
+    const [loading, setLoading] = useState(true);
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // QR Preview Modal
+    const [previewQr, setPreviewQr] = useState<{ name: string, data: string } | null>(null);
 
     // Drag & Drop State
     const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -63,6 +59,23 @@ export default function QRControlClient() {
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, itemId: string | null } | null>(null);
+
+    // --- Fetch Data ---
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const res = await apiFetch('/admin/qr/file-system');
+            setFileSystem(res);
+        } catch (e: any) {
+            toast.error("Failed to load QR file system");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     // --- Derived State ---
     const currentItems = fileSystem.filter(item => item.parentId === currentFolderId);
@@ -89,8 +102,9 @@ export default function QRControlClient() {
         if (item.type === 'folder') {
             setCurrentFolderId(item.id);
             setSelectedIds(new Set());
-        } else {
-            toast.info(`Opening file: ${item.name}`);
+        } else if (item.url) {
+            // View QR Modal
+            setPreviewQr({ name: item.name, data: item.url });
         }
     };
 
@@ -123,11 +137,10 @@ export default function QRControlClient() {
     const onDragStart = (e: React.DragEvent, item: FileItem) => {
         setDraggedItemId(item.id);
         e.dataTransfer.effectAllowed = 'move';
-        // Create ghost image if needed, default usually works
     };
 
     const onDragOver = (e: React.DragEvent, item: FileItem | null) => {
-        e.preventDefault(); // Necessary to allow dropping
+        e.preventDefault();
         if (item && item.type === 'folder' && item.id !== draggedItemId) {
             setDragOverFolderId(item.id);
         } else {
@@ -135,32 +148,37 @@ export default function QRControlClient() {
         }
     };
 
-    const onDrop = (e: React.DragEvent, targetFolderId: string | null) => {
+    const onDrop = async (e: React.DragEvent, targetFolderId: string | null) => {
         e.preventDefault();
         setDragOverFolderId(null);
 
         if (!draggedItemId) return;
-        if (targetFolderId === draggedItemId) return; // Can't drop on self
+        if (targetFolderId === draggedItemId) return;
 
-        // Update File System
         const itemToMove = fileSystem.find(i => i.id === draggedItemId);
         if (!itemToMove) return;
 
-        // Prevent circular moves (folder into its child) - simplified check since we only go 1 level deep mock
-        // Real implementation needs recursive check
-
-        setFileSystem(prev => prev.map(item => {
-            if (item.id === draggedItemId) {
-                return { ...item, parentId: targetFolderId };
+        // If target is a Batch folder and item is a QR (file)
+        if (targetFolderId && targetFolderId.startsWith('batch_') && itemToMove.type === 'file') {
+            const batchId = targetFolderId.replace('batch_', '');
+            try {
+                await apiFetch('/admin/qr/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        qr_ids: [itemToMove.id],
+                        batch_id: batchId
+                    }),
+                });
+                toast.success(`Moved "${itemToMove.name}" to batch`);
+                fetchData();
+            } catch (e: any) {
+                toast.error(e.message || "Failed to move file");
             }
-            return item;
-        }));
+        } else {
+            toast.error("Only moving QR codes to Batch folders is supported via backend.");
+        }
 
-        const targetName = targetFolderId
-            ? fileSystem.find(i => i.id === targetFolderId)?.name
-            : 'Root';
-
-        toast.success(`Moved "${itemToMove.name}" to "${targetName}"`);
         setDraggedItemId(null);
     };
 
@@ -168,12 +186,12 @@ export default function QRControlClient() {
     const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
         e.preventDefault();
         e.stopPropagation();
-        setSelectedIds(new Set([itemId])); // Select item logic
+        setSelectedIds(new Set([itemId]));
         setContextMenu({ x: e.clientX, y: e.clientY, itemId });
     };
 
     // Context Menu Actions
-    const handleContextAction = (action: string) => {
+    const handleContextAction = async (action: string) => {
         if (!contextMenu?.itemId) return;
         const item = fileSystem.find(i => i.id === contextMenu.itemId);
         if (!item) return;
@@ -183,12 +201,21 @@ export default function QRControlClient() {
                 handleNavigate(item);
                 break;
             case 'rename':
-                toast.info("Rename feature coming soon!");
+                toast.info("Rename coming soon!");
                 break;
             case 'delete':
-                if (confirm(`Delete ${item.name}?`)) {
-                    setFileSystem(prev => prev.filter(i => i.id !== item.id));
-                    toast.success("Item deleted");
+                if (item.type === 'file') {
+                    if (confirm(`Delete ${item.name}?`)) {
+                        try {
+                            await apiFetch(`/admin/qr/${item.id}`, { method: 'DELETE' });
+                            toast.success("Item deleted");
+                            fetchData();
+                        } catch (e: any) {
+                            toast.error(e.message || "Failed to delete");
+                        }
+                    }
+                } else {
+                    toast.info("Batch/Role folders cannot be deleted manually here.");
                 }
                 break;
         }
@@ -202,8 +229,15 @@ export default function QRControlClient() {
         return () => window.removeEventListener('click', closeMenu);
     }, []);
 
+
     // --- Render Helpers ---
     const crumbs = getBreadcrumbs();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredItems = currentItems.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.size && item.size.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     return (
         <div
@@ -211,9 +245,6 @@ export default function QRControlClient() {
             onClick={handleBackgroundClick}
             onDragOver={(e) => {
                 e.preventDefault();
-                // Allow dropping on empty space to move to current folder? No, usually drop ON a folder.
-                // But if we dragged from outside... complex.
-                // For now, drop targets are only Folders.
             }}
         >
             <style jsx global>{`
@@ -233,36 +264,49 @@ export default function QRControlClient() {
             {/* Header / Toolbar */}
             <div className="no-print flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-slate-800">QR Manager</h2>
-                    <p className="text-muted-foreground text-sm">File System Mode</p>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-800 uppercase">QR Manager</h2>
+                    <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest text-indigo-500">Live File System</p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+                <div className="flex items-center gap-3">
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search QR File..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-100 transition-all w-64 shadow-sm"
+                        />
+                    </div>
+                    <div className="flex items-center bg-slate-100 rounded-2xl p-1 border border-slate-200">
                         <button
                             onClick={() => setViewMode('grid')}
-                            className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`p-1.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             <Grid className="w-4 h-4" />
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`p-1.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             <ListIcon className="w-4 h-4" />
                         </button>
                     </div>
-                    <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-                        <Upload className="w-4 h-4" /> Upload
+                    <Button
+                        onClick={() => fetchData()}
+                        className="gap-2 bg-indigo-600 hover:bg-white hover:text-indigo-600 hover:border-indigo-600 border border-transparent rounded-2xl h-11 px-6 font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20"
+                    >
+                        <Zap className="w-4 h-4" /> Sync
                     </Button>
                 </div>
             </div>
 
             {/* Path Bar */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm text-sm text-slate-600 overflow-x-auto">
+            <div className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm text-sm text-slate-600 overflow-x-auto">
                 <button
                     onClick={(e) => { e.stopPropagation(); setCurrentFolderId(null); setSelectedIds(new Set()); }}
-                    className={`flex items-center gap-1 font-medium transition-colors hover:text-indigo-600 ${!currentFolderId ? 'text-indigo-600 font-bold' : ''}`}
+                    className={`flex items-center gap-1 font-black uppercase tracking-wider transition-colors hover:text-indigo-600 ${!currentFolderId ? 'text-indigo-600' : ''}`}
                 >
                     <Home className="w-4 h-4" /> Root
                 </button>
@@ -272,7 +316,7 @@ export default function QRControlClient() {
                         <ChevronRight className="w-4 h-4 text-slate-300" />
                         <button
                             onClick={(e) => { e.stopPropagation(); setCurrentFolderId(folder.id); setSelectedIds(new Set()); }}
-                            className={`font-medium transition-colors whitespace-nowrap hover:text-indigo-600 ${idx === crumbs.length - 1 ? 'text-indigo-600 font-bold' : ''}`}
+                            className={`font-bold transition-colors whitespace-nowrap hover:text-indigo-600 ${idx === crumbs.length - 1 ? 'text-indigo-600' : 'text-slate-400'}`}
                         >
                             {folder.name}
                         </button>
@@ -281,11 +325,11 @@ export default function QRControlClient() {
             </div>
 
             {/* File Area */}
-            <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6 min-h-[400px]">
+            <div className="bg-slate-50/50 rounded-[2.5rem] border border-slate-200/60 p-6 min-h-[400px]">
                 {/* Back Button if not root */}
                 {currentFolderId && (
                     <div
-                        className="mb-4 inline-flex items-center gap-2 text-slate-500 hover:text-indigo-600 cursor-pointer font-medium text-sm transition-colors py-1 px-2 rounded-lg hover:bg-indigo-50"
+                        className="mb-6 inline-flex items-center gap-2 text-indigo-600 hover:underline cursor-pointer font-black text-[10px] uppercase tracking-widest transition-colors py-2 px-4 rounded-xl bg-indigo-50 border border-indigo-100 shadow-sm"
                         onClick={(e) => { e.stopPropagation(); handleUp(); }}
                     >
                         <CornerUpLeft className="w-4 h-4" /> Back to parent
@@ -294,10 +338,10 @@ export default function QRControlClient() {
 
                 <div className={
                     viewMode === 'grid'
-                        ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4"
-                        : "flex flex-col gap-2"
+                        ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6"
+                        : "flex flex-col gap-3"
                 }>
-                    {currentItems.map((item) => {
+                    {filteredItems.map((item) => {
                         const isSelected = selectedIds.has(item.id);
                         const isDragOver = dragOverFolderId === item.id;
 
@@ -387,6 +431,42 @@ export default function QRControlClient() {
                     <button onClick={() => handleContextAction('delete')} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                         <Trash2 className="w-4 h-4" /> Delete
                     </button>
+                </div>
+            )}
+
+            {/* QR Preview Dialog */}
+            <Dialog open={!!previewQr} onOpenChange={(open) => !open && setPreviewQr(null)}>
+                <DialogContent className="sm:max-w-md bg-white border-none rounded-[2.5rem] p-8 shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight text-center">
+                            QR File Preview
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center justify-center p-6 space-y-6">
+                        <div className="p-4 bg-white rounded-3xl shadow-lg border border-slate-100">
+                            {previewQr && <QRCode value={previewQr.data} size={256} level="H" />}
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-slate-800">{previewQr?.name}</h3>
+                            <p className="text-sm text-slate-400 font-mono mt-1">{previewQr?.data}</p>
+                        </div>
+                        <Button
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-14 font-black text-sm uppercase tracking-widest"
+                            onClick={() => window.print()}
+                        >
+                            Print QR Code
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Loading Overlay */}
+            {loading && (
+                <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-[100] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-indigo-600 font-black text-xs uppercase tracking-widest">Compiling Files...</p>
+                    </div>
                 </div>
             )}
         </div>
