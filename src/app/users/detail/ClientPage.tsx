@@ -52,17 +52,46 @@ export default function UserDetailsPage() {
         }
     }, [data?.user]);
 
+    const handleSenderPercentChange = (val: string) => {
+        setCashbackPercent(val);
+        if (parseFloat(val) > 0) setCashbackFlat('');
+    };
+
+    const handleSenderFlatChange = (val: string) => {
+        setCashbackFlat(val);
+        if (parseFloat(val) > 0) setCashbackPercent('');
+    };
+
+    const handleReceiverPercentChange = (val: string) => {
+        setReceivePercent(val);
+        if (parseFloat(val) > 0) setReceiveFlat('');
+    };
+
+    const handleReceiverFlatChange = (val: string) => {
+        setReceiveFlat(val);
+        if (parseFloat(val) > 0) setReceivePercent('');
+    };
+
     const handleSaveCashback = async () => {
         setIsSaving(true);
         try {
+            const pPercent = parseFloat(cashbackPercent) || 0;
+            const pFlat = parseFloat(cashbackFlat) || 0;
+            const rPercent = parseFloat(receivePercent) || 0;
+            const rFlat = parseFloat(receiveFlat) || 0;
+
+            if (pPercent < 0 || pFlat < 0 || rPercent < 0 || rFlat < 0) {
+                throw new Error("Cashback values cannot be negative");
+            }
+
             await apiFetch(`/admin/users/${id}/cashback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    cashback_percentage: parseFloat(cashbackPercent) || 0,
-                    cashback_flat_amount: parseFloat(cashbackFlat) || 0,
-                    receive_cashback_percentage: parseFloat(receivePercent) || 0,
-                    receive_cashback_flat_amount: parseFloat(receiveFlat) || 0
+                    cashback_percentage: pPercent,
+                    cashback_flat_amount: pFlat,
+                    receive_cashback_percentage: rPercent,
+                    receive_cashback_flat_amount: rFlat
                 })
             });
             toast.success("Cashback settings updated successfully");
@@ -223,8 +252,9 @@ export default function UserDetailsPage() {
                                         <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
                                         <input
                                             type="number"
+                                            min="0"
                                             value={cashbackPercent}
-                                            onChange={e => setCashbackPercent(e.target.value)}
+                                            onChange={e => handleSenderPercentChange(e.target.value)}
                                             className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200"
                                             placeholder="%"
                                         />
@@ -233,8 +263,9 @@ export default function UserDetailsPage() {
                                         <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
                                         <input
                                             type="number"
+                                            min="0"
                                             value={cashbackFlat}
-                                            onChange={e => setCashbackFlat(e.target.value)}
+                                            onChange={e => handleSenderFlatChange(e.target.value)}
                                             className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200"
                                             placeholder="₹"
                                         />
@@ -249,8 +280,9 @@ export default function UserDetailsPage() {
                                         <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
                                         <input
                                             type="number"
+                                            min="0"
                                             value={receivePercent}
-                                            onChange={e => setReceivePercent(e.target.value)}
+                                            onChange={e => handleReceiverPercentChange(e.target.value)}
                                             className="w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200"
                                             placeholder="%"
                                         />
@@ -259,8 +291,9 @@ export default function UserDetailsPage() {
                                         <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
                                         <input
                                             type="number"
+                                            min="0"
                                             value={receiveFlat}
-                                            onChange={e => setReceiveFlat(e.target.value)}
+                                            onChange={e => handleReceiverFlatChange(e.target.value)}
                                             className="w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200"
                                             placeholder="₹"
                                         />

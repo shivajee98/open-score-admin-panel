@@ -24,18 +24,48 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
         setReceiveFlat(user.receive_cashback_flat_amount ?? '');
     }, [user.cashback_percentage, user.cashback_flat_amount, user.receive_cashback_percentage, user.receive_cashback_flat_amount]);
 
+    const handleSenderPercentChange = (val: string) => {
+        setCashbackPercent(val);
+        if (parseFloat(val) > 0) setCashbackFlat('');
+    };
+
+    const handleSenderFlatChange = (val: string) => {
+        setCashbackFlat(val);
+        if (parseFloat(val) > 0) setCashbackPercent('');
+    };
+
+    const handleReceiverPercentChange = (val: string) => {
+        setReceivePercent(val);
+        if (parseFloat(val) > 0) setReceiveFlat('');
+    };
+
+    const handleReceiverFlatChange = (val: string) => {
+        setReceiveFlat(val);
+        if (parseFloat(val) > 0) setReceivePercent('');
+    };
+
     const handleSaveCashback = async () => {
         setIsSaving(true);
         try {
+            const pPercent = parseFloat(cashbackPercent) || 0;
+            const pFlat = parseFloat(cashbackFlat) || 0;
+            const rPercent = parseFloat(receivePercent) || 0;
+            const rFlat = parseFloat(receiveFlat) || 0;
+
+            if (pPercent < 0 || pFlat < 0 || rPercent < 0 || rFlat < 0) {
+                alert("Values cannot be negative");
+                return;
+            }
+
             await apiFetch('/admin/users/bulk-cashback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_ids: [user.id],
-                    cashback_percentage: parseFloat(cashbackPercent) || 0,
-                    cashback_flat_amount: parseFloat(cashbackFlat) || 0,
-                    receive_cashback_percentage: parseFloat(receivePercent) || 0,
-                    receive_cashback_flat_amount: parseFloat(receiveFlat) || 0
+                    cashback_percentage: pPercent,
+                    cashback_flat_amount: pFlat,
+                    receive_cashback_percentage: rPercent,
+                    receive_cashback_flat_amount: rFlat
                 })
             });
             alert('Cashback updated!');
@@ -91,13 +121,13 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             type="number" min="0" max="100" step="0.01" placeholder="Pay %"
                             className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
                             value={cashbackPercent}
-                            onChange={(e) => setCashbackPercent(e.target.value)}
+                            onChange={(e) => handleSenderPercentChange(e.target.value)}
                         />
                         <input
                             type="number" min="0" max="100" step="0.01" placeholder="Rec %"
                             className="w-20 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200"
                             value={receivePercent}
-                            onChange={(e) => setReceivePercent(e.target.value)}
+                            onChange={(e) => handleReceiverPercentChange(e.target.value)}
                         />
                     </div>
                 ) : (
@@ -115,13 +145,13 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                                 type="number" min="0" step="0.01" placeholder="Pay ₹"
                                 className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
                                 value={cashbackFlat}
-                                onChange={(e) => setCashbackFlat(e.target.value)}
+                                onChange={(e) => handleSenderFlatChange(e.target.value)}
                             />
                             <input
                                 type="number" min="0" step="0.01" placeholder="Rec ₹"
                                 className="w-24 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-200"
                                 value={receiveFlat}
-                                onChange={(e) => setReceiveFlat(e.target.value)}
+                                onChange={(e) => handleReceiverFlatChange(e.target.value)}
                             />
                         </div>
                         <button
