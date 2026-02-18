@@ -10,15 +10,19 @@ import { useAuth } from '@/hooks/useAuth';
 
 // Sub-component for individual user rows to handle local input state
 const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser }: any) => {
-    const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage || '');
-    const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount || '');
+    const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage ?? '');
+    const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount ?? '');
+    const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
+    const [receiveFlat, setReceiveFlat] = useState(user.receive_cashback_flat_amount ?? '');
     const [isSaving, setIsSaving] = useState(false);
 
     // Sync state if user prop changes (e.g. after reload)
     useEffect(() => {
-        setCashbackPercent(user.cashback_percentage || '');
-        setCashbackFlat(user.cashback_flat_amount || '');
-    }, [user.cashback_percentage, user.cashback_flat_amount]);
+        setCashbackPercent(user.cashback_percentage ?? '');
+        setCashbackFlat(user.cashback_flat_amount ?? '');
+        setReceivePercent(user.receive_cashback_percentage ?? '');
+        setReceiveFlat(user.receive_cashback_flat_amount ?? '');
+    }, [user.cashback_percentage, user.cashback_flat_amount, user.receive_cashback_percentage, user.receive_cashback_flat_amount]);
 
     const handleSaveCashback = async () => {
         setIsSaving(true);
@@ -29,7 +33,9 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 body: JSON.stringify({
                     user_ids: [user.id],
                     cashback_percentage: parseFloat(cashbackPercent) || 0,
-                    cashback_flat_amount: parseFloat(cashbackFlat) || 0
+                    cashback_flat_amount: parseFloat(cashbackFlat) || 0,
+                    receive_cashback_percentage: parseFloat(receivePercent) || 0,
+                    receive_cashback_flat_amount: parseFloat(receiveFlat) || 0
                 })
             });
             alert('Cashback updated!');
@@ -80,34 +86,44 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             {/* Inline Cashback Inputs - Only for Admin */}
             <td className="p-6">
                 {isAdmin ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-1">
                         <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            placeholder="%"
-                            className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
+                            type="number" min="0" max="100" step="0.01" placeholder="Pay %"
+                            className="w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-purple-600 focus:ring-2 focus:ring-purple-200"
                             value={cashbackPercent}
                             onChange={(e) => setCashbackPercent(e.target.value)}
                         />
+                        <input
+                            type="number" min="0" max="100" step="0.01" placeholder="Rec %"
+                            className="w-20 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200"
+                            value={receivePercent}
+                            onChange={(e) => setReceivePercent(e.target.value)}
+                        />
                     </div>
                 ) : (
-                    <span className="text-slate-400 font-mono text-sm">{user.cashback_percentage || 0}%</span>
+                    <div className="flex flex-col text-[10px] font-mono">
+                        <span className="text-purple-600">P: {user.cashback_percentage || 0}%</span>
+                        <span className="text-blue-600">R: {user.receive_cashback_percentage || 0}%</span>
+                    </div>
                 )}
             </td>
             <td className="p-6">
                 {isAdmin ? (
                     <div className="flex items-center gap-2">
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="₹"
-                            className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-sm font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
-                            value={cashbackFlat}
-                            onChange={(e) => setCashbackFlat(e.target.value)}
-                        />
+                        <div className="flex flex-col gap-1">
+                            <input
+                                type="number" min="0" step="0.01" placeholder="Pay ₹"
+                                className="w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200"
+                                value={cashbackFlat}
+                                onChange={(e) => setCashbackFlat(e.target.value)}
+                            />
+                            <input
+                                type="number" min="0" step="0.01" placeholder="Rec ₹"
+                                className="w-24 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-200"
+                                value={receiveFlat}
+                                onChange={(e) => setReceiveFlat(e.target.value)}
+                            />
+                        </div>
                         <button
                             onClick={handleSaveCashback}
                             disabled={isSaving}
@@ -118,7 +134,10 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                         </button>
                     </div>
                 ) : (
-                    <span className="text-slate-400 font-mono text-sm">₹{user.cashback_flat_amount || 0}</span>
+                    <div className="flex flex-col text-[10px] font-mono">
+                        <span className="text-emerald-600">P: ₹{user.cashback_flat_amount || 0}</span>
+                        <span className="text-indigo-600">R: ₹{user.receive_cashback_flat_amount || 0}</span>
+                    </div>
                 )}
             </td>
 
@@ -195,6 +214,8 @@ export default function InternalUsersPage() {
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
     const [cashbackPercent, setCashbackPercent] = useState('');
     const [cashbackFlat, setCashbackFlat] = useState('');
+    const [receivePercent, setReceivePercent] = useState('');
+    const [receiveFlat, setReceiveFlat] = useState('');
 
     const loadUsers = async () => {
         try {
@@ -321,7 +342,9 @@ export default function InternalUsersPage() {
                 body: JSON.stringify({
                     user_ids: selectedIds,
                     cashback_percentage: parseFloat(cashbackPercent) || 0,
-                    cashback_flat_amount: parseFloat(cashbackFlat) || 0
+                    cashback_flat_amount: parseFloat(cashbackFlat) || 0,
+                    receive_cashback_percentage: parseFloat(receivePercent) || 0,
+                    receive_cashback_flat_amount: parseFloat(receiveFlat) || 0
                 })
             });
 
@@ -329,6 +352,8 @@ export default function InternalUsersPage() {
             setIsCashbackModalOpen(false);
             setCashbackPercent('');
             setCashbackFlat('');
+            setReceivePercent('');
+            setReceiveFlat('');
             setSelectedIds([]);
             loadUsers();
         } catch (e: any) {
@@ -606,8 +631,8 @@ export default function InternalUsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">User Details</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback %</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Flat Bonus</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback % (P | R)</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
@@ -736,31 +761,45 @@ export default function InternalUsersPage() {
                         <form onSubmit={handleBulkCashback}>
                             <div className="space-y-4 mb-6">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Flat Amount (₹)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100"
-                                        placeholder="e.g. 5"
-                                        value={cashbackFlat}
-                                        onChange={e => setCashbackFlat(e.target.value)}
-                                    />
+                                    <label className="block text-xs font-black text-purple-400 uppercase tracking-widest mb-4">Pay/Sender Rules</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input
+                                            type="number" min="0" step="0.01"
+                                            className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100"
+                                            placeholder="Flat ₹"
+                                            value={cashbackFlat}
+                                            onChange={e => setCashbackFlat(e.target.value)}
+                                        />
+                                        <input
+                                            type="number" min="0" max="100" step="0.01"
+                                            className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100"
+                                            placeholder="Percent %"
+                                            value={cashbackPercent}
+                                            onChange={e => setCashbackPercent(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
+
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Percentage (%)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-purple-100"
-                                        placeholder="e.g. 2.5"
-                                        value={cashbackPercent}
-                                        onChange={e => setCashbackPercent(e.target.value)}
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-2 font-bold px-1">
-                                        Logic: (Amount * Rate%) + Flat Amount. Capped at transaction amount.
+                                    <label className="block text-xs font-black text-blue-400 uppercase tracking-widest mb-4">Receive/Payee Rules</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input
+                                            type="number" min="0" step="0.01"
+                                            className="w-full bg-blue-50/50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
+                                            placeholder="Flat ₹"
+                                            value={receiveFlat}
+                                            onChange={e => setReceiveFlat(e.target.value)}
+                                        />
+                                        <input
+                                            type="number" min="0" max="100" step="0.01"
+                                            className="w-full bg-blue-50/50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
+                                            placeholder="Percent %"
+                                            value={receivePercent}
+                                            onChange={e => setReceivePercent(e.target.value)}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-4 font-bold px-1">
+                                        Logic: (Amount * Rate%) + Flat Amount. P = Payer, R = Receiver.
                                     </p>
                                 </div>
                             </div>

@@ -1,7 +1,7 @@
 'use client';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import SubUserDetailPage from '../[id]/ClientPage';
+import SubUserDetailPage from './ClientPage';
 
 function SubUserDetailContent() {
     const searchParams = useSearchParams();

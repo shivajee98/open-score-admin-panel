@@ -1,7 +1,7 @@
 'use client';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import LoanPlanInsights from '../[id]/insights/ClientPage';
+import LoanPlanInsights from './ClientPage';
 
 function InsightsPageContent() {
     const searchParams = useSearchParams();

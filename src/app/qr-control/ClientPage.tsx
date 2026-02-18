@@ -216,8 +216,22 @@ export default function QRControlClient() {
                 // For now, drop targets are only Folders.
             }}
         >
+            <style jsx global>{`
+                @media print {
+                    aside, header, .no-print {
+                        display: none !important;
+                    }
+                    body {
+                        background: white !important;
+                    }
+                    main {
+                        margin-left: 0 !important;
+                        padding: 0 !important;
+                    }
+                }
+            `}</style>
             {/* Header / Toolbar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="no-print flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight text-slate-800">QR Manager</h2>
                     <p className="text-muted-foreground text-sm">File System Mode</p>

@@ -1,7 +1,7 @@
 'use client';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import EditLoanPlanClient from './[id]/ClientPage';
+import EditLoanPlanClient from './ClientPage';
 
 function EditPageContent() {
     const searchParams = useSearchParams();

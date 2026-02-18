@@ -22,6 +22,11 @@ export default function UserDetailsPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('LOANS');
+    const [cashbackPercent, setCashbackPercent] = useState<any>('');
+    const [cashbackFlat, setCashbackFlat] = useState<any>('');
+    const [receivePercent, setReceivePercent] = useState<any>('');
+    const [receiveFlat, setReceiveFlat] = useState<any>('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const loadData = async () => {
         try {
@@ -37,6 +42,37 @@ export default function UserDetailsPage() {
     useEffect(() => {
         loadData();
     }, [id]);
+
+    useEffect(() => {
+        if (data?.user) {
+            setCashbackPercent(data.user.cashback_percentage ?? '');
+            setCashbackFlat(data.user.cashback_flat_amount ?? '');
+            setReceivePercent(data.user.receive_cashback_percentage ?? '');
+            setReceiveFlat(data.user.receive_cashback_flat_amount ?? '');
+        }
+    }, [data?.user]);
+
+    const handleSaveCashback = async () => {
+        setIsSaving(true);
+        try {
+            await apiFetch(`/admin/users/${id}/cashback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cashback_percentage: parseFloat(cashbackPercent) || 0,
+                    cashback_flat_amount: parseFloat(cashbackFlat) || 0,
+                    receive_cashback_percentage: parseFloat(receivePercent) || 0,
+                    receive_cashback_flat_amount: parseFloat(receiveFlat) || 0
+                })
+            });
+            toast.success("Cashback settings updated successfully");
+            loadData();
+        } catch (e: any) {
+            toast.error(e.message || "Failed to update cashback");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -164,6 +200,77 @@ export default function UserDetailsPage() {
                                 <span className="text-sm font-bold text-blue-600">Past Loans</span>
                                 <span className="font-black text-blue-700">{loans.past.length}</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 flex items-center justify-between">
+                            Cashback Config
+                            <button
+                                onClick={handleSaveCashback}
+                                disabled={isSaving}
+                                className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all font-black uppercase tracking-widest active:scale-95"
+                            >
+                                {isSaving ? '...' : 'Save'}
+                            </button>
+                        </h3>
+
+                        <div className="space-y-6">
+                            <div>
+                                <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3 px-1">Sender Rules (Payer)</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
+                                        <input
+                                            type="number"
+                                            value={cashbackPercent}
+                                            onChange={e => setCashbackPercent(e.target.value)}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200"
+                                            placeholder="%"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
+                                        <input
+                                            type="number"
+                                            value={cashbackFlat}
+                                            onChange={e => setCashbackFlat(e.target.value)}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-purple-200"
+                                            placeholder="₹"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 px-1">Receiver Rules (Payee)</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Percent %</label>
+                                        <input
+                                            type="number"
+                                            value={receivePercent}
+                                            onChange={e => setReceivePercent(e.target.value)}
+                                            className="w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200"
+                                            placeholder="%"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">Flat ₹</label>
+                                        <input
+                                            type="number"
+                                            value={receiveFlat}
+                                            onChange={e => setReceiveFlat(e.target.value)}
+                                            className="w-full bg-blue-50/50 border-none rounded-xl p-3 text-sm font-black text-slate-900 focus:ring-1 focus:ring-blue-200"
+                                            placeholder="₹"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p className="text-[9px] font-medium text-slate-400 px-1 leading-relaxed">
+                                Dual rewards are instant. User gets credited from the capital pool based on these rules during payment transactions.
+                            </p>
                         </div>
                     </div>
 

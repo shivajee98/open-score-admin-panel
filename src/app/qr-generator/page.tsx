@@ -217,7 +217,7 @@ export default function QrGenerator() {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
-                    .no-print {
+                    .no-print, header, aside, .sidebar {
                         display: none !important;
                     }
                     .print-page {
