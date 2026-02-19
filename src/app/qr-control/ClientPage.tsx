@@ -45,7 +45,8 @@ import {
     FolderOpen,
     LayoutGrid,
     SearchCode,
-    FileType2
+    FileType2,
+    ChevronDown
 } from 'lucide-react';
 import AdminLayout from '@/components/AdminLayout';
 import { cn } from '@/lib/utils';
@@ -367,6 +368,45 @@ export default function QRControlClient() {
     // Sidebar foldery hierarchy
     const sidebarFolders = fileSystem.filter(i => i.type === 'folder');
 
+    const renderSidebarFolder = (folder: FileItem, depth = 0) => {
+        const subFolders = sidebarFolders.filter(f => f.parentId === folder.id);
+        const isRoot = folder.parentId === null;
+        const isActive = currentFolderId === folder.id;
+        const isParentOfActive = crumbs.some(c => c.id === folder.id);
+        const isOpen = isActive || isParentOfActive || folder.id === 'f_batches' || (isRoot && folder.id === 'f_batches');
+
+        return (
+            <div key={folder.id} className="space-y-1">
+                <button
+                    onClick={() => handleNavigate(folder)}
+                    onDragOver={(e) => onDragOver(e, folder)}
+                    onDrop={(e) => onDrop(e, folder.id)}
+                    className={cn(
+                        "w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl transition-all group",
+                        isActive ? "bg-blue-50 text-blue-700" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600",
+                        dragOverFolderId === folder.id ? "bg-indigo-100 ring-4 ring-indigo-500/20 border-indigo-500 scale-105" : ""
+                    )}
+                >
+                    {isRoot ? (
+                        <Folder size={18} className={cn("fill-current opacity-30", folder.color?.replace('text-', 'text-'))} />
+                    ) : (
+                        <FolderOpen size={14} className="opacity-40" />
+                    )}
+                    <span className={cn(
+                        "font-black uppercase tracking-widest truncate",
+                        isRoot ? "text-[13px]" : "text-[12px]"
+                    )}>{folder.name}</span>
+                </button>
+
+                {isOpen && subFolders.length > 0 && (
+                    <div className={cn("space-y-1 border-l-2 border-slate-50 mt-1", isRoot ? "pl-6 ml-6" : "pl-4 ml-3")}>
+                        {subFolders.map(sub => renderSidebarFolder(sub, depth + 1))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // For printing: only file types, matching current search/filter if applied
     const printableAssets = fileSystem.filter(item => {
         if (item.type !== 'file') return false;
@@ -575,25 +615,25 @@ export default function QRControlClient() {
             `}</style>
 
             <div className="no-print">
-                <div className="flex flex-col lg:flex-row gap-6 min-h-[750px] bg-slate-50/10 p-2 sm:p-4 rounded-[4rem]">
+                <div className="flex flex-col lg:flex-row gap-4 min-h-[750px] bg-slate-50/10 p-2 rounded-[3rem]">
                     {/* File Sidebar */}
-                    <aside className="no-print w-full lg:w-80 shrink-0 bg-white border border-slate-100 rounded-[3rem] p-8 shadow-2xl shadow-blue-900/5 flex flex-col">
-                        <div className="mb-10 px-2 flex items-center justify-between">
+                    <aside className="no-print w-full lg:w-80 shrink-0 bg-white border border-slate-100 rounded-[3rem] p-5 shadow-2xl shadow-blue-900/5 flex flex-col">
+                        <div className="mb-6 px-2 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <Monitor className="w-5 h-5 text-indigo-600" />
-                                <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-800">File System</h3>
+                                <h3 className="font-black text-[13px] uppercase tracking-[0.2em] text-slate-800">File System</h3>
                             </div>
                             <Link href="/qr-generator" className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Back to Generator">
                                 <ArrowLeft size={16} />
                             </Link>
                         </div>
 
-                        <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar pb-8">
+                        <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar pb-8">
                             <div>
                                 <button
                                     onClick={() => setCurrentFolderId(null)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-5 py-4 rounded-[1.5rem] transition-all font-bold text-sm",
+                                        "w-full flex items-center gap-3 px-4 py-3 rounded-[1.5rem] transition-all font-bold text-[15px]",
                                         currentFolderId === null ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-105" : "text-slate-500 hover:bg-slate-50"
                                     )}
                                 >
@@ -602,48 +642,30 @@ export default function QRControlClient() {
                             </div>
 
                             <div className="space-y-3">
-                                <p className="px-5 text-[10px] font-black uppercase tracking-widest text-slate-300">Directories</p>
-                                {sidebarFolders.filter(f => f.parentId === null).map(folder => (
-                                    <div key={folder.id} className="space-y-1">
-                                        <button
-                                            onClick={() => handleNavigate(folder)}
-                                            onDragOver={(e) => onDragOver(e, folder)}
-                                            onDrop={(e) => onDrop(e, folder.id)}
-                                            className={cn(
-                                                "w-full flex items-center gap-4 px-5 py-3 rounded-2xl transition-all group",
-                                                currentFolderId === folder.id ? "bg-blue-50 text-blue-700" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600",
-                                                dragOverFolderId === folder.id ? "bg-indigo-100 ring-4 ring-indigo-500/20 border-indigo-500 scale-105" : ""
-                                            )}
-                                        >
-                                            <Folder size={18} className={cn("fill-current opacity-30", folder.color?.replace('text-', 'text-'))} />
-                                            <span className="font-black text-[10px] uppercase tracking-widest truncate">{folder.name}</span>
-                                        </button>
-
-                                        {/* Sub-folders (Batches) */}
-                                        {folder.id === 'f_batches' && (
-                                            <div className="pl-8 space-y-1 border-l-2 border-slate-50 ml-7 mt-1">
-                                                {sidebarFolders.filter(f => f.parentId === 'f_batches').map(batch => (
-                                                    <button
-                                                        key={batch.id}
-                                                        onClick={() => handleNavigate(batch)}
-                                                        onDragOver={(e) => onDragOver(e, batch)}
-                                                        onDrop={(e) => onDrop(e, batch.id)}
-                                                        className={cn(
-                                                            "w-full flex items-center justify-between px-4 py-2 rounded-xl transition-all group",
-                                                            currentFolderId === batch.id ? "bg-indigo-50 text-indigo-700" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600",
-                                                            dragOverFolderId === batch.id ? "bg-indigo-100 scale-105" : ""
-                                                        )}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <FolderOpen size={14} className="opacity-40" />
-                                                            <span className="font-bold text-[10px] truncate max-w-[120px]">{batch.name}</span>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                <div className="px-4 flex items-center justify-between">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-300">Directories</p>
+                                    <button
+                                        onClick={async () => {
+                                            const name = prompt("Enter folder name:");
+                                            if (!name) return;
+                                            try {
+                                                await apiFetch('/admin/qr/folder', {
+                                                    method: 'POST',
+                                                    body: JSON.stringify({ name, parent_id: currentFolderId })
+                                                });
+                                                toast.success("Folder created");
+                                                fetchData();
+                                            } catch (e) {
+                                                toast.error("Failed to create folder");
+                                            }
+                                        }}
+                                        className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                                        title="New Internal Folder"
+                                    >
+                                        <FolderPlus size={14} />
+                                    </button>
+                                </div>
+                                {sidebarFolders.filter(f => f.parentId === null).map(folder => renderSidebarFolder(folder))}
                             </div>
                         </div>
 
@@ -677,7 +699,7 @@ export default function QRControlClient() {
                                                 <Move size={16} /> <span className="font-black text-[10px] uppercase">Migrate</span>
                                             </button>
                                             <button onClick={handleDeleteMultiple} className="p-3 bg-white/5 hover:bg-rose-600 text-white rounded-2xl transition-all flex items-center gap-2 px-6">
-                                                <Trash2 size={16} /> <span className="font-black text-[10px] uppercase">Purge</span>
+                                                <Trash2 size={16} /> <span className="font-black text-[10px] uppercase">Delete</span>
                                             </button>
                                         </div>
                                     </div>
@@ -706,11 +728,11 @@ export default function QRControlClient() {
                         {/* Search and Action Bar */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                             <div className="lg:col-span-8 relative group w-full">
-                                <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Execute Global Search Strategy (Name, Hash, Merchant...)"
-                                    className="w-full pl-20 pr-10 py-6 bg-white border border-slate-100 rounded-[2rem] font-bold text-slate-800 shadow-xl shadow-blue-900/5 outline-none focus:ring-4 focus:ring-indigo-100 transition-all text-sm"
+                                    className="w-full pl-16 pr-10 py-4 bg-white border border-slate-100 rounded-[1.5rem] font-bold text-slate-800 shadow-xl shadow-blue-900/5 outline-none focus:ring-4 focus:ring-indigo-100 transition-all text-sm"
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
@@ -764,14 +786,14 @@ export default function QRControlClient() {
                         </div>
 
                         {/* Content Viewport */}
-                        <div className="bg-white/40 backdrop-blur-3xl rounded-[4rem] border border-white p-6 sm:p-10 min-h-[600px] relative shadow-2xl shadow-blue-900/5" onClick={handleBackgroundClick}>
+                        <div className="bg-white/40 backdrop-blur-3xl rounded-[3rem] border border-white p-4 sm:p-6 min-h-[600px] relative shadow-2xl shadow-blue-900/5" onClick={handleBackgroundClick}>
                             {currentFolderId && (
-                                <button onClick={handleUp} className="mb-10 inline-flex items-center gap-3 text-slate-400 hover:text-indigo-600 transition-all font-black text-[10px] uppercase tracking-[0.2em] px-8 py-4 bg-white border border-slate-100 rounded-[1.5rem] shadow-xl group">
-                                    <CornerUpLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> Directory Hierarchy
+                                <button onClick={handleUp} className="mb-6 inline-flex items-center gap-3 text-slate-400 hover:text-indigo-600 transition-all font-black text-[10px] uppercase tracking-[0.2em] px-5 py-3 bg-white border border-slate-100 rounded-[1.2rem] shadow-xl group">
+                                    <CornerUpLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Directory Hierarchy
                                 </button>
                             )}
 
-                            <div className={cn(viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 pb-12" : "flex flex-col gap-4 pb-12")}>
+                            <div className={cn(viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 pb-12" : "flex flex-col gap-4 pb-12")}>
                                 {paginatedItems.map(item => {
                                     const isSelected = selectedIds.has(item.id);
                                     return (
@@ -786,7 +808,7 @@ export default function QRControlClient() {
                                             onDrop={(e) => onDrop(e, item.id)}
                                             className={cn(
                                                 "relative group transition-all cursor-pointer bg-white border-2",
-                                                viewMode === 'grid' ? "p-8 rounded-[3rem] aspect-square flex flex-col items-center justify-between text-center" : "p-6 rounded-[2rem] flex items-center justify-between",
+                                                viewMode === 'grid' ? "p-5 rounded-[2.5rem] aspect-square flex flex-col items-center justify-between text-center" : "p-4 rounded-[1.5rem] flex items-center justify-between",
                                                 isSelected ? "border-blue-500 bg-blue-50/20 shadow-2xl ring-4 ring-blue-500/10 z-10" : "border-slate-50 hover:border-indigo-100 shadow-xl shadow-slate-300/10",
                                                 draggedItemId === item.id ? "opacity-20 scale-95" : "hover:scale-[1.03] hover:-translate-y-2"
                                             )}
