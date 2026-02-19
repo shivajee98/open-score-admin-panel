@@ -617,8 +617,8 @@ export default function QRControlClient() {
             <div className="no-print">
                 <div className="flex flex-col lg:flex-row gap-4 min-h-[750px] bg-slate-50/10 p-2 rounded-[3rem]">
                     {/* File Sidebar */}
-                    <aside className="no-print w-full lg:w-80 shrink-0 bg-white border border-slate-100 rounded-[3rem] p-5 shadow-2xl shadow-blue-900/5 flex flex-col">
-                        <div className="mb-6 px-2 flex items-center justify-between">
+                    <aside className="no-print w-full lg:w-72 shrink-0 bg-white border border-slate-100 rounded-[2.5rem] p-4 shadow-2xl shadow-blue-900/5 flex flex-col">
+                        <div className="mb-4 px-2 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <Monitor className="w-5 h-5 text-indigo-600" />
                                 <h3 className="font-black text-[13px] uppercase tracking-[0.2em] text-slate-800">File System</h3>
@@ -677,13 +677,13 @@ export default function QRControlClient() {
                     </aside>
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col gap-8">
-                        <div className="flex flex-col xl:flex-row justify-between items-center gap-6 mb-8">
+                    <div className="flex-1 flex flex-col gap-4">
+                        <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
                             <div>
-                                <h1 className="text-4xl font-black text-slate-800 tracking-tighter">QR INFRASTRUCTURE</h1>
-                                <div className="flex items-center gap-2 mt-2">
+                                <h1 className="text-3xl font-black text-slate-800 tracking-tighter">QR INFRASTRUCTURE</h1>
+                                <div className="flex items-center gap-2 mt-1">
                                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                                    <p className="text-muted-foreground text-[11px] font-black uppercase tracking-[0.2em] text-indigo-500">Global Cluster Mapping</p>
+                                    <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Global Cluster Mapping</p>
                                 </div>
                             </div>
 
@@ -726,13 +726,13 @@ export default function QRControlClient() {
                         </div>
 
                         {/* Search and Action Bar */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                             <div className="lg:col-span-8 relative group w-full">
                                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Execute Global Search Strategy (Name, Hash, Merchant...)"
-                                    className="w-full pl-16 pr-10 py-4 bg-white border border-slate-100 rounded-[1.5rem] font-bold text-slate-800 shadow-xl shadow-blue-900/5 outline-none focus:ring-4 focus:ring-indigo-100 transition-all text-sm"
+                                    className="w-full pl-16 pr-10 py-3.5 bg-white border border-slate-100 rounded-[1.2rem] font-bold text-slate-800 shadow-xl shadow-blue-900/5 outline-none focus:ring-4 focus:ring-indigo-100 transition-all text-sm"
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
@@ -743,30 +743,30 @@ export default function QRControlClient() {
                                 )}
                             </div>
 
-                            <div className="lg:col-span-4 flex gap-4">
-                                <button onClick={toggleSelectAll} className="flex-1 flex items-center justify-center gap-3 px-8 py-6 bg-white border border-slate-100 text-slate-600 rounded-[2rem] font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl shadow-blue-900/5">
-                                    {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? <CheckSquare size={20} className="text-indigo-600" /> : <Square size={20} />}
+                            <div className="lg:col-span-4 flex gap-3">
+                                <button onClick={toggleSelectAll} className="flex-1 flex items-center justify-center gap-3 px-6 py-3.5 bg-white border border-slate-100 text-slate-600 rounded-[1.2rem] font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl shadow-blue-900/5">
+                                    {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? <CheckSquare size={18} className="text-indigo-600" /> : <Square size={18} />}
                                     {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? "Reset" : "Select All"}
                                 </button>
-                                <button onClick={handlePrint} className="p-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-2xl flex items-center justify-center gap-3">
-                                    <Printer size={20} />
+                                <button onClick={handlePrint} className="px-6 py-3.5 bg-slate-900 text-white rounded-[1.2rem] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-2xl flex items-center justify-center gap-3">
+                                    <Printer size={18} />
                                 </button>
                             </div>
                         </div>
 
                         {/* Breadcrumbs Control */}
-                        <div className="flex flex-col md:flex-row items-center justify-between px-10 py-5 bg-white border border-slate-100/50 rounded-[2.5rem] shadow-2xl shadow-blue-900/5 gap-4">
-                            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar max-w-full">
-                                <button onClick={() => setCurrentFolderId(null)} className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:bg-indigo-600 hover:text-white transition-all shrink-0 border border-slate-100">
-                                    <Home size={20} />
+                        <div className="flex flex-col md:flex-row items-center justify-between px-8 py-3 bg-white border border-slate-100/50 rounded-[1.8rem] shadow-2xl shadow-blue-900/5 gap-3">
+                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full">
+                                <button onClick={() => setCurrentFolderId(null)} className="p-2.5 bg-slate-50 rounded-xl text-slate-400 hover:bg-indigo-600 hover:text-white transition-all shrink-0 border border-slate-100">
+                                    <Home size={18} />
                                 </button>
                                 {crumbs.map((folder, idx) => (
-                                    <div key={folder.id} className="flex items-center gap-3">
-                                        <ChevronRight className="w-5 h-5 text-slate-200" />
+                                    <div key={folder.id} className="flex items-center gap-2">
+                                        <ChevronRight className="w-4 h-4 text-slate-200" />
                                         <button
                                             onClick={() => handleNavigate(folder)}
                                             className={cn(
-                                                "px-5 py-3 rounded-2xl font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] transition-all",
+                                                "px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all",
                                                 idx === crumbs.length - 1 ? "bg-indigo-600 text-white shadow-xl" : "bg-slate-50 text-slate-400 hover:bg-slate-100"
                                             )}
                                         >
@@ -786,14 +786,14 @@ export default function QRControlClient() {
                         </div>
 
                         {/* Content Viewport */}
-                        <div className="bg-white/40 backdrop-blur-3xl rounded-[3rem] border border-white p-4 sm:p-6 min-h-[600px] relative shadow-2xl shadow-blue-900/5" onClick={handleBackgroundClick}>
+                        <div className="bg-white/40 backdrop-blur-3xl rounded-[2rem] border border-white p-3 sm:p-5 min-h-[600px] relative shadow-2xl shadow-blue-900/5" onClick={handleBackgroundClick}>
                             {currentFolderId && (
-                                <button onClick={handleUp} className="mb-6 inline-flex items-center gap-3 text-slate-400 hover:text-indigo-600 transition-all font-black text-[10px] uppercase tracking-[0.2em] px-5 py-3 bg-white border border-slate-100 rounded-[1.2rem] shadow-xl group">
-                                    <CornerUpLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Directory Hierarchy
+                                <button onClick={handleUp} className="mb-4 inline-flex items-center gap-3 text-slate-400 hover:text-indigo-600 transition-all font-black text-[10px] uppercase tracking-[0.2em] px-4 py-2 bg-white border border-slate-100 rounded-[1rem] shadow-xl group">
+                                    <CornerUpLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Directory Hierarchy
                                 </button>
                             )}
 
-                            <div className={cn(viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 pb-12" : "flex flex-col gap-4 pb-12")}>
+                            <div className={cn(viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-8" : "flex flex-col gap-3 pb-8")}>
                                 {paginatedItems.map(item => {
                                     const isSelected = selectedIds.has(item.id);
                                     return (
@@ -808,9 +808,9 @@ export default function QRControlClient() {
                                             onDrop={(e) => onDrop(e, item.id)}
                                             className={cn(
                                                 "relative group transition-all cursor-pointer bg-white border-2",
-                                                viewMode === 'grid' ? "p-5 rounded-[2.5rem] aspect-square flex flex-col items-center justify-between text-center" : "p-4 rounded-[1.5rem] flex items-center justify-between",
-                                                isSelected ? "border-blue-500 bg-blue-50/20 shadow-2xl ring-4 ring-blue-500/10 z-10" : "border-slate-50 hover:border-indigo-100 shadow-xl shadow-slate-300/10",
-                                                draggedItemId === item.id ? "opacity-20 scale-95" : "hover:scale-[1.03] hover:-translate-y-2"
+                                                viewMode === 'grid' ? "p-3 rounded-[1.8rem] aspect-square flex flex-col items-center justify-between text-center" : "p-3 rounded-[1rem] flex items-center justify-between",
+                                                isSelected ? "border-blue-500 bg-blue-50/20 shadow-2xl ring-2 ring-blue-500/10 z-10" : "border-slate-50 hover:border-indigo-100 shadow-xl shadow-slate-300/10",
+                                                draggedItemId === item.id ? "opacity-20 scale-95" : "hover:scale-[1.02] hover:-translate-y-1"
                                             )}
                                         >
                                             <div className={cn("relative", viewMode === 'grid' ? "flex-1 flex items-center justify-center w-full" : "shrink-0 mr-8")}>
