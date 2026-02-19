@@ -3,640 +3,692 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import {
-    Search, Filter, TrendingUp, Award, DollarSign, Store,
-    ChevronDown, CheckCircle, Clock, XCircle, Download,
-    Calendar, Plus, Edit2, Eye, Trash2, ChevronLeft, ChevronRight
-} from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
-interface Merchant {
-    id: number;
-    name: string;
-    mobile_number: string;
-    business_name: string;
-    business_nature: string;
-    daily_turnover: string;
-    calculated_daily_turnover: number;
-    wallet_balance: string;
-    latest_cashback?: any;
-}
+// Sub-component for individual user rows to handle local input state
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser }: any) => {
+    const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage ?? '');
+    const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount ?? '');
+    const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
+    const [receiveFlat, setReceiveFlat] = useState(user.receive_cashback_flat_amount ?? '');
+    const [isSaving, setIsSaving] = useState(false);
 
-interface CashbackTier {
-    id: number;
-    tier_name: string;
-    min_turnover: number;
-    max_turnover: number;
-    cashback_min: number;
-    cashback_max: number;
-    is_active: boolean;
-}
+    // Sync state if user prop changes (e.g. after reload)
+    useEffect(() => {
+        setCashbackPercent(user.cashback_percentage ?? '');
+        setCashbackFlat(user.cashback_flat_amount ?? '');
+        setReceivePercent(user.receive_cashback_percentage ?? '');
+        setReceiveFlat(user.receive_cashback_flat_amount ?? '');
+    }, [user.cashback_percentage, user.cashback_flat_amount, user.receive_cashback_percentage, user.receive_cashback_flat_amount]);
+
+    const handleSenderPercentChange = (val: string) => {
+        setCashbackPercent(val);
+        if (parseFloat(val) > 0) setCashbackFlat('');
+    };
+
+    const handleSenderFlatChange = (val: string) => {
+        setCashbackFlat(val);
+        if (parseFloat(val) > 0) setCashbackPercent('');
+    };
+
+    const handleReceiverPercentChange = (val: string) => {
+        setReceivePercent(val);
+        if (parseFloat(val) > 0) setReceiveFlat('');
+    };
+
+    const handleReceiverFlatChange = (val: string) => {
+        setReceiveFlat(val);
+        if (parseFloat(val) > 0) setReceivePercent('');
+    };
+
+    const handleSaveCashback = async () => {
+        setIsSaving(true);
+        try {
+            const pPercent = parseFloat(cashbackPercent) || 0;
+            const pFlat = parseFloat(cashbackFlat) || 0;
+            const rPercent = parseFloat(receivePercent) || 0;
+            const rFlat = parseFloat(receiveFlat) || 0;
+
+            if (pPercent < 0 || pFlat < 0 || rPercent < 0 || rFlat < 0) {
+                alert("Values cannot be negative");
+                return;
+            }
+
+            await apiFetch('/admin/users/bulk-cashback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_ids: [user.id],
+                    cashback_percentage: pPercent,
+                    cashback_flat_amount: pFlat,
+                    receive_cashback_percentage: rPercent,
+                    receive_cashback_flat_amount: rFlat
+                })
+            });
+            alert('Cashback updated!');
+            reloadUsers();
+        } catch (e) {
+            alert('Error updating cashback');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const isAdmin = currentUser?.role === 'ADMIN';
+
+    return (
+        <tr className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
+            <td className="p-6 text-center">
+                {isAdmin && (
+                    <button onClick={() => toggleSelect(user.id)}>
+                        {selectedIds.includes(user.id) ?
+                            <CheckSquare className="text-blue-600" /> : <Square className="text-slate-300 group-hover:text-slate-400" />
+                        }
+                    </button>
+                )}
+            </td>
+            <td className="p-6 pl-2">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center font-bold text-slate-600">
+                        {(user.name || 'M')[0]}
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-900">{user.name || 'Unknown Merchant'}</p>
+                        <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
+                    </div>
+                </div>
+            </td>
+            <td className="p-6">
+                <span className={cn(
+                    "inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
+                    "bg-blue-100 text-blue-700"
+                )}>
+                    {user.role}
+                </span>
+            </td>
+            <td className="p-6">
+                <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
+            </td>
+
+            <td className="p-6">
+                {isAdmin ? (
+                    <div className="flex flex-col gap-1">
+                        <input
+                            type="number" min="0" max="100" step="0.01" placeholder="Pay %"
+                            className={cn(
+                                "w-20 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-purple-600 focus:ring-2 focus:ring-purple-200",
+                                parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed"
+                            )}
+                            value={cashbackPercent}
+                            onChange={(e) => handleSenderPercentChange(e.target.value)}
+                            disabled={parseFloat(cashbackFlat) > 0}
+                        />
+                        <input
+                            type="number" min="0" max="100" step="0.01" placeholder="Rec %"
+                            className={cn(
+                                "w-20 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200",
+                                parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed"
+                            )}
+                            value={receivePercent}
+                            onChange={(e) => handleReceiverPercentChange(e.target.value)}
+                            disabled={parseFloat(receiveFlat) > 0}
+                        />
+                    </div>
+                ) : (
+                    <div className="flex flex-col text-[10px] font-mono">
+                        <span className="text-purple-600">P: {user.cashback_percentage || 0}%</span>
+                        <span className="text-blue-600">R: {user.receive_cashback_percentage || 0}%</span>
+                    </div>
+                )}
+            </td>
+            <td className="p-6 text-right">
+                {isAdmin ? (
+                    <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1">
+                            <input
+                                type="number" min="0" step="0.01" placeholder="Pay ₹"
+                                className={cn(
+                                    "w-24 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-emerald-600 focus:ring-2 focus:ring-emerald-200",
+                                    parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed"
+                                )}
+                                value={cashbackFlat}
+                                onChange={(e) => handleSenderFlatChange(e.target.value)}
+                                disabled={parseFloat(cashbackPercent) > 0}
+                            />
+                            <input
+                                type="number" min="0" step="0.01" placeholder="Rec ₹"
+                                className={cn(
+                                    "w-24 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-200",
+                                    parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed"
+                                )}
+                                value={receiveFlat}
+                                onChange={(e) => handleReceiverFlatChange(e.target.value)}
+                                disabled={parseFloat(receivePercent) > 0}
+                            />
+                        </div>
+                        <button
+                            onClick={handleSaveCashback}
+                            disabled={isSaving}
+                            className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors ml-2"
+                            title="Update Cashback Rules"
+                        >
+                            <Save className="w-4 h-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex flex-col text-[10px] font-mono">
+                        <span className="text-emerald-600">P: ₹{user.cashback_flat_amount || 0}</span>
+                        <span className="text-indigo-600">R: ₹{user.receive_cashback_flat_amount || 0}</span>
+                    </div>
+                )}
+            </td>
+
+            <td className="p-6">
+                <div className="flex flex-col">
+                    <p className="text-xs font-bold text-slate-700">{new Date(user.date_of_join).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-[10px] text-slate-400 font-mono italic">{new Date(user.date_of_join).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+            </td>
+            <td className="p-6">
+                {user.referred_by ? (
+                    <div className="flex flex-col">
+                        <p className="text-xs font-black text-blue-600">{user.referred_by.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{user.referred_by.mobile}</p>
+                    </div>
+                ) : (
+                    <span className="text-xs text-slate-300 font-medium italic">Direct Join</span>
+                )}
+            </td>
+            <td className="p-6">
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    <span className="text-sm font-bold text-slate-600">{user.status}</span>
+                </div>
+            </td>
+            <td className="p-6 pr-8 text-right">
+                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Link
+                        href={`/users/detail?id=${user.id}`}
+                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="View Full Details"
+                    >
+                        <Eye className="w-5 h-5" />
+                    </Link>
+
+                    {isAdmin && (
+                        <button
+                            onClick={() => toggleStatus(user)}
+                            className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                            title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
+                        >
+                            {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                        </button>
+                    )}
+
+                    <button
+                        onClick={() => { setSelectedUser(user); setIsCreditsModalOpen(true); }}
+                        className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                        title="Add Funds"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+
+                    {isAdmin && user.role !== 'SYSTEM' && user.role !== 'ADMIN' && (
+                        <button
+                            onClick={() => handleDelete(user.id)}
+                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
+                            title="Delete User"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
+            </td>
+        </tr>
+    );
+};
 
 export default function MerchantsPage() {
-    const [merchants, setMerchants] = useState<Merchant[]>([]);
-    const [tiers, setTiers] = useState<CashbackTier[]>([]);
-    const [cashbacks, setCashbacks] = useState<any[]>([]);
-
-    // Filters
+    const { user: currentUser } = useAuth();
+    const [users, setUsers] = useState([]);
     const [search, setSearch] = useState('');
-    const [selectedTier, setSelectedTier] = useState('ALL');
-    const [businessNature, setBusinessNature] = useState('');
-    const [cashbackStatus, setCashbackStatus] = useState('PENDING');
+    const [loading, setLoading] = useState(true);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(12);
 
-    // UI State
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'merchants' | 'cashbacks' | 'tiers'>('merchants');
-    const [selectedMerchants, setSelectedMerchants] = useState<number[]>([]);
-    const [showBulkModal, setShowBulkModal] = useState(false);
-    const [showTierModal, setShowTierModal] = useState(false);
+    // Add Funds Modal State
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [amount, setAmount] = useState('');
+    const [creditType, setCreditType] = useState('WALLET_TOPUP');
+    const [description, setDescription] = useState('');
+    const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
 
-    // Bulk award state
-    const [bulkCashbackDate, setBulkCashbackDate] = useState(new Date().toISOString().split('T')[0]);
-    const [bulkTier, setBulkTier] = useState('');
+    // Bulk Cashback States
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
+    const [cashbackPercent, setCashbackPercent] = useState('');
+    const [cashbackFlat, setCashbackFlat] = useState('');
+    const [receivePercent, setReceivePercent] = useState('');
+    const [receiveFlat, setReceiveFlat] = useState('');
 
-    useEffect(() => {
-        loadData();
-    }, [selectedTier, businessNature, search]);
-
-    useEffect(() => {
-        if (activeTab === 'cashbacks') {
-            loadCashbacks();
-        }
-    }, [activeTab, cashbackStatus]);
-
-    const loadData = async () => {
+    const loadUsers = async () => {
         try {
-            setLoading(true);
-            const params = new URLSearchParams();
-            if (selectedTier !== 'ALL') params.append('turnover_tier', selectedTier);
-            if (businessNature) params.append('business_nature', businessNature);
-            if (search) params.append('search', search);
-
-            const [merchantsData, tiersData] = await Promise.all([
-                apiFetch(`/admin/merchants?${params}`),
-                apiFetch('/admin/cashback/tiers')
-            ]);
-
-            setMerchants(merchantsData.data || []);
-            setTiers(tiersData || []);
-        } catch (error) {
-            console.error('Failed to load data', error);
+            const data = await apiFetch('/admin/users?type=merchant');
+            setUsers(data);
+        } catch (e) {
+            console.error(e);
         } finally {
             setLoading(false);
         }
     };
 
-    const loadCashbacks = async () => {
+    useEffect(() => {
+        loadUsers();
+    }, []);
+
+    const handleAddFunds = async (e: React.FormEvent) => {
+        e.preventDefault();
         try {
-            const params = new URLSearchParams();
-            if (cashbackStatus !== 'ALL') params.append('status', cashbackStatus);
-
-            const data = await apiFetch(`/admin/cashback?${params}`);
-            setCashbacks(data.data || []);
-        } catch (error) {
-            console.error('Failed to load cashbacks', error);
-        }
-    };
-
-    const toggleMerchantSelection = (merchantId: number) => {
-        setSelectedMerchants(prev =>
-            prev.includes(merchantId)
-                ? prev.filter(id => id !== merchantId)
-                : [...prev, merchantId]
-        );
-    };
-
-    const handleBulkAward = async () => {
-        if (selectedMerchants.length === 0 || !bulkTier) {
-            alert('Please select merchants and a tier');
-            return;
-        }
-
-        const tier = tiers.find(t => t.id === parseInt(bulkTier));
-        if (!tier) return;
-
-        // Calculate cashback amounts for each merchant based on their turnover
-        const cashbackAmounts = selectedMerchants.map(merchantId => {
-            const merchant = merchants.find(m => m.id === merchantId);
-            const turnover = merchant?.calculated_daily_turnover || 0;
-
-            // Simple calculation: proportional to turnover within tier bounds
-            if (turnover < tier.min_turnover) return tier.cashback_min;
-            if (turnover > tier.max_turnover) return tier.cashback_max;
-
-            const ratio = (turnover - tier.min_turnover) / (tier.max_turnover - tier.min_turnover);
-            return tier.cashback_min + (ratio * (tier.cashback_max - tier.cashback_min));
-        });
-
-        try {
-            await apiFetch('/admin/cashback/bulk-award', {
+            await apiFetch(`/admin/users/${selectedUser.id}/credit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    merchant_ids: selectedMerchants,
-                    cashback_amounts: cashbackAmounts,
-                    cashback_date: bulkCashbackDate,
-                    tier_id: parseInt(bulkTier)
+                    amount: parseFloat(amount),
+                    type: creditType,
+                    description: description
                 })
             });
 
-            alert(`Cashback awarded to ${selectedMerchants.length} merchants!`);
-            setShowBulkModal(false);
-            setSelectedMerchants([]);
-            loadData();
-        } catch (error) {
-            alert('Failed to award cashback');
+            const msg = currentUser?.role === 'ADMIN'
+                ? 'Success! Funds added successfully.'
+                : 'Request Submitted! Pending Admin Approval.';
+
+            alert(msg);
+            setIsCreditsModalOpen(false);
+            setAmount('');
+            setDescription('');
+            setCreditType('WALLET_TOPUP');
+
+            loadUsers();
+        } catch (e) {
+            alert('Error adding funds');
         }
     };
 
-    const handleApproveCashback = async (cashbackId: number) => {
-        if (!confirm('Approve this cashback? Wallet will be credited immediately.')) return;
-
+    const handleBulkCashback = async (e: React.FormEvent) => {
+        e.preventDefault();
         try {
-            await apiFetch(`/admin/cashback/${cashbackId}/approve`, { method: 'POST' });
-            alert('Cashback approved and credited!');
-            loadCashbacks();
-        } catch (error) {
-            alert('Failed to approve cashback');
-        }
-    };
+            await apiFetch('/admin/users/bulk-cashback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_ids: selectedIds,
+                    cashback_percentage: parseFloat(cashbackPercent) || 0,
+                    cashback_flat_amount: parseFloat(cashbackFlat) || 0,
+                    receive_cashback_percentage: parseFloat(receivePercent) || 0,
+                    receive_cashback_flat_amount: parseFloat(receiveFlat) || 0
+                })
+            });
 
-    const getTierBadgeColor = (turnover: number) => {
-        const tier = tiers.find(t => turnover >= t.min_turnover && turnover <= t.max_turnover);
-        if (!tier) return 'bg-slate-100 text-slate-600';
-
-        const tierColors: Record<string, string> = {
-            '1K-5K': 'bg-blue-100 text-blue-700',
-            '5K-10K': 'bg-cyan-100 text-cyan-700',
-            '10K-20K': 'bg-emerald-100 text-emerald-700',
-            '20K-50K': 'bg-amber-100 text-amber-700',
-            '50K-1L': 'bg-orange-100 text-orange-700',
-            '1L-2L': 'bg-rose-100 text-rose-700',
-            '2L-5L': 'bg-purple-100 text-purple-700',
-        };
-
-        return tierColors[tier.tier_name] || 'bg-slate-100 text-slate-600';
-    };
-
-    const totalPages = Math.ceil(merchants.length / itemsPerPage);
-    const paginatedMerchants = merchants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-    const totalCashbackPages = Math.ceil(cashbacks.length / itemsPerPage);
-    const paginatedCashbacks = cashbacks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-    const handleDeleteMerchant = async (id: number) => {
-        if (!confirm('Are you sure you want to delete this merchant record?')) return;
-        try {
-            await apiFetch(`/admin/merchants/${id}`, { method: 'DELETE' });
-            alert('Merchant deleted successfully');
-            loadData();
+            alert('Success! Cashback settings updated.');
+            setIsCashbackModalOpen(false);
+            setCashbackPercent('');
+            setCashbackFlat('');
+            setReceivePercent('');
+            setReceiveFlat('');
+            setSelectedIds([]);
+            loadUsers();
         } catch (e: any) {
-            alert(e.message || 'Failed to delete merchant');
+            console.error(e);
+            alert('Error updating cashback settings');
         }
     };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this merchant?')) return;
+        await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
+        loadUsers();
+    };
+
+    const toggleStatus = async (user: any) => {
+        const newStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
+        if (!confirm(`Are you sure you want to ${newStatus === 'ACTIVE' ? 'activate' : 'suspend'} this merchant?`)) return;
+
+        try {
+            await apiFetch(`/admin/users/${user.id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            loadUsers();
+        } catch (e) {
+            alert('Error updating status');
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        if (selectedIds.includes(id)) {
+            setSelectedIds(selectedIds.filter(i => i !== id));
+        } else {
+            setSelectedIds([...selectedIds, id]);
+        }
+    };
+
+    const filteredUsers = users.filter((u: any) =>
+        (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.mobile_number || '').includes(search)
+    );
+
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(paginatedUsers.map((u: any) => u.id));
+        }
+    };
+
+    const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
-        <AdminLayout title="Merchant Cashback Management">
-            {/* Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
-                        <Store className="w-7 h-7" />
-                    </div>
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Merchants</p>
-                        <p className="text-3xl font-black text-slate-900">{merchants.length}</p>
-                    </div>
+        <AdminLayout title="Merchant Management">
+            {/* Header Actions */}
+            <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search merchants..."
+                        className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                    />
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
-                        <TrendingUp className="w-7 h-7" />
-                    </div>
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Tiers</p>
-                        <p className="text-3xl font-black text-slate-900">{tiers.filter(t => t.is_active).length}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
-                        <Clock className="w-7 h-7" />
-                    </div>
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Cashback</p>
-                        <p className="text-3xl font-black text-slate-900">{cashbacks.filter(c => c.status === 'PENDING').length}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center">
-                        <Award className="w-7 h-7" />
-                    </div>
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Selected</p>
-                        <p className="text-3xl font-black text-slate-900">{selectedMerchants.length}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-2 mb-6 bg-slate-100 p-2 rounded-2xl w-fit">
-                {(['merchants', 'cashbacks', 'tiers'] as const).map(tab => (
+                <div className="flex gap-2">
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-6 py-3 rounded-xl font-bold capitalize transition-all ${activeTab === tab
-                            ? 'bg-white text-slate-900 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
-                            }`}
+                        onClick={async () => {
+                            try {
+                                const res = await apiFetch('/admin/users/export?search=' + search + '&role=MERCHANT');
+                                const url = window.URL.createObjectURL(new Blob([res]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', `merchants_export_${new Date().toISOString().split('T')[0]}.csv`);
+                                document.body.appendChild(link);
+                                link.click();
+                            } catch (e) {
+                                alert('Export failed. Please try again.');
+                            }
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
                     >
-                        {tab}
+                        <Download className="w-5 h-5" />
+                        Download CSV
                     </button>
-                ))}
+
+                    <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
+                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                        >
+                            <option value={12}>12</option>
+                            <option value={24}>24</option>
+                            <option value={60}>60</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
+
+                    {isAdmin && selectedIds.length > 0 && (
+                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
+                            <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                            <button
+                                onClick={() => setIsCashbackModalOpen(true)}
+                                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                            >
+                                <ReceiptIndianRupee size={20} />
+                                Set Cashback
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Merchants Tab */}
-            {activeTab === 'merchants' && (
-                <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                    {/* Filters */}
-                    <div className="p-8 border-b border-slate-100 space-y-4">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name, mobile, or business..."
-                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100"
-                                    value={search}
-                                    onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50/50">
+                            <tr>
+                                <th className="p-6 w-16 text-center">
+                                    {isAdmin && (
+                                        <button onClick={toggleSelectAll} className="opacity-50 hover:opacity-100">
+                                            {selectedIds.length > 0 && selectedIds.length === filteredUsers.length ?
+                                                <CheckSquare className="text-blue-600" /> : <Square className="text-slate-400" />
+                                            }
+                                        </button>
+                                    )}
+                                </th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Merchant Details</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback % (P | R)</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedUsers.map((user: any) => (
+                                <UserRow
+                                    key={user.id}
+                                    user={user}
+                                    selectedIds={selectedIds}
+                                    toggleSelect={toggleSelect}
+                                    toggleStatus={toggleStatus}
+                                    handleDelete={handleDelete}
+                                    setSelectedUser={setSelectedUser}
+                                    setIsCreditsModalOpen={setIsCreditsModalOpen}
+                                    reloadUsers={loadUsers}
+                                    currentUser={currentUser}
                                 />
-                            </div>
-
-                            <div className="flex gap-2">
-                                <div className="relative min-w-[200px]">
-                                    <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <select
-                                        className="w-full pl-11 pr-10 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer text-sm"
-                                        value={selectedTier}
-                                        onChange={e => { setSelectedTier(e.target.value); setCurrentPage(1); }}
-                                    >
-                                        <option value="ALL">All Turnover Tiers</option>
-                                        {tiers.map(tier => (
-                                            <option key={tier.id} value={tier.id}>
-                                                {tier.tier_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                                </div>
-
-                                <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
-                                    <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
-                                    <select
-                                        value={itemsPerPage}
-                                        onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                        className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
-                                    >
-                                        <option value={12}>12</option>
-                                        <option value={24}>24</option>
-                                        <option value={60}>60</option>
-                                        <option value={100}>100</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {selectedMerchants.length > 0 && (
-                                <button
-                                    onClick={() => setShowBulkModal(true)}
-                                    className="px-6 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
-                                >
-                                    <Award className="w-5 h-5" />
-                                    Bulk Award ({selectedMerchants.length})
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Merchants Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50/50">
-                                <tr>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedMerchants.length === merchants.length && merchants.length > 0}
-                                            onChange={() => {
-                                                if (selectedMerchants.length === merchants.length) {
-                                                    setSelectedMerchants([]);
-                                                } else {
-                                                    setSelectedMerchants(merchants.map(m => m.id));
-                                                }
-                                            }}
-                                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                    </th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Merchant Details</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Business</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Today's Turnover</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Tier</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Last Cashback</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {paginatedMerchants.map(merchant => (
-                                    <tr key={merchant.id} className="hover:bg-slate-50/80 transition-colors group">
-                                        <td className="p-6">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedMerchants.includes(merchant.id)}
-                                                onChange={() => toggleMerchantSelection(merchant.id)}
-                                                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                            />
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full flex items-center justify-center font-bold text-blue-700">
-                                                    {(merchant.name || 'M')[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-slate-900">{merchant.name || 'Unknown'}</p>
-                                                    <p className="text-xs font-medium text-slate-500">{merchant.mobile_number}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-6">
-                                            <p className="font-bold text-slate-700">{merchant.business_name || '-'}</p>
-                                            <p className="text-xs text-slate-500">{merchant.business_nature || '-'}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <p className="font-mono font-bold text-emerald-600">₹{merchant.calculated_daily_turnover?.toLocaleString('en-IN') || '0'}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase ${getTierBadgeColor(merchant.calculated_daily_turnover)}`}>
-                                                {tiers.find(t => merchant.calculated_daily_turnover >= t.min_turnover && merchant.calculated_daily_turnover <= t.max_turnover)?.tier_name || 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td className="p-6">
-                                            <p className="font-mono font-bold text-slate-700">₹{parseFloat(merchant.wallet_balance || '0').toLocaleString('en-IN')}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex items-center justify-between group">
-                                                {merchant.latest_cashback ? (
-                                                    <div>
-                                                        <p className="font-bold text-emerald-600">₹{parseFloat(merchant.latest_cashback.cashback_amount).toLocaleString('en-IN')}</p>
-                                                        <p className="text-xs text-slate-400">{new Date(merchant.latest_cashback.created_at).toLocaleDateString()}</p>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-slate-400 text-sm">Never</p>
-                                                )}
-
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMerchant(merchant.id); }}
-                                                    className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                Page {currentPage} of {totalPages}
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                    disabled={currentPage === 1}
-                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                                >
-                                    <ChevronLeft className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                                >
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Cashbacks Tab */}
-            {activeTab === 'cashbacks' && (
-                <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                    <div className="p-8 border-b border-slate-100 flex justify-between items-center">
-                        <div className="flex gap-2">
-                            {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(status => (
-                                <button
-                                    key={status}
-                                    onClick={() => { setCashbackStatus(status); setCurrentPage(1); }}
-                                    className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${cashbackStatus === status
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        }`}
-                                >
-                                    {status}
-                                </button>
                             ))}
-                        </div>
-                        <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
-                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
-                            <select
-                                value={itemsPerPage}
-                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Page {currentPage} of {totalPages}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
                             >
-                                <option value={12}>12</option>
-                                <option value={24}>24</option>
-                                <option value={60}>60</option>
-                                <option value={100}>100</option>
-                            </select>
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
+                )}
+            </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50/50">
-                                <tr>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Merchant</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Turnover</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {paginatedCashbacks.map(cashback => (
-                                    <tr key={cashback.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="p-6">
-                                            <p className="font-bold text-slate-900">{cashback.merchant?.name}</p>
-                                            <p className="text-xs text-slate-500">{cashback.merchant?.business_name}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <p className="font-medium text-slate-700">{new Date(cashback.cashback_date).toLocaleDateString()}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <p className="font-mono font-bold text-slate-700">₹{parseFloat(cashback.daily_turnover).toLocaleString('en-IN')}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <p className="font-mono font-bold text-emerald-600">₹{parseFloat(cashback.cashback_amount).toLocaleString('en-IN')}</p>
-                                        </td>
-                                        <td className="p-6">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${cashback.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
-                                                cashback.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-rose-100 text-rose-700'
-                                                }`}>
-                                                {cashback.status === 'APPROVED' && <CheckCircle className="w-3 h-3" />}
-                                                {cashback.status === 'PENDING' && <Clock className="w-3 h-3" />}
-                                                {cashback.status === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                                                {cashback.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-6 text-right">
-                                            {cashback.status === 'PENDING' && (
-                                                <button
-                                                    onClick={() => handleApproveCashback(cashback.id)}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-                                                >
-                                                    Approve & Credit
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Cashback Pagination Controls */}
-                    {totalCashbackPages > 1 && (
-                        <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                Page {currentPage} of {totalCashbackPages}
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                    disabled={currentPage === 1}
-                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                                >
-                                    <ChevronLeft className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(totalCashbackPages, prev + 1))}
-                                    disabled={currentPage === totalCashbackPages}
-                                    className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                                >
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Tiers Tab */}
-            {activeTab === 'tiers' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {tiers.map(tier => (
-                        <div key={tier.id} className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-lg transition-all">
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-2xl font-black text-slate-900">{tier.tier_name}</h3>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${tier.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                    {tier.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                            </div>
-
-                            <div className="space-y-3">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Turnover Range</p>
-                                    <p className="font-mono font-bold text-slate-700">₹{tier.min_turnover.toLocaleString('en-IN')} - ₹{tier.max_turnover.toLocaleString('en-IN')}</p>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Cashback Range</p>
-                                    <p className="font-mono font-bold text-emerald-600">₹{tier.cashback_min.toLocaleString('en-IN')} - ₹{tier.cashback_max.toLocaleString('en-IN')}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Bulk Award Modal */}
-            {showBulkModal && (
+            {/* Add Funds Modal */}
+            {isCreditsModalOpen && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-8 shadow-2xl">
-                        <h3 className="text-2xl font-black text-slate-900 mb-6">Bulk Award Cashback</h3>
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <h3 className="text-2xl font-black text-slate-900 mb-2">{isAdmin ? 'Add Funds' : 'Request Funds'}</h3>
+                        <p className="text-slate-500 font-medium mb-6">
+                            {isAdmin ? 'Add funds directly to' : 'Submit a request to add funds for'} <span className="text-slate-900 font-bold">{selectedUser?.name}</span>.
+                        </p>
 
-                        <div className="space-y-4 mb-6">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Select Tier</label>
-                                <select
-                                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-100"
-                                    value={bulkTier}
-                                    onChange={e => setBulkTier(e.target.value)}
+                        <form onSubmit={handleAddFunds}>
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Transaction Type</label>
+                                    <select
+                                        value={creditType}
+                                        onChange={(e) => setCreditType(e.target.value)}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
+                                    >
+                                        <option value="WALLET_TOPUP">Wallet Top-up</option>
+                                        <option value="SERVICE_FEE">Service Fee Payment</option>
+                                        <option value="OTHER">Other Adjustment</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="0.01"
+                                        required
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-100 outline-none"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Description / Note</label>
+                                    <textarea
+                                        rows={3}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 font-bold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Reason for crediting funds..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreditsModalOpen(false)}
+                                    className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
                                 >
-                                    <option value="">Choose a tier...</option>
-                                    {tiers.map(tier => (
-                                        <option key={tier.id} value={tier.id}>
-                                            {tier.tier_name} (CB: ₹{tier.cashback_min} - ₹{tier.cashback_max})
-                                        </option>
-                                    ))}
-                                </select>
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-95"
+                                >
+                                    {isAdmin ? 'Add Funds Now' : 'Submit Request'}
+                                </button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
+            {/* Bulk Cashback Modal */}
+            {isCashbackModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <div className="flex justify-between items-start mb-6">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cashback Date</label>
-                                <input
-                                    type="date"
-                                    className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-100"
-                                    value={bulkCashbackDate}
-                                    onChange={e => setBulkCashbackDate(e.target.value)}
-                                />
+                                <h3 className="text-2xl font-black text-slate-900">Bulk Merchant Cashback</h3>
+                                <p className="text-slate-500 font-medium">Updating {selectedIds.length} selected merchants</p>
+                            </div>
+                            <button onClick={() => setIsCashbackModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                <X className="w-6 h-6 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleBulkCashback} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pay (Outbound)</p>
+                                    <div className="space-y-3">
+                                        <div className="relative">
+                                            <input
+                                                type="number" step="0.01" min="0" max="100" placeholder="Percent %"
+                                                className={cn("w-full bg-slate-50 border-none rounded-2xl p-4 font-mono font-bold text-purple-600", parseFloat(cashbackFlat) > 0 && "opacity-50 cursor-not-allowed")}
+                                                value={cashbackPercent}
+                                                onChange={(e) => setCashbackPercent(e.target.value)}
+                                                disabled={parseFloat(cashbackFlat) > 0}
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-purple-300">%</span>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number" step="0.01" min="0" placeholder="Flat Amount ₹"
+                                                className={cn("w-full bg-slate-50 border-none rounded-2xl p-4 font-mono font-bold text-emerald-600", parseFloat(cashbackPercent) > 0 && "opacity-50 cursor-not-allowed")}
+                                                value={cashbackFlat}
+                                                onChange={(e) => setCashbackFlat(e.target.value)}
+                                                disabled={parseFloat(cashbackPercent) > 0}
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-emerald-300">₹</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Receive (Inbound)</p>
+                                    <div className="space-y-3">
+                                        <div className="relative">
+                                            <input
+                                                type="number" step="0.01" min="0" max="100" placeholder="Percent %"
+                                                className={cn("w-full bg-indigo-50/50 border-none rounded-2xl p-4 font-mono font-bold text-blue-600", parseFloat(receiveFlat) > 0 && "opacity-50 cursor-not-allowed")}
+                                                value={receivePercent}
+                                                onChange={(e) => setReceivePercent(e.target.value)}
+                                                disabled={parseFloat(receiveFlat) > 0}
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-blue-300">%</span>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number" step="0.01" min="0" placeholder="Flat Amount ₹"
+                                                className={cn("w-full bg-indigo-50/50 border-none rounded-2xl p-4 font-mono font-bold text-indigo-600", parseFloat(receivePercent) > 0 && "opacity-50 cursor-not-allowed")}
+                                                value={receiveFlat}
+                                                onChange={(e) => setReceiveFlat(e.target.value)}
+                                                disabled={parseFloat(receivePercent) > 0}
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-indigo-300">₹</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="bg-blue-50 p-4 rounded-2xl">
-                                <p className="text-sm font-bold text-blue-900">
-                                    {selectedMerchants.length} merchants selected. Cashback will be calculated based on their individual turnover within the tier range.
+                            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
+                                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                                <p className="text-xs font-bold text-amber-700 leading-relaxed">
+                                    Note: Setting a percentage will clear any existing flat amount for these merchants, and vice-versa. Percentage takes priority if both are accidentally sent.
                                 </p>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
                             <button
-                                onClick={() => setShowBulkModal(false)}
-                                className="py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                type="submit"
+                                className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-purple-700 shadow-xl shadow-purple-200 transition-all active:scale-95"
                             >
-                                Cancel
+                                Apply Changes to {selectedIds.length} Merchants
                             </button>
-                            <button
-                                onClick={handleBulkAward}
-                                className="py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
-                            >
-                                Award Cashback
-                            </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )}
+
         </AdminLayout>
     );
 }

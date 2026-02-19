@@ -58,7 +58,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'My Loan User', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
-        // { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'QR Generator', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Internal Team & Funds', href: '/internal-users', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },

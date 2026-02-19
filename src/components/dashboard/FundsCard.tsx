@@ -24,6 +24,7 @@ interface FundStats {
     fee_collection: number;
     total_profit: number;
     cashback_transfer: number;
+    total_merchant_credits: number;
 }
 
 export default function FundsCard() {
@@ -222,7 +223,7 @@ export default function FundsCard() {
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 lg:grid-rows-1">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <Card className="border-green-100 bg-green-50/30">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-green-700">Interest Earned</CardTitle>
@@ -275,6 +276,17 @@ export default function FundsCard() {
                     <CardContent>
                         <div className="text-2xl font-bold text-purple-700">₹{stats?.cashback_transfer?.toLocaleString()}</div>
                         <p className="text-xs text-purple-600 mt-1">Rewards & Bonuses</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-cyan-100 bg-cyan-50/30 cursor-pointer hover:bg-cyan-100/50 transition-colors" onClick={() => router.push('/merchants')}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-cyan-700">Merchant Credit Volume</CardTitle>
+                        <ArrowUpRight className="h-4 w-4 text-cyan-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-cyan-700">₹{stats?.total_merchant_credits?.toLocaleString()}</div>
+                        <p className="text-xs text-cyan-600 mt-1">Total incoming via Customer QR</p>
                     </CardContent>
                 </Card>
             </div>
