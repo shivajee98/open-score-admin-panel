@@ -260,6 +260,7 @@ export default function MerchantsPage() {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(12);
+    const [turnoverFilter, setTurnoverFilter] = useState('ALL');
 
     // Add Funds Modal State
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -379,10 +380,14 @@ export default function MerchantsPage() {
         }
     };
 
-    const filteredUsers = users.filter((u: any) =>
-        (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (u.mobile_number || '').includes(search)
-    );
+    const filteredUsers = users.filter((u: any) => {
+        const matchesSearch = (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (u.mobile_number || '').includes(search);
+
+        const matchesTurnover = turnoverFilter === 'ALL' || u.daily_turnover === turnoverFilter;
+
+        return matchesSearch && matchesTurnover;
+    });
 
     const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
     const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -401,15 +406,35 @@ export default function MerchantsPage() {
         <AdminLayout title="Merchant Management">
             {/* Header Actions */}
             <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-                <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search merchants..."
-                        className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                        value={search}
-                        onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                    />
+                <div className="flex flex-1 gap-2">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search merchants..."
+                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                            value={search}
+                            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                        />
+                    </div>
+
+                    <div className="flex items-center bg-slate-50 border-none rounded-xl px-4 py-2">
+                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Turnover:</span>
+                        <select
+                            value={turnoverFilter}
+                            onChange={(e) => { setTurnoverFilter(e.target.value); setCurrentPage(1); }}
+                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                        >
+                            <option value="ALL">All Ranges</option>
+                            <option value="1k-5k">1k - 5k</option>
+                            <option value="5k-10k">5k - 10k</option>
+                            <option value="10k-20k">10k - 20k</option>
+                            <option value="20k-50k">20k - 50k</option>
+                            <option value="50k-1l">50k - 1l</option>
+                            <option value="1l-2l">1l - 2l</option>
+                            <option value="2l-5l">2l - 5l</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div className="flex gap-2">
