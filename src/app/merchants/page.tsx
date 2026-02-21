@@ -26,22 +26,22 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
 
     const handleSenderPercentChange = (val: string) => {
         setCashbackPercent(val);
-        if (parseFloat(val) > 0) setCashbackFlat('');
+        setCashbackFlat('');
     };
 
     const handleSenderFlatChange = (val: string) => {
         setCashbackFlat(val);
-        if (parseFloat(val) > 0) setCashbackPercent('');
+        setCashbackPercent('');
     };
 
     const handleReceiverPercentChange = (val: string) => {
         setReceivePercent(val);
-        if (parseFloat(val) > 0) setReceiveFlat('');
+        setReceiveFlat('');
     };
 
     const handleReceiverFlatChange = (val: string) => {
         setReceiveFlat(val);
-        if (parseFloat(val) > 0) setReceivePercent('');
+        setReceivePercent('');
     };
 
     const handleSaveCashback = async () => {
