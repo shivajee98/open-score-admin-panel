@@ -39,8 +39,13 @@ export function useAuth() {
     }, []);
 
     const logout = () => {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        if (typeof window !== 'undefined') {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+        }
         setUser(null);
         setStatus('unauthenticated');
         router.push('/login');
