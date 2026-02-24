@@ -321,7 +321,11 @@ export default function LoanApprovals() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loans.map((loan: any) => (
-                                    <tr key={loan.id} className="hover:bg-slate-50/80 transition-all group">
+                                    <tr
+                                        key={loan.id}
+                                        className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                                        onClick={() => setSelectedLoan(loan.id)}
+                                    >
                                         <td className="p-6 pl-8">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
@@ -404,7 +408,7 @@ export default function LoanApprovals() {
                                                 {['PENDING', 'APPLIED'].includes(loan.status) && (
                                                     <button
                                                         disabled={!!actionLoading}
-                                                        onClick={() => handleAction(loan.id, 'proceed', 'Loan Proceeded!')}
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'proceed', 'Loan Proceeded!'); }}
                                                         className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-mono"
                                                     >
                                                         Proceed
@@ -414,7 +418,7 @@ export default function LoanApprovals() {
                                                 {['PROCEEDED', 'VETTING'].includes(loan.status) && (
                                                     <button
                                                         disabled={!!actionLoading}
-                                                        onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Link Sent!')}
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'send-kyc', 'KYC Link Sent!'); }}
                                                         className="px-5 py-2.5 bg-amber-400 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 shadow-xl shadow-amber-500/20 transition-all font-mono"
                                                     >
                                                         Send KYC
@@ -422,9 +426,9 @@ export default function LoanApprovals() {
                                                 )}
 
                                                 {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                                         <button
-                                                            onClick={() => setPreviewLoan(loan)}
+                                                            onClick={(e) => { e.stopPropagation(); setPreviewLoan(loan); }}
                                                             className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
                                                             title="Preview KYC"
                                                         >
@@ -432,7 +436,7 @@ export default function LoanApprovals() {
                                                         </button>
                                                         <button
                                                             disabled={!!actionLoading}
-                                                            onClick={() => handleAction(loan.id, 'approve', 'Loan Approved!')}
+                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'approve', 'Loan Approved!'); }}
                                                             className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all font-mono"
                                                         >
                                                             Approve
@@ -441,10 +445,10 @@ export default function LoanApprovals() {
                                                 )}
 
                                                 {loan.status === 'APPROVED' && (
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan))}
-                                                            onClick={() => handleAction(loan.id, 'release', 'Funds Released!')}
+                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'release', 'Funds Released!'); }}
                                                             className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all font-mono ${hasPlatformFee(loan) && !isPlatformFeePaid(loan)
                                                                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                                                                 : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/30'
@@ -477,10 +481,10 @@ export default function LoanApprovals() {
                                                     <Eye size={18} />
                                                 </button>
 
-                                                <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity ml-4 border-l pl-4 border-slate-100">
+                                                <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity ml-4 border-l pl-4 border-slate-100" onClick={(e) => e.stopPropagation()}>
                                                     {['DISBURSED'].includes(loan.status) && (
                                                         <button
-                                                            onClick={() => handleAction(loan.id, 'close', 'Loan Closed Manually!', 'POST')}
+                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'close', 'Loan Closed Manually!', 'POST'); }}
                                                             className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
                                                             title="Close Loan"
                                                         >
@@ -488,7 +492,7 @@ export default function LoanApprovals() {
                                                         </button>
                                                     )}
                                                     <button
-                                                        onClick={() => handleAction(loan.id, '', 'Loan Deleted!', 'DELETE')}
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, '', 'Loan Deleted!', 'DELETE'); }}
                                                         className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                                                         title="Delete Record"
                                                     >

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
-import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield } from 'lucide-react';
+import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 
@@ -199,6 +199,168 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                 }`}>{loan.status}</span>
                         </div>
                     </div>
+
+                    {/* Calculations Breakdown */}
+                    {loan.calculations && (
+                        <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 shadow-sm">
+                            <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Calculator className="w-4 h-4" />
+                                Pricing Breakdown
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-8 gap-y-6">
+                                {Object.entries(loan.calculations).map(([key, val]: [string, any]) => (
+                                    typeof val !== 'object' && val !== null && val !== undefined && (
+                                        <div key={key}>
+                                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</p>
+                                            <p className="text-sm font-black text-emerald-900">
+                                                {typeof val === 'number' ?
+                                                    (key.includes('rate') ? `${val}%` : `₹${val.toLocaleString()}`)
+                                                    : String(val)}
+                                            </p>
+                                        </div>
+                                    )
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* KYC & Form Data Integrated (Same as FormDetailsModal) */}
+                    {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-slate-400" />
+                                    Applicant KYC & Form Data
+                                </h3>
+                                <div className="flex gap-2 text-[10px] font-black text-slate-400">
+                                    {loan.form_data.auto_approved && (
+                                        <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                            <Shield size={10} /> AUTO-APPROVED
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="p-6 sm:p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Personal & Contact */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <User size={16} className="text-blue-500" />
+                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Personal & Contact</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Full Name</p>
+                                                <p className="text-sm font-bold text-slate-900">{loan.form_data.first_name} {loan.form_data.last_name}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Date of Birth</p>
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {loan.form_data.birth_day && loan.form_data.birth_month && loan.form_data.birth_year
+                                                        ? `${loan.form_data.birth_day}/${loan.form_data.birth_month}/${loan.form_data.birth_year}`
+                                                        : 'N/A'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Marital Status</p>
+                                                <p className="text-sm font-bold text-slate-900 uppercase">{loan.form_data.marital_status || 'N/A'}</p>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Email Address</p>
+                                                <p className="text-sm font-bold text-slate-900">{loan.form_data.email || 'N/A'}</p>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Current Address</p>
+                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                    {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code]
+                                                        .filter(Boolean).join(', ')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Work & Identity */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Briefcase size={16} className="text-amber-500" />
+                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Identity & Employment</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pan Card Number</p>
+                                                <p className="text-sm font-black text-slate-900 uppercase font-mono">{loan.form_data.pan_number || 'N/A'}</p>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aadhaar Card Number</p>
+                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.form_data.aadhar_number || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Monthly Income</p>
+                                                <p className="text-sm font-bold text-emerald-600">₹{parseFloat(loan.form_data.gross_monthly_income || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Occupation</p>
+                                                <p className="text-sm font-bold text-slate-900">{loan.form_data.occupation || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Bank Details */}
+                                {(loan.form_data.bank_name || loan.user?.bank_name) && (
+                                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Landmark size={16} className="text-emerald-500" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Payout Info</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Bank Name</p>
+                                                <p className="text-sm font-bold text-slate-900">{loan.user?.bank_name || loan.form_data.bank_name}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Acc Number</p>
+                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.user?.account_number || loan.form_data.account_number}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">IFSC Code</p>
+                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.user?.ifsc_code || loan.form_data.ifsc_code}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Holder Name</p>
+                                                <p className="text-sm font-bold text-slate-900">{loan.user?.account_holder_name || loan.form_data.account_holder_name}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* KYC Images */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    {['aadhar_front', 'aadhar_back', 'pan_front', 'selfie', 'applicant_selfie', 'prop_1', 'prop_2', 'prop_3'].map(field => {
+                                        const file = loan.form_data[field];
+                                        if (!file || typeof file !== 'object' || !file.url) return null;
+                                        return (
+                                            <div key={field} className="space-y-2">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center truncate">{field.replace(/_/g, ' ')}</p>
+                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-square overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                                                    <img src={file.url} alt={field} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                    <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
+                                                        <ExternalLink className="w-5 h-5 text-white opacity-0 group-hover:opacity-100" />
+                                                    </div>
+                                                </a>
+                                                {file.geo && (
+                                                    <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center">
+                                                        <span>LAT: {file.geo.lat?.toFixed(4)}</span>
+                                                        <span>LNG: {file.geo.lng?.toFixed(4)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* EMI Table */}
                     <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
