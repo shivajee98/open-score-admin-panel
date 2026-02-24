@@ -7,6 +7,19 @@ import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filte
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import FormDetailsModal from '@/components/loans/FormDetailsModal';
 
+// Helper: Check if platform fee (EMI #0) has been paid for a loan
+const isPlatformFeePaid = (loan: any): boolean => {
+    if (!loan.repayments || !Array.isArray(loan.repayments)) return false;
+    const emi0 = loan.repayments.find((r: any) => r.emi_number === 0);
+    return emi0?.status === 'PAID';
+};
+
+// Helper: Check if platform fee (EMI #0) exists (pending or paid)
+const hasPlatformFee = (loan: any): boolean => {
+    if (!loan.repayments || !Array.isArray(loan.repayments)) return false;
+    return loan.repayments.some((r: any) => r.emi_number === 0);
+};
+
 export default function LoanApprovals() {
     const [loans, setLoans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -215,10 +228,13 @@ export default function LoanApprovals() {
                             <option value="ALL">All Status</option>
                             {activeTab === 'requests' ? (
                                 <>
-                                    <option value="PENDING">Pending</option>
-                                    <option value="PROCEEDED">Proceeded</option>
+                                    <option value="PENDING">Pending (Intake)</option>
+                                    <option value="APPLIED">Applied (Intake)</option>
+                                    <option value="PROCEEDED">Proceeded (Vetting)</option>
+                                    <option value="VETTING">Vetting (Vetting)</option>
                                     <option value="KYC_SENT">KYC Sent</option>
                                     <option value="FORM_SUBMITTED">Form Submitted</option>
+                                    <option value="KYC_SUBMITTED">KYC Submitted</option>
                                     <option value="APPROVED">Approved</option>
                                 </>
                             ) : (
@@ -313,7 +329,7 @@ export default function LoanApprovals() {
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.id} • {loan.user?.mobile_number}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
 
                                                     {/* Referral Info */}
                                                     {loan.user?.sub_user && (
@@ -333,15 +349,32 @@ export default function LoanApprovals() {
                                                         </p>
                                                     ) : null}
 
-                                                    <div className="mt-1">
+                                                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${loan.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                             loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                                loan.status === 'KYC_SENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                                    loan.status === 'FORM_SUBMITTED' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                                                                        loan.status === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                                                            'bg-slate-50 text-slate-500 border-slate-100'
+                                                                (loan.status === 'KYC_SENT' || loan.status === 'FORM_SUBMITTED' || loan.status === 'KYC_SUBMITTED') ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                                    (loan.status === 'REJECTED' || loan.status === 'CANCELLED') ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                                        'bg-slate-50 text-slate-500 border-slate-100'
                                                             }`}>{loan.status}</span>
+                                                        {/* Platform Fee Status Indicator */}
+                                                        {loan.status === 'APPROVED' && hasPlatformFee(loan) && (
+                                                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${isPlatformFeePaid(loan)
+                                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                                }`}>
+                                                                {isPlatformFeePaid(loan) ? '✅ Fee Paid' : '⏳ Fee Pending'}
+                                                            </span>
+                                                        )}
                                                     </div>
+                                                    {/* Quick KYC Access */}
+                                                    {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setFormDetailLoan(loan); }}
+                                                            className="mt-1 text-[9px] font-bold text-purple-500 hover:text-purple-700 flex items-center gap-0.5 transition-colors"
+                                                        >
+                                                            <FileText size={10} /> View KYC
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -368,7 +401,7 @@ export default function LoanApprovals() {
                                         </td>
                                         <td className="p-6 pr-8 text-right">
                                             <div className="flex justify-end items-center gap-2">
-                                                {loan.status === 'PENDING' && (
+                                                {['PENDING', 'APPLIED'].includes(loan.status) && (
                                                     <button
                                                         disabled={!!actionLoading}
                                                         onClick={() => handleAction(loan.id, 'proceed', 'Loan Proceeded!')}
@@ -378,7 +411,7 @@ export default function LoanApprovals() {
                                                     </button>
                                                 )}
 
-                                                {loan.status === 'PROCEEDED' && (
+                                                {['PROCEEDED', 'VETTING'].includes(loan.status) && (
                                                     <button
                                                         disabled={!!actionLoading}
                                                         onClick={() => handleAction(loan.id, 'send-kyc', 'KYC Link Sent!')}
@@ -388,7 +421,7 @@ export default function LoanApprovals() {
                                                     </button>
                                                 )}
 
-                                                {loan.status === 'FORM_SUBMITTED' && (
+                                                {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => setPreviewLoan(loan)}
@@ -408,13 +441,22 @@ export default function LoanApprovals() {
                                                 )}
 
                                                 {loan.status === 'APPROVED' && (
-                                                    <button
-                                                        disabled={!!actionLoading}
-                                                        onClick={() => handleAction(loan.id, 'release', 'Funds Released!')}
-                                                        className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 shadow-xl shadow-slate-900/30 transition-all font-mono"
-                                                    >
-                                                        Disburse
-                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan))}
+                                                            onClick={() => handleAction(loan.id, 'release', 'Funds Released!')}
+                                                            className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all font-mono ${hasPlatformFee(loan) && !isPlatformFeePaid(loan)
+                                                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                                                : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/30'
+                                                                }`}
+                                                            title={hasPlatformFee(loan) && !isPlatformFeePaid(loan) ? 'Platform fee must be paid before disbursal' : 'Release funds to customer'}
+                                                        >
+                                                            Disburse
+                                                        </button>
+                                                        {hasPlatformFee(loan) && !isPlatformFeePaid(loan) && (
+                                                            <span className="text-[9px] font-bold text-orange-500 max-w-[100px] leading-tight">Fee unpaid</span>
+                                                        )}
+                                                    </div>
                                                 )}
 
                                                 {/* View Form Details Button */}
