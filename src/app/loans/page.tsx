@@ -29,6 +29,7 @@ export default function LoanApprovals() {
     const [formDetailLoan, setFormDetailLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
+    const [selectedLoanIds, setSelectedLoanIds] = useState<number[]>([]);
 
     // Filters & Pagination
     const [search, setSearch] = useState('');
@@ -39,6 +40,7 @@ export default function LoanApprovals() {
 
     const loadLoans = async () => {
         setLoading(true);
+        setSelectedLoanIds([]);
         try {
             const endpoint = activeTab === 'requests' ? '/admin/loans' : '/admin/loans/history';
             const query = new URLSearchParams({
@@ -93,7 +95,41 @@ export default function LoanApprovals() {
         }
     };
 
-    // Excel Export Handler
+    const toggleSelection = (e: any, id: number) => {
+        e.stopPropagation();
+        setSelectedLoanIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleAllOnPage = () => {
+        if (selectedLoanIds.length === loans.length && loans.length > 0) {
+            setSelectedLoanIds([]);
+        } else {
+            setSelectedLoanIds(loans.map(l => l.id));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedLoanIds.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedLoanIds.length} selected loans and all their history? This is permanent.`)) return;
+
+        setActionLoading('bulk-delete');
+        try {
+            const response = await apiFetch('/admin/loans/bulk-delete', {
+                method: 'POST',
+                body: JSON.stringify({ ids: selectedLoanIds })
+            });
+            alert(response.message || 'Bulk delete successful');
+            setSelectedLoanIds([]);
+            loadLoans();
+        } catch (e) {
+            console.error(e);
+            alert('Bulk action failed');
+        } finally {
+            setActionLoading(null);
+        }
+    };
     const handleExportExcel = async () => {
         setExporting(true);
         try {
@@ -297,8 +333,28 @@ export default function LoanApprovals() {
                                 : 'Comprehensive history of closed, cancelled or rejected requests.'}
                         </p>
                     </div>
-                    {loading && <div className="animate-spin w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full" />}
                 </div>
+
+                {activeTab === 'history' && selectedLoanIds.length > 0 && (
+                    <div className="mx-8 mb-4 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-red-900">{selectedLoanIds.length} Loans Selected</p>
+                                <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Caution: Deletion is permanent</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleBulkDelete}
+                            disabled={actionLoading === 'bulk-delete'}
+                            className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all font-mono"
+                        >
+                            {actionLoading === 'bulk-delete' ? 'Deleting...' : 'Delete Selected Records'}
+                        </button>
+                    </div>
+                )}
 
                 {loans.length === 0 && !loading ? (
                     <div className="p-24 text-center">
@@ -313,7 +369,16 @@ export default function LoanApprovals() {
                         <table className="w-full text-left order-collapse">
                             <thead className="bg-slate-50/50">
                                 <tr>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Applicant & Loan ID</th>
+                                    <th className="p-6 pl-8 w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={loans.length > 0 && selectedLoanIds.length === loans.length}
+                                            onChange={toggleAllOnPage}
+                                            className="w-4 h-4 text-blue-600 rounded"
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Applicant & Loan ID</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Details</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
@@ -326,7 +391,15 @@ export default function LoanApprovals() {
                                         className="hover:bg-slate-50/80 transition-all group cursor-pointer"
                                         onClick={() => setSelectedLoan(loan.id)}
                                     >
-                                        <td className="p-6 pl-8">
+                                        <td className="p-6 pl-8" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedLoanIds.includes(loan.id)}
+                                                onChange={(e) => toggleSelection(e, loan.id)}
+                                                className="w-4 h-4 text-blue-600 rounded"
+                                            />
+                                        </td>
+                                        <td className="p-6 pl-2">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
                                                     {loan.user?.name?.[0] || 'U'}
@@ -533,74 +606,80 @@ export default function LoanApprovals() {
             </div>
 
             {/* Preview Modal (legacy KYC preview) */}
-            {previewLoan && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl">
-                        <div className="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                            <div>
-                                <h2 className="text-xl font-black text-slate-900">KYC Form Details</h2>
-                                <p className="text-sm text-slate-500">Submitted on {new Date(previewLoan.updated_at).toLocaleDateString()}</p>
-                            </div>
-                            <button onClick={() => setPreviewLoan(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900">
-                                <BadgeCheck className="w-6 h-6 rotate-45" />
-                            </button>
-                        </div>
-                        <div className="p-8 space-y-8">
-                            {previewLoan.form_data ? (
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                                    {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => {
-                                        const isImageObject = value && typeof value === 'object' && value.url;
-                                        return (
-                                            <div key={key} className={isImageObject ? "col-span-2 sm:col-span-1" : ""}>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
-                                                {isImageObject ? (
-                                                    <div className="space-y-2">
-                                                        <a href={value.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
-                                                            <img src={value.url} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
-                                                                <ChevronRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            </div>
-                                                        </a>
-                                                        {value.geo && (
-                                                            <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                <span>Lat: {value.geo.lat?.toFixed(6)}</span>
-                                                                <span>Lng: {value.geo.lng?.toFixed(6)}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+            {
+                previewLoan && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl">
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900">KYC Form Details</h2>
+                                    <p className="text-sm text-slate-500">Submitted on {new Date(previewLoan.updated_at).toLocaleDateString()}</p>
                                 </div>
-                            ) : (
-                                <p className="text-slate-500 italic">No form data submitted.</p>
-                            )}
+                                <button onClick={() => setPreviewLoan(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900">
+                                    <BadgeCheck className="w-6 h-6 rotate-45" />
+                                </button>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                {previewLoan.form_data ? (
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                                        {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => {
+                                            const isImageObject = value && typeof value === 'object' && value.url;
+                                            return (
+                                                <div key={key} className={isImageObject ? "col-span-2 sm:col-span-1" : ""}>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
+                                                    {isImageObject ? (
+                                                        <div className="space-y-2">
+                                                            <a href={value.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+                                                                <img src={value.url} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                                                <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
+                                                                    <ChevronRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                </div>
+                                                            </a>
+                                                            {value.geo && (
+                                                                <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                    <span>Lat: {value.geo.lat?.toFixed(6)}</span>
+                                                                    <span>Lng: {value.geo.lng?.toFixed(6)}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 italic">No form data submitted.</p>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Form Details Modal */}
-            {formDetailLoan && (
-                <FormDetailsModal
-                    loan={formDetailLoan}
-                    onClose={() => setFormDetailLoan(null)}
-                />
-            )}
+            {
+                formDetailLoan && (
+                    <FormDetailsModal
+                        loan={formDetailLoan}
+                        onClose={() => setFormDetailLoan(null)}
+                    />
+                )
+            }
 
             {/* Repayment Schedule Modal */}
-            {selectedLoan && (
-                <LoanDetailModal
-                    loanId={selectedLoan}
-                    onClose={() => setSelectedLoan(null)}
-                    onUpdate={() => {
-                        loadLoans();
-                    }}
-                />
-            )}
-        </AdminLayout>
+            {
+                selectedLoan && (
+                    <LoanDetailModal
+                        loanId={selectedLoan}
+                        onClose={() => setSelectedLoan(null)}
+                        onUpdate={() => {
+                            loadLoans();
+                        }}
+                    />
+                )
+            }
+        </AdminLayout >
     );
 }

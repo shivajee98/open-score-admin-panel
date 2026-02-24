@@ -42,6 +42,17 @@ const formatTenure = (days: number, type: string = 'months') => {
     return `${months} ${months === 1 ? 'Month' : 'Months'}`;
 };
 
+const getFrequencyDays = (freq: string) => {
+    if (freq === 'DAILY') return 1;
+    if (freq === 'WEEKLY') return 7;
+    if (freq === '15_DAYS') return 15;
+    if (freq === 'MONTHLY') return 30;
+    if (freq === 'QUARTERLY') return 90;
+    if (freq === 'YEARLY') return 365;
+    const match = freq.match(/(\d+)/);
+    return match ? parseInt(match[0]) : 999;
+};
+
 export default function CreateLoanPlan() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -354,59 +365,61 @@ export default function CreateLoanPlan() {
                                     <div className="mb-6">
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Allowed Frequencies & Cashback</label>
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                            {['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS', ...(config.allowed_frequencies || []).filter(f => !['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS'].includes(f))].map(freq => (
-                                                <div key={freq} className={`p-3 rounded-lg border ${config.allowed_frequencies.includes(freq) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
-                                                    <div className="flex justify-between items-start">
-                                                        <label className="flex items-center space-x-2 cursor-pointer mb-2">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={config.allowed_frequencies.includes(freq)}
-                                                                onChange={(e) => {
-                                                                    const current = config.allowed_frequencies;
-                                                                    const newFreqs = e.target.checked
-                                                                        ? [...current, freq]
-                                                                        : current.filter(f => f !== freq);
-                                                                    updateConfig(idx, 'allowed_frequencies', newFreqs);
-                                                                }}
-                                                                className="w-4 h-4 text-indigo-600 rounded"
-                                                            />
-                                                            <span className="text-sm font-bold text-slate-700">{freq.replace('_', ' ')}</span>
-                                                        </label>
-                                                    </div>
-
-                                                    {config.allowed_frequencies.includes(freq) && (
-                                                        <div className="space-y-2">
-                                                            <div>
-                                                                <label className="text-[10px] uppercase font-bold text-slate-400 block">Int. Rate (%/mo)</label>
+                                            {['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS', ...(config.allowed_frequencies || []).filter(f => !['DAILY', 'WEEKLY', 'MONTHLY', '15_DAYS'].includes(f))]
+                                                .sort((a, b) => getFrequencyDays(a) - getFrequencyDays(b))
+                                                .map(freq => (
+                                                    <div key={freq} className={`p-3 rounded-lg border ${config.allowed_frequencies.includes(freq) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'}`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <label className="flex items-center space-x-2 cursor-pointer mb-2">
                                                                 <input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    placeholder="0"
-                                                                    value={config.interest_rates[freq] ?? config.interest_rate}
+                                                                    type="checkbox"
+                                                                    checked={config.allowed_frequencies.includes(freq)}
                                                                     onChange={(e) => {
-                                                                        const newRates = { ...config.interest_rates, [freq]: parseFloat(e.target.value) };
-                                                                        updateConfig(idx, 'interest_rates', newRates);
+                                                                        const current = config.allowed_frequencies;
+                                                                        const newFreqs = e.target.checked
+                                                                            ? [...current, freq]
+                                                                            : current.filter(f => f !== freq);
+                                                                        updateConfig(idx, 'allowed_frequencies', newFreqs);
                                                                     }}
-                                                                    className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
+                                                                    className="w-4 h-4 text-indigo-600 rounded"
                                                                 />
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-[10px] uppercase font-bold text-slate-400 block">Cashback (₹)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="0"
-                                                                    value={config.cashback[freq] || 0}
-                                                                    onChange={(e) => {
-                                                                        const newCb = { ...config.cashback, [freq]: parseFloat(e.target.value) };
-                                                                        updateConfig(idx, 'cashback', newCb);
-                                                                    }}
-                                                                    className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
-                                                                />
-                                                            </div>
+                                                                <span className="text-sm font-bold text-slate-700">{freq.replace('_', ' ')}</span>
+                                                            </label>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+
+                                                        {config.allowed_frequencies.includes(freq) && (
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <label className="text-[10px] uppercase font-bold text-slate-400 block">Int. Rate (%/mo)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        placeholder="0"
+                                                                        value={config.interest_rates[freq] ?? config.interest_rate}
+                                                                        onChange={(e) => {
+                                                                            const newRates = { ...config.interest_rates, [freq]: parseFloat(e.target.value) };
+                                                                            updateConfig(idx, 'interest_rates', newRates);
+                                                                        }}
+                                                                        className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[10px] uppercase font-bold text-slate-400 block">Cashback (₹)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="0"
+                                                                        value={config.cashback[freq] || 0}
+                                                                        onChange={(e) => {
+                                                                            const newCb = { ...config.cashback, [freq]: parseFloat(e.target.value) };
+                                                                            updateConfig(idx, 'cashback', newCb);
+                                                                        }}
+                                                                        className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
 
                                             {/* Custom Frequency Adder */}
                                             <div className="p-3 rounded-lg border border-dashed border-slate-300 flex flex-col justify-center items-center gap-2">

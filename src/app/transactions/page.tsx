@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, ArrowUpRight, ArrowDownLeft, Filter, AlertCircle } from 'lucide-react';
+import { Search, Loader2, ArrowUpRight, ArrowDownLeft, Filter, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import AdminLayout from '@/components/AdminLayout';
@@ -43,6 +43,7 @@ export default function GlobalTransactionsPage() {
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [revertingId, setRevertingId] = useState<number | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -81,6 +82,22 @@ export default function GlobalTransactionsPage() {
             toast.error('Failed to fetch transactions');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRevert = async (id: number) => {
+        if (!confirm('Are you sure you want to revert this transaction? This will restore balances and permanently remove the record.')) return;
+
+        setRevertingId(id);
+        try {
+            const res = await apiFetch(`/admin/transactions/${id}/revert`, { method: 'POST' });
+            toast.success(res.message || 'Transaction reverted');
+            fetchTransactions();
+        } catch (error) {
+            console.error(error);
+            toast.error('Reversal failed');
+        } finally {
+            setRevertingId(null);
         }
     };
 
@@ -195,6 +212,7 @@ export default function GlobalTransactionsPage() {
                                     <th className="px-6 py-4 font-semibold text-slate-700">Description</th>
                                     <th className="px-6 py-4 font-semibold text-slate-700">Status</th>
                                     <th className="px-6 py-4 font-semibold text-slate-700">Date</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-700 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -246,6 +264,20 @@ export default function GlobalTransactionsPage() {
                                             </td>
                                             <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
                                                 {formatDate(tx.created_at)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => handleRevert(tx.id)}
+                                                    disabled={revertingId === tx.id || tx.status === 'FAILED'}
+                                                    className={`p-2 rounded-lg transition-all ${revertingId === tx.id ? 'bg-slate-100 text-slate-400' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}
+                                                    title="Revert & Delete"
+                                                >
+                                                    {revertingId === tx.id ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <RotateCcw className="w-4 h-4" />
+                                                    )}
+                                                </button>
                                             </td>
                                         </tr>
                                     ))

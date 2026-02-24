@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift } from 'lucide-react';
 import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
@@ -41,12 +41,20 @@ export default function AdminDashboard() {
     const loadData = async () => {
         try {
             // Parallel fetch for speed
-            const [analytics, pending, users, pendingRepays] = await Promise.all([
+            const [analytics, pending, users, pendingRepays, referralsData] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
                 apiFetch('/admin/users'),
-                apiFetch('/admin/repayments/pending')
+                apiFetch('/admin/repayments/pending'),
+                apiFetch('/admin/all-referrals')
             ]);
+
+            const referralList = referralsData?.data || [];
+            const totalSignupPaid = referralList.reduce((sum: number, r: any) =>
+                sum + (r.signup_bonus_paid ? Number(r.signup_bonus_earned) : 0), 0);
+            const totalLoanPaid = referralList.reduce((sum: number, r: any) =>
+                sum + (r.loan_bonus_paid ? Number(r.loan_bonus_earned) : 0), 0);
+            const totalReferralPaid = totalSignupPaid + totalLoanPaid;
 
             setStats({
                 totalUsers: analytics?.total_users || 0,
@@ -59,8 +67,9 @@ export default function AdminDashboard() {
                 activeLoans: analytics?.active_loans || 0,
                 defaultedLoans: analytics?.defaulted_loans || 0,
                 pendingLoans: analytics?.pending_loans || 0,
-                recentRepayments: analytics?.recent_repayments || []
-            });
+                recentRepayments: analytics?.recent_repayments || [],
+                totalReferralPaid: totalReferralPaid
+            } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
         } catch (error) {
@@ -165,6 +174,16 @@ export default function AdminDashboard() {
                     <div>
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Overdue</p>
                         <p className="text-3xl font-black text-red-600">₹{stats.totalOverdue.toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+                        <Gift className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Referral Paid</p>
+                        <p className="text-3xl font-black text-amber-600">₹{(stats as any).totalReferralPaid?.toLocaleString('en-IN') || 0}</p>
                     </div>
                 </div>
             </div>
