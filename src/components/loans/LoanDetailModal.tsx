@@ -150,419 +150,421 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     const { loan, repayments } = data;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-slate-50 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden my-auto relative">
+        <div className="contents">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+                <div className="bg-slate-50 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden my-auto relative">
 
-                {/* Header */}
-                <div className="bg-white p-6 sm:p-8 border-b border-slate-100 flex justify-between items-start sticky top-0 z-10 shadow-sm">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h2 className="text-2xl font-black text-slate-900">{loan.user?.name}</h2>
-                            <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">#{loan.display_id || loan.id}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 font-medium">
-                            <div className="flex items-center gap-1.5">
-                                <User size={16} className="text-blue-500" />
-                                Approved by: <span className="text-slate-900 font-bold">{loan.approver?.name || 'System/Admin'}</span>
+                    {/* Header */}
+                    <div className="bg-white p-6 sm:p-8 border-b border-slate-100 flex justify-between items-start sticky top-0 z-10 shadow-sm">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <h2 className="text-2xl font-black text-slate-900">{loan.user?.name}</h2>
+                                <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">#{loan.display_id || loan.id}</span>
                             </div>
-                            {loan.disbursed_at && (
+                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 font-medium">
                                 <div className="flex items-center gap-1.5">
-                                    <BadgeCheck size={16} className="text-emerald-500" />
-                                    Disbursed: <span className="text-slate-900 font-bold">₹{parseFloat(loan.amount).toLocaleString()}</span> on {new Date(loan.disbursed_at).toLocaleDateString()}
+                                    <User size={16} className="text-blue-500" />
+                                    Approved by: <span className="text-slate-900 font-bold">{loan.approver?.name || 'System/Admin'}</span>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-red-500">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                <div className="p-6 sm:p-8 space-y-8">
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Loan</p>
-                            <p className="text-lg font-black text-slate-900">₹{parseFloat(loan.amount).toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Paid Amount</p>
-                            <p className="text-lg font-black text-emerald-600">₹{parseFloat(loan.paid_amount || 0).toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tenure</p>
-                            <p className="text-lg font-black text-slate-900">{loan.tenure} <span className="text-xs text-slate-400">{Number(loan.tenure) > 6 ? 'Days' : 'Months'}</span></p>
-                        </div>
-                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-black uppercase ${loan.status === 'CLOSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
-                                }`}>{loan.status}</span>
-                        </div>
-                    </div>
-
-                    {/* Calculations Breakdown */}
-                    {loan.calculations && (
-                        <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 shadow-sm">
-                            <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <Calculator className="w-4 h-4" />
-                                Pricing Breakdown
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-8 gap-y-6">
-                                {Object.entries(loan.calculations).map(([key, val]: [string, any]) => (
-                                    typeof val !== 'object' && val !== null && val !== undefined && (
-                                        <div key={key}>
-                                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</p>
-                                            <p className="text-sm font-black text-emerald-900">
-                                                {typeof val === 'number' ?
-                                                    (key.includes('rate') ? `${val}%` : `₹${val.toLocaleString()}`)
-                                                    : String(val)}
-                                            </p>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* KYC & Form Data Integrated (Same as FormDetailsModal) */}
-                    {loan.form_data && Object.keys(loan.form_data).length > 0 && (
-                        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                                    <FileText className="w-4 h-4 text-slate-400" />
-                                    Applicant KYC & Form Data
-                                </h3>
-                                <div className="flex gap-2 text-[10px] font-black text-slate-400">
-                                    {loan.form_data.auto_approved && (
-                                        <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                            <Shield size={10} /> AUTO-APPROVED
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="p-6 sm:p-8 space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {/* Personal & Contact */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <User size={16} className="text-blue-500" />
-                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Personal & Contact</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="col-span-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Full Name</p>
-                                                <p className="text-sm font-bold text-slate-900">{loan.form_data.first_name} {loan.form_data.last_name}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Date of Birth</p>
-                                                <p className="text-sm font-bold text-slate-900">
-                                                    {loan.form_data.birth_day && loan.form_data.birth_month && loan.form_data.birth_year
-                                                        ? `${loan.form_data.birth_day}/${loan.form_data.birth_month}/${loan.form_data.birth_year}`
-                                                        : 'N/A'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Marital Status</p>
-                                                <p className="text-sm font-bold text-slate-900 uppercase">{loan.form_data.marital_status || 'N/A'}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Email Address</p>
-                                                <p className="text-sm font-bold text-slate-900">{loan.form_data.email || 'N/A'}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Current Address</p>
-                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                                                    {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code]
-                                                        .filter(Boolean).join(', ')}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Work & Identity */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Briefcase size={16} className="text-amber-500" />
-                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Identity & Employment</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="col-span-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pan Card Number</p>
-                                                <p className="text-sm font-black text-slate-900 uppercase font-mono">{loan.form_data.pan_number || 'N/A'}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aadhaar Card Number</p>
-                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.form_data.aadhar_number || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Monthly Income</p>
-                                                <p className="text-sm font-bold text-emerald-600">₹{parseFloat(loan.form_data.gross_monthly_income || 0).toLocaleString()}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Occupation</p>
-                                                <p className="text-sm font-bold text-slate-900">{loan.form_data.occupation || 'N/A'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Bank Details */}
-                                {(loan.form_data.bank_name || loan.user?.bank_name) && (
-                                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Landmark size={16} className="text-emerald-500" />
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Payout Info</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Bank Name</p>
-                                                <p className="text-sm font-bold text-slate-900">{loan.user?.bank_name || loan.form_data.bank_name}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Acc Number</p>
-                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.user?.account_number || loan.form_data.account_number}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">IFSC Code</p>
-                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.user?.ifsc_code || loan.form_data.ifsc_code}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Holder Name</p>
-                                                <p className="text-sm font-bold text-slate-900">{loan.user?.account_holder_name || loan.form_data.account_holder_name}</p>
-                                            </div>
-                                        </div>
+                                {loan.disbursed_at && (
+                                    <div className="flex items-center gap-1.5">
+                                        <BadgeCheck size={16} className="text-emerald-500" />
+                                        Disbursed: <span className="text-slate-900 font-bold">₹{parseFloat(loan.amount).toLocaleString()}</span> on {new Date(loan.disbursed_at).toLocaleDateString()}
                                     </div>
                                 )}
-
-                                {/* KYC Images */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    {['aadhar_front', 'aadhar_back', 'pan_front', 'selfie', 'applicant_selfie', 'prop_1', 'prop_2', 'prop_3'].map(field => {
-                                        const file = loan.form_data[field];
-                                        if (!file || typeof file !== 'object' || !file.url) return null;
-                                        return (
-                                            <div key={field} className="space-y-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center truncate">{field.replace(/_/g, ' ')}</p>
-                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-square overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-                                                    <img src={file.url} alt={field} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                    <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
-                                                        <ExternalLink className="w-5 h-5 text-white opacity-0 group-hover:opacity-100" />
-                                                    </div>
-                                                </a>
-                                                {file.geo && (
-                                                    <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center">
-                                                        <span>LAT: {file.geo.lat?.toFixed(4)}</span>
-                                                        <span>LNG: {file.geo.lng?.toFixed(4)}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
                             </div>
                         </div>
-                    )}
+                        <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-red-500">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
 
-                    {/* EMI Table */}
-                    <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
-                        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                                <Calendar className="w-5 h-5 text-slate-400" />
-                                Repayment Schedule
-                            </h3>
+                    <div className="p-6 sm:p-8 space-y-8">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Loan</p>
+                                <p className="text-lg font-black text-slate-900">₹{parseFloat(loan.amount).toLocaleString()}</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Paid Amount</p>
+                                <p className="text-lg font-black text-emerald-600">₹{parseFloat(loan.paid_amount || 0).toLocaleString()}</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tenure</p>
+                                <p className="text-lg font-black text-slate-900">{loan.tenure} <span className="text-xs text-slate-400">{Number(loan.tenure) > 6 ? 'Days' : 'Months'}</span></p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-black uppercase ${loan.status === 'CLOSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                                    }`}>{loan.status}</span>
+                            </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
-                                    <tr>
-                                        <th className="p-4 pl-6 w-16">#</th>
-                                        <th className="p-4">Due Date</th>
-                                        <th className="p-4">Amount</th>
-                                        <th className="p-4">Status</th>
-                                        <th className="p-4 text-right pr-6">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {repayments.map((emi: any, index: number) => (
-                                        <tr key={emi.id} className={`transition-colors ${emi.status === 'PENDING_VERIFICATION' || emi.status === 'AGENT_APPROVED'
-                                            ? 'bg-amber-50/40 hover:bg-amber-50/60'
-                                            : 'hover:bg-blue-50/30'
-                                            }`}>
-                                            <td className="p-4 pl-6 font-mono text-slate-400">#{index + 1}</td>
-                                            <td className="p-4 font-medium text-slate-900">
-                                                {new Date(emi.due_date).toLocaleDateString()}
-                                            </td>
-                                            <td className="p-4">
-                                                <div className="font-black text-slate-900">
-                                                    ₹{parseFloat(emi.amount).toLocaleString()}
+
+                        {/* Calculations Breakdown */}
+                        {loan.calculations && (
+                            <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 shadow-sm">
+                                <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <Calculator className="w-4 h-4" />
+                                    Pricing Breakdown
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-8 gap-y-6">
+                                    {Object.entries(loan.calculations).map(([key, val]: [string, any]) => (
+                                        typeof val !== 'object' && val !== null && val !== undefined && (
+                                            <div key={key}>
+                                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-0.5">{key.replace(/_/g, ' ')}</p>
+                                                <p className="text-sm font-black text-emerald-900">
+                                                    {typeof val === 'number' ?
+                                                        (key.includes('rate') ? `${val}%` : `₹${val.toLocaleString()}`)
+                                                        : String(val)}
+                                                </p>
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* KYC & Form Data Integrated (Same as FormDetailsModal) */}
+                        {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                            <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+                                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                                        <FileText className="w-4 h-4 text-slate-400" />
+                                        Applicant KYC & Form Data
+                                    </h3>
+                                    <div className="flex gap-2 text-[10px] font-black text-slate-400">
+                                        {loan.form_data.auto_approved && (
+                                            <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                                <Shield size={10} /> AUTO-APPROVED
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="p-6 sm:p-8 space-y-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Personal & Contact */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <User size={16} className="text-blue-500" />
+                                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Personal & Contact</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="col-span-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Full Name</p>
+                                                    <p className="text-sm font-bold text-slate-900">{loan.form_data.first_name} {loan.form_data.last_name}</p>
                                                 </div>
-                                                <div className="flex gap-2 mt-1">
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter" title="Principal">P: ₹{parseFloat(emi.principal_component || 0).toLocaleString()}</span>
-                                                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter" title="Interest (Profit)">I: ₹{parseFloat(emi.interest_component || 0).toLocaleString()}</span>
-                                                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter" title="Fees">F: ₹{parseFloat(emi.fee_component || 0).toLocaleString()}</span>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Date of Birth</p>
+                                                    <p className="text-sm font-bold text-slate-900">
+                                                        {loan.form_data.birth_day && loan.form_data.birth_month && loan.form_data.birth_year
+                                                            ? `${loan.form_data.birth_day}/${loan.form_data.birth_month}/${loan.form_data.birth_year}`
+                                                            : 'N/A'}
+                                                    </p>
                                                 </div>
-                                            </td>
-                                            <td className="p-4">
-                                                {emi.status === 'PAID' ? (
-                                                    <div className="flex flex-col items-start gap-1">
-                                                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold inline-flex items-center gap-1">
-                                                            <CheckCircle2 size={12} /> Paid
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                            {emi.payment_mode || 'ONLINE'}
-                                                        </span>
-                                                    </div>
-                                                ) : emi.status === 'PENDING_VERIFICATION' ? (
-                                                    <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold inline-flex items-center gap-1 animate-pulse">
-                                                        <Clock size={12} /> Awaiting Approval
-                                                    </span>
-                                                ) : emi.status === 'AGENT_APPROVED' ? (
-                                                    <div className="flex flex-col items-start gap-1">
-                                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold inline-flex items-center gap-1">
-                                                            <ShieldCheck size={12} /> Agent Approved
-                                                        </span>
-                                                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
-                                                            Needs Admin Final
-                                                        </span>
-                                                    </div>
-                                                ) : emi.status === 'MANUAL_VERIFICATION' ? (
-                                                    <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold inline-flex items-center gap-1">
-                                                        <Clock size={12} /> Verification
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">
-                                                        Pending
-                                                    </span>
-                                                )}
-
-                                                {/* Transaction ID */}
-                                                {emi.transaction_id && (
-                                                    <p className="text-[10px] text-slate-500 mt-1 font-mono" title={emi.transaction_id}>
-                                                        TXN: {emi.transaction_id}
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Marital Status</p>
+                                                    <p className="text-sm font-bold text-slate-900 uppercase">{loan.form_data.marital_status || 'N/A'}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Email Address</p>
+                                                    <p className="text-sm font-bold text-slate-900">{loan.form_data.email || 'N/A'}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Current Address</p>
+                                                    <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                        {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code]
+                                                            .filter(Boolean).join(', ')}
                                                     </p>
-                                                )}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                                {/* Verification Note */}
-                                                {(emi.status === 'MANUAL_VERIFICATION' || (emi.status === 'PAID' && emi.payment_mode === 'MANUAL')) && emi.notes && (
-                                                    <p className="text-[10px] text-slate-400 mt-1 max-w-[150px] truncate" title={emi.notes}>
-                                                        Note: {emi.notes}
-                                                    </p>
-                                                )}
+                                        {/* Work & Identity */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Briefcase size={16} className="text-amber-500" />
+                                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Identity & Employment</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="col-span-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pan Card Number</p>
+                                                    <p className="text-sm font-black text-slate-900 uppercase font-mono">{loan.form_data.pan_number || 'N/A'}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aadhaar Card Number</p>
+                                                    <p className="text-sm font-black text-slate-900 font-mono">{loan.form_data.aadhar_number || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Monthly Income</p>
+                                                    <p className="text-sm font-bold text-emerald-600">₹{parseFloat(loan.form_data.gross_monthly_income || 0).toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Occupation</p>
+                                                    <p className="text-sm font-bold text-slate-900">{loan.form_data.occupation || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                                {/* Admin rejection note */}
-                                                {emi.admin_note && emi.status === 'PENDING' && (
-                                                    <p className="text-[10px] text-rose-500 mt-1 max-w-[150px] truncate font-bold" title={emi.admin_note}>
-                                                        ⚠ Rejected: {emi.admin_note}
-                                                    </p>
-                                                )}
-                                            </td>
-                                            <td className="p-4 pr-6 text-right">
-                                                <div className="flex flex-col items-end gap-2">
-                                                    {/* PENDING_VERIFICATION or AGENT_APPROVED — show View Proof + Approve + Reject */}
-                                                    {(emi.status === 'PENDING_VERIFICATION' || emi.status === 'AGENT_APPROVED') && (
-                                                        <div className="flex gap-2 flex-wrap justify-end">
-                                                            {/* View Proof */}
-                                                            {emi.proof_image && (
-                                                                <button
-                                                                    onClick={() => setViewingProof(emi)}
-                                                                    className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all border border-indigo-100"
-                                                                >
-                                                                    <Eye size={12} /> View Proof
-                                                                </button>
-                                                            )}
-                                                            {/* Approve */}
-                                                            <button
-                                                                onClick={() => handleApproveRepayment(emi.id)}
-                                                                disabled={!!actionLoading}
-                                                                className="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700 hover:shadow-emerald-500/20 transition-all disabled:opacity-50"
-                                                            >
-                                                                <CheckCircle2 size={12} /> {actionLoading === `approve-repayment-${emi.id}` ? '...' : 'Approve'}
-                                                            </button>
-                                                            {/* Reject */}
-                                                            <button
-                                                                onClick={() => { setRejectingId(emi.id); setRejectReason(''); }}
-                                                                disabled={!!actionLoading}
-                                                                className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-all border border-rose-100 disabled:opacity-50"
-                                                            >
-                                                                <XCircle size={12} /> Reject
-                                                            </button>
+                                    {/* Bank Details */}
+                                    {(loan.form_data.bank_name || loan.user?.bank_name) && (
+                                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Landmark size={16} className="text-emerald-500" />
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Payout Info</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Bank Name</p>
+                                                    <p className="text-sm font-bold text-slate-900">{loan.user?.bank_name || loan.form_data.bank_name}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Acc Number</p>
+                                                    <p className="text-sm font-black text-slate-900 font-mono">{loan.user?.account_number || loan.form_data.account_number}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">IFSC Code</p>
+                                                    <p className="text-sm font-black text-slate-900 font-mono">{loan.user?.ifsc_code || loan.form_data.ifsc_code}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Holder Name</p>
+                                                    <p className="text-sm font-bold text-slate-900">{loan.user?.account_holder_name || loan.form_data.account_holder_name}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* KYC Images */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        {['aadhar_front', 'aadhar_back', 'pan_front', 'selfie', 'applicant_selfie', 'prop_1', 'prop_2', 'prop_3'].map(field => {
+                                            const file = loan.form_data[field];
+                                            if (!file || typeof file !== 'object' || !file.url) return null;
+                                            return (
+                                                <div key={field} className="space-y-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center truncate">{field.replace(/_/g, ' ')}</p>
+                                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-square overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                                                        <img src={file.url} alt={field} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                        <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
+                                                            <ExternalLink className="w-5 h-5 text-white opacity-0 group-hover:opacity-100" />
+                                                        </div>
+                                                    </a>
+                                                    {file.geo && (
+                                                        <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center">
+                                                            <span>LAT: {file.geo.lat?.toFixed(4)}</span>
+                                                            <span>LNG: {file.geo.lng?.toFixed(4)}</span>
                                                         </div>
                                                     )}
-
-                                                    {/* PENDING — Collect Manual */}
-                                                    {emi.status === 'PENDING' && (
-                                                        collectingId === emi.id ? (
-                                                            <div className="flex flex-col gap-2 min-w-[200px] bg-slate-50 p-3 rounded-xl border border-blue-100 shadow-lg relative z-10">
-                                                                <p className="text-xs font-bold text-slate-900 text-left">Manual Collection</p>
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="Amount"
-                                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-bold"
-                                                                    value={amount}
-                                                                    onChange={e => setAmount(e.target.value)}
-                                                                    autoFocus
-                                                                />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Ref/Notes (Optional)"
-                                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
-                                                                    value={notes}
-                                                                    onChange={e => setNotes(e.target.value)}
-                                                                />
-                                                                <div className="flex gap-2 mt-1">
-                                                                    <button
-                                                                        onClick={handleManualCollect}
-                                                                        disabled={!amount || !!actionLoading}
-                                                                        className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition"
-                                                                    >
-                                                                        {actionLoading ? '...' : 'Submit'}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setCollectingId(null)}
-                                                                        className="px-3 bg-slate-200 text-slate-600 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300"
-                                                                    >
-                                                                        Cancel
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setCollectingId(emi.id);
-                                                                    setAmount(emi.amount); // Default to full amount
-                                                                    setNotes('');
-                                                                }}
-                                                                className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                                            >
-                                                                Collect Manual
-                                                            </button>
-                                                        )
-                                                    )}
-
-                                                    {emi.status === 'MANUAL_VERIFICATION' && (
-                                                        <button
-                                                            onClick={() => handleApproveCollection(emi.id)}
-                                                            disabled={!!actionLoading}
-                                                            className="bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-600 hover:shadow-emerald-500/20 transition-all"
-                                                        >
-                                                            {actionLoading === `approve-${emi.id}` ? '...' : 'Approve'}
-                                                        </button>
-                                                    )}
-
-                                                    {/* Show proof thumbnail for PAID with proof */}
-                                                    {emi.status === 'PAID' && emi.proof_image && (
-                                                        <button
-                                                            onClick={() => setViewingProof(emi)}
-                                                            className="inline-flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:text-indigo-600 transition-colors"
-                                                        >
-                                                            <Eye size={10} /> Receipt
-                                                        </button>
-                                                    )}
                                                 </div>
-                                            </td>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* EMI Table */}
+                        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+                            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-slate-400" />
+                                    Repayment Schedule
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
+                                        <tr>
+                                            <th className="p-4 pl-6 w-16">#</th>
+                                            <th className="p-4">Due Date</th>
+                                            <th className="p-4">Amount</th>
+                                            <th className="p-4">Status</th>
+                                            <th className="p-4 text-right pr-6">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {repayments.map((emi: any, index: number) => (
+                                            <tr key={emi.id} className={`transition-colors ${emi.status === 'PENDING_VERIFICATION' || emi.status === 'AGENT_APPROVED'
+                                                ? 'bg-amber-50/40 hover:bg-amber-50/60'
+                                                : 'hover:bg-blue-50/30'
+                                                }`}>
+                                                <td className="p-4 pl-6 font-mono text-slate-400">#{index + 1}</td>
+                                                <td className="p-4 font-medium text-slate-900">
+                                                    {new Date(emi.due_date).toLocaleDateString()}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-black text-slate-900">
+                                                        ₹{parseFloat(emi.amount).toLocaleString()}
+                                                    </div>
+                                                    <div className="flex gap-2 mt-1">
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter" title="Principal">P: ₹{parseFloat(emi.principal_component || 0).toLocaleString()}</span>
+                                                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter" title="Interest (Profit)">I: ₹{parseFloat(emi.interest_component || 0).toLocaleString()}</span>
+                                                        <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter" title="Fees">F: ₹{parseFloat(emi.fee_component || 0).toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    {emi.status === 'PAID' ? (
+                                                        <div className="flex flex-col items-start gap-1">
+                                                            <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                                                <CheckCircle2 size={12} /> Paid
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                                                {emi.payment_mode || 'ONLINE'}
+                                                            </span>
+                                                        </div>
+                                                    ) : emi.status === 'PENDING_VERIFICATION' ? (
+                                                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold inline-flex items-center gap-1 animate-pulse">
+                                                            <Clock size={12} /> Awaiting Approval
+                                                        </span>
+                                                    ) : emi.status === 'AGENT_APPROVED' ? (
+                                                        <div className="flex flex-col items-start gap-1">
+                                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                                                <ShieldCheck size={12} /> Agent Approved
+                                                            </span>
+                                                            <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
+                                                                Needs Admin Final
+                                                            </span>
+                                                        </div>
+                                                    ) : emi.status === 'MANUAL_VERIFICATION' ? (
+                                                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                                            <Clock size={12} /> Verification
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">
+                                                            Pending
+                                                        </span>
+                                                    )}
+
+                                                    {/* Transaction ID */}
+                                                    {emi.transaction_id && (
+                                                        <p className="text-[10px] text-slate-500 mt-1 font-mono" title={emi.transaction_id}>
+                                                            TXN: {emi.transaction_id}
+                                                        </p>
+                                                    )}
+
+                                                    {/* Verification Note */}
+                                                    {(emi.status === 'MANUAL_VERIFICATION' || (emi.status === 'PAID' && emi.payment_mode === 'MANUAL')) && emi.notes && (
+                                                        <p className="text-[10px] text-slate-400 mt-1 max-w-[150px] truncate" title={emi.notes}>
+                                                            Note: {emi.notes}
+                                                        </p>
+                                                    )}
+
+                                                    {/* Admin rejection note */}
+                                                    {emi.admin_note && emi.status === 'PENDING' && (
+                                                        <p className="text-[10px] text-rose-500 mt-1 max-w-[150px] truncate font-bold" title={emi.admin_note}>
+                                                            ⚠ Rejected: {emi.admin_note}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 pr-6 text-right">
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {/* PENDING_VERIFICATION or AGENT_APPROVED — show View Proof + Approve + Reject */}
+                                                        {(emi.status === 'PENDING_VERIFICATION' || emi.status === 'AGENT_APPROVED') && (
+                                                            <div className="flex gap-2 flex-wrap justify-end">
+                                                                {/* View Proof */}
+                                                                {emi.proof_image && (
+                                                                    <button
+                                                                        onClick={() => setViewingProof(emi)}
+                                                                        className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all border border-indigo-100"
+                                                                    >
+                                                                        <Eye size={12} /> View Proof
+                                                                    </button>
+                                                                )}
+                                                                {/* Approve */}
+                                                                <button
+                                                                    onClick={() => handleApproveRepayment(emi.id)}
+                                                                    disabled={!!actionLoading}
+                                                                    className="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700 hover:shadow-emerald-500/20 transition-all disabled:opacity-50"
+                                                                >
+                                                                    <CheckCircle2 size={12} /> {actionLoading === `approve-repayment-${emi.id}` ? '...' : 'Approve'}
+                                                                </button>
+                                                                {/* Reject */}
+                                                                <button
+                                                                    onClick={() => { setRejectingId(emi.id); setRejectReason(''); }}
+                                                                    disabled={!!actionLoading}
+                                                                    className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-all border border-rose-100 disabled:opacity-50"
+                                                                >
+                                                                    <XCircle size={12} /> Reject
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {/* PENDING — Collect Manual */}
+                                                        {emi.status === 'PENDING' && (
+                                                            collectingId === emi.id ? (
+                                                                <div className="flex flex-col gap-2 min-w-[200px] bg-slate-50 p-3 rounded-xl border border-blue-100 shadow-lg relative z-10">
+                                                                    <p className="text-xs font-bold text-slate-900 text-left">Manual Collection</p>
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="Amount"
+                                                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-bold"
+                                                                        value={amount}
+                                                                        onChange={e => setAmount(e.target.value)}
+                                                                        autoFocus
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Ref/Notes (Optional)"
+                                                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
+                                                                        value={notes}
+                                                                        onChange={e => setNotes(e.target.value)}
+                                                                    />
+                                                                    <div className="flex gap-2 mt-1">
+                                                                        <button
+                                                                            onClick={handleManualCollect}
+                                                                            disabled={!amount || !!actionLoading}
+                                                                            className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition"
+                                                                        >
+                                                                            {actionLoading ? '...' : 'Submit'}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => setCollectingId(null)}
+                                                                            className="px-3 bg-slate-200 text-slate-600 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setCollectingId(emi.id);
+                                                                        setAmount(emi.amount); // Default to full amount
+                                                                        setNotes('');
+                                                                    }}
+                                                                    className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                                                >
+                                                                    Collect Manual
+                                                                </button>
+                                                            )
+                                                        )}
+
+                                                        {emi.status === 'MANUAL_VERIFICATION' && (
+                                                            <button
+                                                                onClick={() => handleApproveCollection(emi.id)}
+                                                                disabled={!!actionLoading}
+                                                                className="bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-600 hover:shadow-emerald-500/20 transition-all"
+                                                            >
+                                                                {actionLoading === `approve-${emi.id}` ? '...' : 'Approve'}
+                                                            </button>
+                                                        )}
+
+                                                        {/* Show proof thumbnail for PAID with proof */}
+                                                        {emi.status === 'PAID' && emi.proof_image && (
+                                                            <button
+                                                                onClick={() => setViewingProof(emi)}
+                                                                className="inline-flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:text-indigo-600 transition-colors"
+                                                            >
+                                                                <Eye size={10} /> Receipt
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -639,9 +641,36 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         viewingProof.status === 'AGENT_APPROVED' ? 'bg-blue-100 text-blue-700' :
                                             'bg-amber-100 text-amber-700'
                                         }`}>
-                                        {viewingProof.status === 'PENDING_VERIFICATION' ? 'Awaiting Approval' : viewingProof.status.replace(/_/g, ' ')}
+                                        {viewingProof.status === 'AGENT_APPROVED' ? 'Awaiting Approval' : viewingProof.status.replace(/_/g, ' ')}
                                     </span>
                                 </div>
+
+                                {/* Loan Breakdown for Verification */}
+                                {loan.calculations && (
+                                    <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <Calculator size={12} /> Loan Breakdown
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                            <div>
+                                                <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Sanctioned</p>
+                                                <p className="text-xs font-black text-emerald-900">₹{parseFloat(loan.calculations.principal || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Disbursed</p>
+                                                <p className="text-xs font-black text-emerald-900">₹{parseFloat(loan.calculations.disbursal_amount || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Interest ({loan.calculations.interest_rate}%)</p>
+                                                <p className="text-xs font-black text-emerald-900">₹{parseFloat(loan.calculations.total_interest || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Net Payable</p>
+                                                <p className="text-xs font-black text-indigo-700">₹{parseFloat(loan.calculations.net_payable_amount || 0).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Notes */}
                                 {viewingProof.notes && (
@@ -732,7 +761,6 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                 onChange={e => setRejectReason(e.target.value)}
                                 placeholder="Enter rejection reason..."
                                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 outline-none min-h-[100px] resize-none"
-                                autoFocus
                             />
                         </div>
 
