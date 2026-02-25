@@ -70,6 +70,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
         { label: 'Support Inbox', href: '/support/tickets', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Requests', href: '/cashback-requests', icon: <Wallet className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Scheduled Cashback', href: '/scheduled-cashback', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Agent Cashouts', href: '/agent-payouts', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'] },
