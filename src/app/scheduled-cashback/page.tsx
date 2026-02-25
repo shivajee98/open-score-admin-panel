@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { apiFetch } from '@/lib/api';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Tier {
@@ -11,6 +11,7 @@ interface Tier {
     tier_name: string;
     min_turnover: string;
     max_turnover: string;
+    cashback_type: string;
     cashback_min: string;
     cashback_max: string;
     is_active: boolean;
@@ -26,8 +27,8 @@ export default function ScheduledCashbackPage() {
         tier_name: '',
         min_turnover: '',
         max_turnover: '',
-        cashback_min: '',
-        cashback_max: ''
+        cashback_type: 'FLAT' as 'FLAT' | 'PERCENTAGE',
+        cashback_value: ''
     });
 
     useEffect(() => {
@@ -38,19 +39,18 @@ export default function ScheduledCashbackPage() {
         try {
             setLoading(true);
             const data = await apiFetch('/admin/cashback/tiers');
-            // Sort by min_turnover ascending
             const sortedData = (data || []).sort((a: Tier, b: Tier) =>
                 parseFloat(a.min_turnover) - parseFloat(b.min_turnover)
             );
             setTiers(sortedData);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load cashback tiers');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
@@ -58,12 +58,22 @@ export default function ScheduledCashbackPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Basic frontend validation for contiguity
         const minTurnover = parseFloat(formData.min_turnover);
         const maxTurnover = parseFloat(formData.max_turnover);
+        const cashbackValue = parseFloat(formData.cashback_value);
 
         if (minTurnover >= maxTurnover) {
             toast.error('Maximum turnover must be greater than minimum turnover');
+            return;
+        }
+
+        if (cashbackValue <= 0 || !Number.isInteger(cashbackValue)) {
+            toast.error('Cashback value must be a positive whole number');
+            return;
+        }
+
+        if (formData.cashback_type === 'PERCENTAGE' && cashbackValue > 100) {
+            toast.error('Percentage cashback cannot exceed 100%');
             return;
         }
 
@@ -82,8 +92,11 @@ export default function ScheduledCashbackPage() {
             await apiFetch('/admin/cashback/tiers', {
                 method: 'POST',
                 body: JSON.stringify({
-                    ...formData,
-                    is_active: true
+                    tier_name: formData.tier_name,
+                    min_turnover: formData.min_turnover,
+                    max_turnover: formData.max_turnover,
+                    cashback_type: formData.cashback_type,
+                    cashback_value: formData.cashback_value,
                 })
             });
             toast.success('Cashback tier created successfully');
@@ -91,8 +104,8 @@ export default function ScheduledCashbackPage() {
                 tier_name: '',
                 min_turnover: '',
                 max_turnover: '',
-                cashback_min: '',
-                cashback_max: ''
+                cashback_type: 'FLAT',
+                cashback_value: ''
             });
             fetchTiers();
         } catch (error: any) {
@@ -112,9 +125,9 @@ export default function ScheduledCashbackPage() {
                         <Plus className="w-5 h-5 text-blue-600" />
                         Add New Tier
                     </h3>
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tier Name (e.g. Silver)</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tier Name</label>
                             <input
                                 type="text"
                                 name="tier_name"
@@ -152,19 +165,31 @@ export default function ScheduledCashbackPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fixed Cashback (₹)</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cashback Type</label>
+                            <select
+                                name="cashback_type"
+                                value={formData.cashback_type}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="FLAT">Flat (₹)</option>
+                                <option value="PERCENTAGE">Percentage (%)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                {formData.cashback_type === 'PERCENTAGE' ? 'Cashback (%)' : 'Cashback (₹)'}
+                            </label>
                             <input
                                 type="number"
-                                name="cashback_min"
-                                value={formData.cashback_min}
-                                onChange={(e) => {
-                                    handleInputChange(e);
-                                    setFormData(prev => ({ ...prev, cashback_max: e.target.value }));
-                                }}
+                                name="cashback_value"
+                                value={formData.cashback_value}
+                                onChange={handleInputChange}
                                 required
-                                min="0"
+                                min="1"
+                                max={formData.cashback_type === 'PERCENTAGE' ? '100' : undefined}
                                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                placeholder="50"
+                                placeholder={formData.cashback_type === 'PERCENTAGE' ? '5' : '100'}
                             />
                         </div>
                         <button
@@ -177,7 +202,7 @@ export default function ScheduledCashbackPage() {
                     </form>
                     <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
-                        New tier's minimum bound must be strictly greater than the highest maximum bound of existing tiers. Nightly calculation uses fixed cashback.
+                        New tier's min bound must be greater than previous tier's max. Choose either Flat (₹ amount) or Percentage (% of daily turnover). One type per tier.
                     </p>
                 </div>
 
@@ -202,7 +227,8 @@ export default function ScheduledCashbackPage() {
                                     <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                         <th className="px-6 py-4">Tier Name</th>
                                         <th className="px-6 py-4">Turnover Range (₹)</th>
-                                        <th className="px-6 py-4">Cashback Amount (₹)</th>
+                                        <th className="px-6 py-4">Type</th>
+                                        <th className="px-6 py-4">Cashback</th>
                                         <th className="px-6 py-4">Status</th>
                                     </tr>
                                 </thead>
@@ -213,10 +239,18 @@ export default function ScheduledCashbackPage() {
                                                 {tier.tier_name}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-slate-600">
-                                                ₹{parseFloat(tier.min_turnover).toLocaleString('en-IN')} - ₹{parseFloat(tier.max_turnover).toLocaleString('en-IN')}
+                                                ₹{parseFloat(tier.min_turnover).toLocaleString('en-IN')} — ₹{parseFloat(tier.max_turnover).toLocaleString('en-IN')}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${tier.cashback_type === 'PERCENTAGE' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {tier.cashback_type || 'FLAT'}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 font-bold text-emerald-600">
-                                                ₹{parseFloat(tier.cashback_min).toLocaleString('en-IN')}
+                                                {(tier.cashback_type === 'PERCENTAGE')
+                                                    ? `${parseFloat(tier.cashback_min)}%`
+                                                    : `₹${parseFloat(tier.cashback_min).toLocaleString('en-IN')}`
+                                                }
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${tier.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
