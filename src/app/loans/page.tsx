@@ -145,7 +145,12 @@ export default function LoanApprovals() {
                 per_page: '999'
             });
             const response = await apiFetch(`${endpoint}?${query}`);
-            const allLoans = response?.data || response || [];
+            let allLoans = response?.data || response || [];
+
+            // 🟢 NEW: If there are selected IDs, filter the list to ONLY those.
+            if (selectedLoanIds.length > 0) {
+                allLoans = allLoans.filter((l: any) => selectedLoanIds.includes(l.id));
+            }
 
             if (!allLoans.length) {
                 alert('No data to export');
@@ -315,7 +320,7 @@ export default function LoanApprovals() {
                         className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Download size={16} />
-                        {exporting ? 'Exporting...' : 'Excel'}
+                        {exporting ? 'Exporting...' : selectedLoanIds.length > 0 ? `Download (${selectedLoanIds.length})` : 'Excel'}
                     </button>
                 </div>
             </div>
