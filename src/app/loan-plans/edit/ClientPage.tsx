@@ -179,12 +179,13 @@ export default function EditLoanPlan() {
         }
     };
 
-    // Fetch once when targeted mode is toggled ON
+    // Fetch once when targeted mode or lock mode is toggled ON
     useEffect(() => {
-        if (!formData.is_public && targetableUsers.length === 0) {
+        if ((!formData.is_public || formData.is_locked) && targetableUsers.length === 0) {
             fetchTargetableUsers();
         }
-    }, [formData.is_public]);
+    }, [formData.is_public, formData.is_locked]);
+
 
     const filteredUsersList = targetableUsers.filter(user => {
         // Search Filter
@@ -598,10 +599,14 @@ export default function EditLoanPlan() {
                         </div>
 
                         {/* Lock Feature Toggle */}
-                        <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className={`flex justify-between items-center p-4 rounded-xl border transition-colors ${formData.is_locked ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
                             <div>
                                 <h4 className="text-sm font-bold text-slate-700">Lock for all users?</h4>
-                                <p className="text-[11px] font-medium text-slate-400">If locked, users will see the plan but won't be able to apply.</p>
+                                <p className="text-[11px] font-medium text-slate-400">
+                                    {formData.is_locked
+                                        ? 'Plan is visible with a 🔒 lock. Select users below to grant them access.'
+                                        : "If locked, users will see the plan but won't be able to apply."}
+                                </p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className={`text-[10px] font-black uppercase tracking-widest ${formData.is_locked ? 'text-amber-500' : 'text-slate-400'}`}>
@@ -617,8 +622,20 @@ export default function EditLoanPlan() {
                             </div>
                         </div>
 
-                        {!formData.is_public && (
-                            <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
+                        {(!formData.is_public || formData.is_locked) && (
+                            <div className={`space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-2 ${formData.is_locked && formData.is_public ? 'border-amber-100' : 'border-slate-100'}`}>
+
+                                {/* Context-aware header */}
+                                {formData.is_locked && formData.is_public && (
+                                    <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                                        <span className="text-2xl">🔓</span>
+                                        <div>
+                                            <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Unlock for Specific Users</p>
+                                            <p className="text-[11px] text-amber-600 font-medium">Selected users will see this plan as unlocked and can apply. Everyone else sees it with a 🔒 lock.</p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* WhatsApp Style Search Bar */}
                                 <div className="relative">
                                     <input
@@ -645,17 +662,16 @@ export default function EditLoanPlan() {
                                                 key={value}
                                                 type="button"
                                                 onClick={() => setUserFilters({ ...userFilters, account_type: value })}
-                                                className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border-2 ${
-                                                    userFilters.account_type === value
+                                                className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border-2 ${userFilters.account_type === value
                                                         ? color === 'slate' ? 'bg-slate-800 text-white border-slate-800'
-                                                        : color === 'blue' ? 'bg-blue-600 text-white border-blue-600'
-                                                        : color === 'indigo' ? 'bg-indigo-600 text-white border-indigo-600'
-                                                        : 'bg-emerald-600 text-white border-emerald-600'
+                                                            : color === 'blue' ? 'bg-blue-600 text-white border-blue-600'
+                                                                : color === 'indigo' ? 'bg-indigo-600 text-white border-indigo-600'
+                                                                    : 'bg-emerald-600 text-white border-emerald-600'
                                                         : color === 'slate' ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-                                                        : color === 'blue' ? 'bg-white text-blue-500 border-blue-200 hover:border-blue-400'
-                                                        : color === 'indigo' ? 'bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400'
-                                                        : 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
-                                                }`}
+                                                            : color === 'blue' ? 'bg-white text-blue-500 border-blue-200 hover:border-blue-400'
+                                                                : color === 'indigo' ? 'bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400'
+                                                                    : 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
+                                                    }`}
                                             >
                                                 {label}
                                             </button>
@@ -724,18 +740,51 @@ export default function EditLoanPlan() {
                                                     <div
                                                         key={user.id}
                                                         onClick={() => toggleUser(user.id)}
-                                                        className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/80 transition-all ${formData.assigned_user_ids.includes(user.id) ? 'bg-indigo-50/30' : ''}`}
+                                                        className={`p-4 flex items-center justify-between cursor-pointer transition-all ${formData.assigned_user_ids.includes(user.id)
+                                                                ? formData.is_locked && formData.is_public ? 'bg-amber-50/60 hover:bg-amber-50' : 'bg-indigo-50/30 hover:bg-slate-50/80'
+                                                                : 'hover:bg-slate-50/80'
+                                                            }`}
                                                     >
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${formData.assigned_user_ids.includes(user.id) ? 'bg-indigo-500' : 'bg-slate-300'}`}>
-                                                                {user.name?.charAt(0) || 'U'}
+                                                            {/* Avatar with lock/unlock overlay */}
+                                                            <div className="relative">
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${formData.assigned_user_ids.includes(user.id)
+                                                                        ? formData.is_locked && formData.is_public ? 'bg-amber-500' : 'bg-indigo-500'
+                                                                        : 'bg-slate-300'
+                                                                    }`}>
+                                                                    {user.name?.charAt(0) || 'U'}
+                                                                </div>
+                                                                {/* Lock/Unlock badge (only in selective lock mode) */}
+                                                                {formData.is_locked && formData.is_public && (
+                                                                    <span className={`absolute -bottom-1 -right-1 text-[11px] leading-none ${formData.assigned_user_ids.includes(user.id) ? '' : ''
+                                                                        }`}>
+                                                                        {formData.assigned_user_ids.includes(user.id) ? '🔓' : '🔒'}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div>
                                                                 <h4 className="text-sm font-bold text-slate-800">{user.name}</h4>
-                                                                <p className="text-[11px] text-slate-500 font-bold tracking-tight">{user.mobile_number} {user.business_name && <span className="text-slate-300 mx-1">|</span>} {user.business_name}</p>
+                                                                <p className="text-[11px] text-slate-500 font-bold tracking-tight">
+                                                                    {user.mobile_number}
+                                                                    {user.business_name && <span className="text-slate-300 mx-1">|</span>}
+                                                                    {user.business_name}
+                                                                </p>
+                                                                {/* Status label in lock mode */}
+                                                                {formData.is_locked && formData.is_public && (
+                                                                    <span className={`text-[10px] font-black uppercase tracking-wider ${formData.assigned_user_ids.includes(user.id) ? 'text-amber-500' : 'text-slate-400'
+                                                                        }`}>
+                                                                        {formData.assigned_user_ids.includes(user.id) ? 'Unlocked ✓' : 'Locked'}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${formData.assigned_user_ids.includes(user.id) ? 'bg-indigo-600 border-indigo-600 scale-110 shadow-md' : 'border-slate-300 group-hover:border-slate-400'}`}>
+                                                        {/* Checkbox / unlock toggle */}
+                                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${formData.assigned_user_ids.includes(user.id)
+                                                                ? formData.is_locked && formData.is_public
+                                                                    ? 'bg-amber-500 border-amber-500 scale-110 shadow-md'
+                                                                    : 'bg-indigo-600 border-indigo-600 scale-110 shadow-md'
+                                                                : 'border-slate-300'
+                                                            }`}>
                                                             {formData.assigned_user_ids.includes(user.id) && (
                                                                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" /></svg>
                                                             )}
