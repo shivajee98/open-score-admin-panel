@@ -6,6 +6,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import FormDetailsModal from '@/components/loans/FormDetailsModal';
+import { useSearchParams } from 'next/navigation';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
 const isPlatformFeePaid = (loan: any): boolean => {
@@ -21,6 +22,7 @@ const hasPlatformFee = (loan: any): boolean => {
 };
 
 export default function LoanApprovals() {
+    const searchParams = useSearchParams();
     const [loans, setLoans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('requests');
@@ -37,6 +39,14 @@ export default function LoanApprovals() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
+
+    // Initial query param setup
+    useEffect(() => {
+        const urlSearch = searchParams.get('search');
+        const openLoanId = searchParams.get('openLoan');
+        if (urlSearch) setSearch(urlSearch);
+        if (openLoanId) setSelectedLoan(parseInt(openLoanId));
+    }, [searchParams]);
 
     const loadLoans = async () => {
         setLoading(true);

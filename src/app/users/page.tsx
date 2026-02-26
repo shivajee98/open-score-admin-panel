@@ -627,6 +627,21 @@ export default function UsersPage() {
                                             Approve
                                         </button>
                                     </div>
+
+                                    {(() => {
+                                        const matchMatch = ticket.subject?.match(/Loan #(\d+)/i);
+                                        const loanId = matchMatch ? parseInt(matchMatch[1]) - 4000 : null;
+                                        if (!loanId) return null;
+
+                                        return (
+                                            <Link
+                                                href={`/loans?openLoan=${loanId}`}
+                                                className="mt-3 w-full block text-center py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors"
+                                            >
+                                                View Loan #{loanId + 4000}
+                                            </Link>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         ))}
