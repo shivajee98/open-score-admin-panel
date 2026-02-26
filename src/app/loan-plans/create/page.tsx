@@ -64,6 +64,8 @@ export default function CreateLoanPlan() {
         configurations: [] as TenureConfig[],
         is_public: true,
         is_locked: false,
+        locked_roles: [] as string[],
+        hidden_roles: [] as string[],
         tenure_type: 'months',
         assigned_user_ids: [] as number[]
     });
@@ -161,6 +163,17 @@ export default function CreateLoanPlan() {
 
         return true;
     });
+
+    const toggleRole = (field: 'locked_roles' | 'hidden_roles', role: string) => {
+        const current = [...(formData[field] as string[])];
+        const index = current.indexOf(role);
+        if (index > -1) {
+            current.splice(index, 1);
+        } else {
+            current.push(role);
+        }
+        setFormData({ ...formData, [field]: current });
+    };
 
     const toggleUser = (userId: number) => {
         const current = [...formData.assigned_user_ids];
@@ -557,6 +570,51 @@ export default function CreateLoanPlan() {
                                 >
                                     <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.is_locked ? 'right-1' : 'left-1'}`} />
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* Role Based Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            {/* Lock for Roles */}
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-3">Lock For Roles</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => toggleRole('locked_roles', role)}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 ${formData.locked_roles.includes(role)
+                                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                                                : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Plan will be visible with a 🔒 lock for these roles.</p>
+                            </div>
+
+                            {/* Hide for Roles */}
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-3">Hide For Roles</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => toggleRole('hidden_roles', role)}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 ${formData.hidden_roles.includes(role)
+                                                ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                                                : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Plan will NOT be visible at all for these roles.</p>
                             </div>
                         </div>
 

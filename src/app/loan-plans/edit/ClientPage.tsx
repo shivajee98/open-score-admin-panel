@@ -70,6 +70,8 @@ export default function EditLoanPlan() {
         configurations: [] as TenureConfig[],
         is_public: true,
         is_locked: false,
+        locked_roles: [] as string[],
+        hidden_roles: [] as string[],
         tenure_type: 'months',
         assigned_user_ids: [] as number[]
     });
@@ -119,6 +121,8 @@ export default function EditLoanPlan() {
                     configurations: sanitizedConfigs,
                     is_public: plan.is_public ?? true,
                     is_locked: plan.is_locked ?? false,
+                    locked_roles: plan.locked_roles || [],
+                    hidden_roles: plan.hidden_roles || [],
                     tenure_type: plan.tenure_type || 'months',
                     assigned_user_ids: plan.assigned_user_ids || []
                 });
@@ -217,6 +221,17 @@ export default function EditLoanPlan() {
 
         return true;
     });
+
+    const toggleRole = (field: 'locked_roles' | 'hidden_roles', role: string) => {
+        const current = [...(formData[field] as string[])];
+        const index = current.indexOf(role);
+        if (index > -1) {
+            current.splice(index, 1);
+        } else {
+            current.push(role);
+        }
+        setFormData({ ...formData, [field]: current });
+    };
 
     const toggleUser = (userId: number) => {
         const current = [...formData.assigned_user_ids];
@@ -622,6 +637,51 @@ export default function EditLoanPlan() {
                             </div>
                         </div>
 
+                        {/* Role Based Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            {/* Lock for Roles */}
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-3">Lock For Roles</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => toggleRole('locked_roles', role)}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 ${formData.locked_roles.includes(role)
+                                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                                                : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Plan will be visible with a 🔒 lock for these roles.</p>
+                            </div>
+
+                            {/* Hide for Roles */}
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-3">Hide For Roles</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => toggleRole('hidden_roles', role)}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 ${formData.hidden_roles.includes(role)
+                                                ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                                                : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Plan will NOT be visible at all for these roles.</p>
+                            </div>
+                        </div>
+
                         {(!formData.is_public || formData.is_locked) && (
                             <div className={`space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-2 ${formData.is_locked && formData.is_public ? 'border-amber-100' : 'border-slate-100'}`}>
 
@@ -663,14 +723,14 @@ export default function EditLoanPlan() {
                                                 type="button"
                                                 onClick={() => setUserFilters({ ...userFilters, account_type: value })}
                                                 className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border-2 ${userFilters.account_type === value
-                                                        ? color === 'slate' ? 'bg-slate-800 text-white border-slate-800'
-                                                            : color === 'blue' ? 'bg-blue-600 text-white border-blue-600'
-                                                                : color === 'indigo' ? 'bg-indigo-600 text-white border-indigo-600'
-                                                                    : 'bg-emerald-600 text-white border-emerald-600'
-                                                        : color === 'slate' ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-                                                            : color === 'blue' ? 'bg-white text-blue-500 border-blue-200 hover:border-blue-400'
-                                                                : color === 'indigo' ? 'bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400'
-                                                                    : 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
+                                                    ? color === 'slate' ? 'bg-slate-800 text-white border-slate-800'
+                                                        : color === 'blue' ? 'bg-blue-600 text-white border-blue-600'
+                                                            : color === 'indigo' ? 'bg-indigo-600 text-white border-indigo-600'
+                                                                : 'bg-emerald-600 text-white border-emerald-600'
+                                                    : color === 'slate' ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                                                        : color === 'blue' ? 'bg-white text-blue-500 border-blue-200 hover:border-blue-400'
+                                                            : color === 'indigo' ? 'bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400'
+                                                                : 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
                                                     }`}
                                             >
                                                 {label}
@@ -741,16 +801,16 @@ export default function EditLoanPlan() {
                                                         key={user.id}
                                                         onClick={() => toggleUser(user.id)}
                                                         className={`p-4 flex items-center justify-between cursor-pointer transition-all ${formData.assigned_user_ids.includes(user.id)
-                                                                ? formData.is_locked && formData.is_public ? 'bg-amber-50/60 hover:bg-amber-50' : 'bg-indigo-50/30 hover:bg-slate-50/80'
-                                                                : 'hover:bg-slate-50/80'
+                                                            ? formData.is_locked && formData.is_public ? 'bg-amber-50/60 hover:bg-amber-50' : 'bg-indigo-50/30 hover:bg-slate-50/80'
+                                                            : 'hover:bg-slate-50/80'
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             {/* Avatar with lock/unlock overlay */}
                                                             <div className="relative">
                                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${formData.assigned_user_ids.includes(user.id)
-                                                                        ? formData.is_locked && formData.is_public ? 'bg-amber-500' : 'bg-indigo-500'
-                                                                        : 'bg-slate-300'
+                                                                    ? formData.is_locked && formData.is_public ? 'bg-amber-500' : 'bg-indigo-500'
+                                                                    : 'bg-slate-300'
                                                                     }`}>
                                                                     {user.name?.charAt(0) || 'U'}
                                                                 </div>
@@ -780,10 +840,10 @@ export default function EditLoanPlan() {
                                                         </div>
                                                         {/* Checkbox / unlock toggle */}
                                                         <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${formData.assigned_user_ids.includes(user.id)
-                                                                ? formData.is_locked && formData.is_public
-                                                                    ? 'bg-amber-500 border-amber-500 scale-110 shadow-md'
-                                                                    : 'bg-indigo-600 border-indigo-600 scale-110 shadow-md'
-                                                                : 'border-slate-300'
+                                                            ? formData.is_locked && formData.is_public
+                                                                ? 'bg-amber-500 border-amber-500 scale-110 shadow-md'
+                                                                : 'bg-indigo-600 border-indigo-600 scale-110 shadow-md'
+                                                            : 'border-slate-300'
                                                             }`}>
                                                             {formData.assigned_user_ids.includes(user.id) && (
                                                                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" /></svg>
