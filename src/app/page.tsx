@@ -68,9 +68,7 @@ export default function AdminDashboard() {
                 defaultedLoans: analytics?.defaulted_loans || 0,
                 pendingLoans: analytics?.pending_loans || 0,
                 recentRepayments: analytics?.recent_repayments || [],
-                totalReferralPaid: totalReferralPaid,
-                referralOnboarding: analytics?.referral_onboarding_earning || 0,
-                referralLoan: analytics?.referral_loan_earning || 0
+                totalReferralPaid: totalReferralPaid
             } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
@@ -128,7 +126,7 @@ export default function AdminDashboard() {
                 <SystemResetDialog />
             </div>
             <FundsCard />
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
                     <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
                         <Users className="w-7 h-7" />
@@ -144,8 +142,8 @@ export default function AdminDashboard() {
                         <Wallet className="w-7 h-7" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Disbursed <span className="text-[10px] lowercase">(Loans)</span></p>
-                        <p className="text-2xl font-black text-slate-900">₹{stats.totalDisbursed.toLocaleString('en-IN')}</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Disbursed (Loans)</p>
+                        <p className="text-3xl font-black text-slate-900">₹{stats.totalDisbursed.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 
@@ -155,7 +153,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Recovered</p>
-                        <p className="text-2xl font-black text-emerald-600">₹{stats.totalRepaid.toLocaleString('en-IN')}</p>
+                        <p className="text-3xl font-black text-emerald-600">₹{stats.totalRepaid.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 
@@ -165,7 +163,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Outstanding</p>
-                        <p className="text-2xl font-black text-purple-600">₹{stats.totalOutstanding.toLocaleString('en-IN')}</p>
+                        <p className="text-3xl font-black text-purple-600">₹{stats.totalOutstanding.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 
@@ -175,7 +173,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Overdue</p>
-                        <p className="text-2xl font-black text-red-600">₹{stats.totalOverdue.toLocaleString('en-IN')}</p>
+                        <p className="text-3xl font-black text-red-600">₹{stats.totalOverdue.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 
@@ -184,18 +182,8 @@ export default function AdminDashboard() {
                         <Gift className="w-7 h-7" />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Signup Earnings</p>
-                        <p className="text-2xl font-black text-amber-600">₹{((stats as any).referralOnboarding || 0).toLocaleString('en-IN')}</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
-                        <Gift className="w-7 h-7" />
-                    </div>
-                    <div>
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Loan App Earnings</p>
-                        <p className="text-2xl font-black text-amber-600">₹{((stats as any).referralLoan || 0).toLocaleString('en-IN')}</p>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Referral Paid</p>
+                        <p className="text-3xl font-black text-amber-600">₹{(stats as any).totalReferralPaid?.toLocaleString('en-IN') || 0}</p>
                     </div>
                 </div>
             </div>
