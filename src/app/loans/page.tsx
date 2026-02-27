@@ -454,7 +454,7 @@ export default function LoanApprovals() {
                                                                 ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                                                                 : 'bg-orange-50 text-orange-600 border-orange-100'
                                                                 }`}>
-                                                                {isPlatformFeePaid(loan) ? '✅ Fee Paid' : '⏳ Fee Pending'}
+                                                                {isPlatformFeePaid(loan) ? ' Fee Paid' : ' Fee Pending'}
                                                             </span>
                                                         )}
                                                     </div>
