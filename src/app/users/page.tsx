@@ -629,18 +629,50 @@ export default function UsersPage() {
                                     </div>
 
                                     {(() => {
+                                        // 1. Identify Target Loan if possible
                                         const matchMatch = ticket.subject?.match(/Loan #(\d+)/i);
                                         const loanId = matchMatch ? parseInt(matchMatch[1]) - 4000 : null;
-                                        if (!loanId) return null;
 
-                                        return (
-                                            <Link
-                                                href={`/loans?openLoan=${loanId}`}
-                                                className="mt-3 w-full block text-center py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors"
-                                            >
-                                                View Loan #{loanId + 4000}
-                                            </Link>
-                                        );
+                                        // 2. Conditional Display based on Purpose (sub_action)
+                                        if (ticket.sub_action === 'platform_fee' || ticket.sub_action === 'emi' || ticket.sub_action === 'loan') {
+                                            if (!loanId) return null;
+                                            return (
+                                                <Link
+                                                    href={`/loans?openLoan=${loanId}`}
+                                                    className="mt-3 w-full block text-center py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100"
+                                                >
+                                                    View Loan #{loanId + 4000}
+                                                </Link>
+                                            );
+                                        }
+
+                                        if (ticket.sub_action === 'recharge' || ticket.sub_action === 'wallet_topup' || ticket.issue_type === 'wallet_topup') {
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        const el = document.getElementById(`user-${ticket.user_id}`);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                                    }}
+                                                    className="mt-3 w-full block text-center py-2 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100"
+                                                >
+                                                    View User Wallet
+                                                </button>
+                                            );
+                                        }
+
+                                        // Fallback to loan view if ID exists but action unknown
+                                        if (loanId) {
+                                            return (
+                                                <Link
+                                                    href={`/loans?openLoan=${loanId}`}
+                                                    className="mt-3 w-full block text-center py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors"
+                                                >
+                                                    View Loan #{loanId + 4000}
+                                                </Link>
+                                            );
+                                        }
+
+                                        return null;
                                     })()}
                                 </div>
                             </div>
