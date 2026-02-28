@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,7 +80,11 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
-        <tr className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
+        <tr className={cn(
+            "hover:bg-slate-50/80 transition-colors group",
+            selectedIds.includes(user.id) && "bg-blue-50/30",
+            user.is_payment_pending && "bg-amber-50/60 border-l-4 border-l-amber-500 shadow-sm"
+        )}>
             <td className="p-6 text-center">
                 {isAdmin && (
                     <button onClick={() => toggleSelect(user.id)}>
@@ -92,11 +96,26 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
             <td className="p-6 pl-2">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center font-bold text-slate-600">
-                        {(user.name || 'U')[0]}
+                    <div className="relative">
+                        <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center font-bold text-slate-600">
+                            {(user.name || 'U')[0]}
+                        </div>
+                        {user.is_payment_pending && (
+                            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 border-2 border-white items-center justify-center text-[8px] text-white font-bold">!</span>
+                            </span>
+                        )}
                     </div>
                     <div>
-                        <p className="font-bold text-slate-900">{user.name || 'Unknown User'}</p>
+                        <p className="font-bold text-slate-900 flex items-center gap-2">
+                            {user.name || 'Unknown User'}
+                            {user.is_payment_pending && (
+                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded uppercase tracking-tighter animate-pulse">
+                                    Action Required
+                                </span>
+                            )}
+                        </p>
                         <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
                     </div>
                 </div>
@@ -257,6 +276,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState([]);
     const [pendingTransactions, setPendingTransactions] = useState([]);
     const [pendingServiceFees, setPendingServiceFees] = useState([]);
+    const [pendingPartnerRepayments, setPendingPartnerRepayments] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
 
@@ -330,11 +350,22 @@ export default function UsersPage() {
         }
     };
 
+    const loadPendingPartnerRepayments = async () => {
+        if (currentUser?.role !== 'ADMIN') return;
+        try {
+            const data = await apiFetch('/admin/loans/pending-partner-approvals');
+            setPendingPartnerRepayments(data || []);
+        } catch (e) {
+            console.error("Failed to load partner repayments", e);
+        }
+    };
+
     useEffect(() => {
         loadUsers();
         if (currentUser?.role === 'ADMIN') {
             loadPendingTransactions();
             loadPendingServiceFees();
+            loadPendingPartnerRepayments();
         }
     }, [currentUser]);
 
@@ -398,6 +429,28 @@ export default function UsersPage() {
         } catch (e: any) {
             alert('Service Fee Processing: ' + e.message);
             loadPendingServiceFees(); // Refresh anyway to remove stale cards
+        }
+    };
+
+    const handleFinalizePartnerRepayment = async (id: number) => {
+        if (!confirm('Finalize this partner-verified repayment?')) return;
+        try {
+            await apiFetch(`/admin/loans/repayments/${id}/finalize`, { method: 'POST' });
+            loadPendingPartnerRepayments();
+            loadUsers();
+        } catch (e: any) {
+            alert('Error finalizing: ' + e.message);
+        }
+    };
+
+    const handleRejectPartnerRepayment = async (id: number) => {
+        if (!confirm('Reject this partner verification and return to pending?')) return;
+        try {
+            await apiFetch(`/admin/loans/repayments/${id}/reject-partner`, { method: 'POST' });
+            loadPendingPartnerRepayments();
+            loadUsers();
+        } catch (e: any) {
+            alert('Error rejecting: ' + e.message);
         }
     };
 
@@ -562,6 +615,77 @@ export default function UsersPage() {
                                             Approve
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Pending Partner Approvals Section (Admin Only) */}
+            {isAdmin && pendingPartnerRepayments.length > 0 && (
+                <div className="mb-8 animate-in slide-in-from-top-4 duration-500 delay-75">
+                    <div className="flex items-center gap-3 mb-4">
+                        <ShieldCheck className="text-emerald-500" />
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Partner-Verified Repayments</h3>
+                        <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-black">{pendingPartnerRepayments.length}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pendingPartnerRepayments.map((rep: any) => (
+                            <div key={rep.id} className="bg-white p-6 rounded-[2rem] border border-emerald-100 shadow-lg shadow-emerald-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <ShieldCheck size={48} className="text-emerald-500" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">EMI #{rep.emi_number}</p>
+                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(rep.amount).toLocaleString()}</p>
+                                        </div>
+                                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                                            <ShieldCheck size={20} />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-6">
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p>
+                                            <p className="font-bold text-slate-800 text-sm">{rep.loan?.user?.name}</p>
+                                            <p className="font-mono text-xs text-slate-500">{rep.loan?.user?.mobile_number}</p>
+                                        </div>
+                                        {rep.agent && (
+                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Verified By (Partner)</p>
+                                                <p className="font-bold text-blue-800 text-sm">{rep.agent.name}</p>
+                                                <p className="text-[10px] text-slate-400">{new Date(rep.agent_approved_at).toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleRejectPartnerRepayment(rep.id)}
+                                            className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleFinalizePartnerRepayment(rep.id)}
+                                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                                        >
+                                            Finalize
+                                        </button>
+                                    </div>
+
+                                    {rep.loan_id && (
+                                        <Link
+                                            href={`/loans?openLoan=${rep.loan_id}`}
+                                            className="mt-3 w-full block text-center py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
+                                        >
+                                            View Loan #{rep.loan_id + 4000}
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
                         ))}
