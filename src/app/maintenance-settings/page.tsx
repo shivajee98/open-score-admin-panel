@@ -25,18 +25,21 @@ export default function MaintenanceSettingsPage() {
     const fetchData = async () => {
         try {
             const data = await apiFetch('/maintenance');
-            // Format end_time for datetime-local input
+            // Format end_time for datetime-local input (YYYY-MM-DDTHH:MM in local time)
+            let formattedDate = '';
             if (data.end_time) {
                 const date = new Date(data.end_time);
-                data.end_time = date.toISOString().slice(0, 16);
+                const pad = (num: number) => String(num).padStart(2, '0');
+                formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
             }
+
             setSettings({
                 is_active: data.is_active || false,
                 message: data.message || 'System is under maintenance. Please check back later.',
                 textColor: data.textColor || '#ffffff',
                 backgroundColor: data.backgroundColor || '#0f172a',
                 fontFamily: data.fontFamily || 'sans-serif',
-                end_time: data.end_time || ''
+                end_time: formattedDate
             });
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -49,9 +52,15 @@ export default function MaintenanceSettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
+            const payload = { ...settings };
+            // Convert local time string to ISO string (UTC) before sending to backend
+            if (payload.end_time) {
+                payload.end_time = new Date(payload.end_time).toISOString();
+            }
+
             await apiFetch('/admin/maintenance', {
                 method: 'POST',
-                body: JSON.stringify(settings)
+                body: JSON.stringify(payload)
             });
             toast.success('Maintenance status updated successfully!');
         } catch (error) {
@@ -81,7 +90,7 @@ export default function MaintenanceSettingsPage() {
                     <div>
                         <h2 className="text-lg font-black text-amber-900">Important Notice</h2>
                         <p className="text-amber-700 text-sm">
-                            Enabling Maintenance Mode will immediately block access for all users across the Frontend, Sub-user panel, and Support Dashboard. 
+                            Enabling Maintenance Mode will immediately block access for all users across the Frontend, Sub-user panel, and Support Dashboard.
                             The Admin Panel will remain accessible to you.
                         </p>
                     </div>
@@ -191,12 +200,12 @@ export default function MaintenanceSettingsPage() {
                         {/* Live Preview */}
                         <div className="mt-4">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Live Preview Snippet</p>
-                            <div 
+                            <div
                                 className="w-full p-6 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-center gap-3 transition-colors duration-500"
-                                style={{ 
-                                    backgroundColor: settings.backgroundColor, 
+                                style={{
+                                    backgroundColor: settings.backgroundColor,
                                     color: settings.textColor,
-                                    fontFamily: settings.fontFamily 
+                                    fontFamily: settings.fontFamily
                                 }}
                             >
                                 <h4 className="font-black text-lg">System Maintenance</h4>
