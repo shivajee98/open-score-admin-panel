@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -63,6 +63,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Internal Team & Funds', href: '/internal-users', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Maintenance Mode', href: '/maintenance-settings', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'] },
 
         // Internal Users Group
         { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Internal Users' },
