@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,6 +78,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Cashback Logs', href: '/cashback-logs', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'My Profile', href: '/profile', icon: <User className="w-5 h-5" />, roles: ['ADMIN'], group: 'Settings' },
     ];
 
     const navItems = allNavItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));

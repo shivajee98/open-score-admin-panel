@@ -9,6 +9,7 @@ export interface User {
     email: string;
     role: string;
     mobile_number: string;
+    username?: string;
     referral_code?: string;
     credit_balance?: number;
 }

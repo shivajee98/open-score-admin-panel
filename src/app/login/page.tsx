@@ -1,233 +1,273 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { Mail, Lock, User, KeyRound } from 'lucide-react';
 
 export default function AdminLogin() {
-    const [mobile, setMobile] = useState('');
-    const [otp, setOtp] = useState('');
-    const [step, setStep] = useState(1); // 1: Input, 2: OTP (for Admin)
-    const [loginMode, setLoginMode] = useState<'ADMIN' | 'SUB_USER'>('ADMIN');
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Forgot Password State
+    const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+    const [forgotStep, setForgotStep] = useState(1); // 1: Username, 2: OTP & New Password
+    const [resetUsername, setResetUsername] = useState('');
+    const [resetOtp, setResetOtp] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [forgotMessage, setForgotMessage] = useState('');
+
     const router = useRouter();
 
-    const handleSendOtp = async () => {
-        setLoading(true);
-        setError('');
-        try {
-            await apiFetch('/auth/otp', {
-                method: 'POST',
-                body: JSON.stringify({ mobile_number: mobile }),
-            });
-            setStep(2);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubUserLogin = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
         try {
-            console.log('[Agent Login] Attempting login with:', { mobile, role: 'SUB_USER' });
-
-            // Direct API call for Sub-User Login
-            const res = await apiFetch('/auth/sub-user/login', {
+            const res = await apiFetch('/auth/admin/login', {
                 method: 'POST',
-                body: JSON.stringify({ mobile_number: mobile, otp }),
+                body: JSON.stringify({ username, password }),
             });
 
-            console.log('[Agent Login] Response:', res);
-
-            if (res.access_token && res.sub_user) {
+            if (res.access_token && res.user) {
                 const user = {
-                    ...res.sub_user,
-                    role: 'SUB_USER',
+                    ...res.user,
+                    role: 'ADMIN',
                     accessToken: res.access_token
                 };
                 localStorage.setItem('user', JSON.stringify(user));
                 localStorage.setItem('token', res.access_token);
 
-                console.log('[Agent Login] Success! Redirecting to dashboard...');
-                router.push('/sub-user-dashboard/');
+                setTimeout(() => {
+                    router.push('/');
+                }, 100);
             } else {
-                setError('Invalid Agent Credentials');
+                setError('Invalid Admin Credentials');
             }
         } catch (err: any) {
-            console.error('[Agent Login] Exception:', err);
             setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleVerify = async () => {
+    const handleSendResetOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        setForgotMessage('');
+        try {
+            const res = await apiFetch('/auth/admin/forgot-password', {
+                method: 'POST',
+                body: JSON.stringify({ username: resetUsername }),
+            });
+            setForgotMessage(res.message || 'OTP sent to your email.');
+            setForgotStep(2);
+        } catch (err: any) {
+            setError(err.message || 'Failed to send OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
         setError('');
         try {
-            // Direct verification for Admin
-            const data = await apiFetch('/auth/verify', {
+            const res = await apiFetch('/auth/admin/reset-password', {
                 method: 'POST',
-                body: JSON.stringify({ mobile_number: mobile, otp, role: 'ADMIN' }),
+                body: JSON.stringify({
+                    username: resetUsername,
+                    otp: resetOtp,
+                    new_password: newPassword
+                }),
             });
-
-            if (data.user.role !== 'ADMIN') {
-                throw new Error('Access Denied: This number is not registered as an Administrator.');
-            }
-
-            localStorage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('token', data.access_token); // Store token for apiFetch
-
-            // Allow token propagation
-            setTimeout(() => {
-                router.push('/');
-            }, 100);
-
+            setIsForgotModalOpen(false);
+            setForgotStep(1);
+            setResetUsername('');
+            setResetOtp('');
+            setNewPassword('');
+            alert('Password reset successfully. You can now login.');
         } catch (err: any) {
-            setError(err.message || 'Login Failed');
+            setError(err.message || 'Failed to reset password');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-[#020617] p-6 text-white font-sans">
-            <div className="w-full max-w-md rounded-[2.5rem] bg-slate-900/50 p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
-                <div className="flex justify-center mb-6">
-                    <div className="flex p-1 bg-black/40 rounded-2xl border border-slate-800">
-                        <button
-                            onClick={() => { setLoginMode('ADMIN'); setStep(1); }}
-                            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${loginMode === 'ADMIN' ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/40' : 'text-slate-500 hover:text-slate-300'}`}
-                        >
-                            Master Admin
-                        </button>
-                        <button
-                            onClick={() => setLoginMode('SUB_USER')}
-                            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${loginMode === 'SUB_USER' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-500 hover:text-slate-300'}`}
-                        >
-                            Agent Login
-                        </button>
+        <main className="flex min-h-screen items-center justify-center bg-[#020617] p-6 font-sans relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-sky-500/10 blur-[120px] rounded-full point-events-none"></div>
+
+            <div className="w-full max-w-[420px] rounded-[2rem] bg-slate-900/60 backdrop-blur-xl p-8 border border-white/5 shadow-2xl relative z-10 transition-all">
+
+                <div className="mb-10 text-center space-y-2">
+                    <div className="w-16 h-16 bg-gradient-to-tr from-sky-500 to-indigo-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-sky-500/20 mb-6">
+                        <User className="text-white w-8 h-8" />
                     </div>
+                    <h1 className="text-3xl font-extrabold tracking-tight text-white">
+                        Admin Portal
+                    </h1>
+                    <p className="text-slate-400 text-sm font-medium tracking-wide">
+                        Secure System Access
+                    </p>
                 </div>
 
-                <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-center bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                    {loginMode === 'ADMIN' ? 'Admin Portal' : 'Agent Access'}
-                </h1>
-                <p className="text-center text-slate-500 mb-8 text-sm font-bold uppercase tracking-widest">
-                    {loginMode === 'ADMIN' ? 'System Control Center' : 'Network Management'}
-                </p>
-
-                {error && <p className="text-red-400 text-xs text-center mb-6 bg-red-400/10 py-3 rounded-xl border border-red-400/20 px-4">{error}</p>}
-
-                {loginMode === 'ADMIN' ? (
-                    step === 1 ? (
-                        <div className="space-y-6">
-                            <div className="group">
-                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-sky-400">Mobile Number</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-sm">+91</span>
-                                    <input
-                                        type="text"
-                                        value={mobile}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                            setMobile(value);
-                                        }}
-                                        className="w-full rounded-2xl bg-black/20 border border-slate-800 pl-14 pr-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-bold tracking-[0.2em] text-lg"
-                                        placeholder="00000 00000"
-                                    />
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleSendOtp}
-                                disabled={loading || mobile.length < 10}
-                                className="w-full rounded-2xl bg-sky-600 py-4 font-black shadow-lg shadow-sky-900/40 hover:bg-sky-500 transition-all active:scale-[0.98] disabled:opacity-30 uppercase tracking-widest text-sm"
-                            >
-                                {loading ? 'Sending Request...' : 'Get Access Code'}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="group text-center">
-                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-6">Verification Code</label>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    value={otp}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                                        setOtp(value);
-                                    }}
-                                    className="w-full rounded-2xl bg-black/20 border border-slate-800 p-5 text-white text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-                                    placeholder="000000"
-                                />
-                            </div>
-                            <button
-                                onClick={handleVerify}
-                                disabled={loading || otp.length < 6}
-                                className="w-full rounded-2xl bg-emerald-600 py-4 font-black shadow-lg shadow-emerald-900/40 hover:bg-emerald-500 transition-all active:scale-[0.98] disabled:opacity-30 uppercase tracking-widest text-sm"
-                            >
-                                {loading ? 'Verifying...' : 'Unlock System'}
-                            </button>
-                            <button
-                                onClick={() => { setStep(1); setOtp(''); }}
-                                className="w-full text-xs text-slate-500 hover:text-white transition-colors py-2 uppercase font-black"
-                            >
-                                ← Return to Number Input
-                            </button>
-                        </div>
-                    )
-                ) : (
-                    <form onSubmit={handleSubUserLogin} className="space-y-6">
-                        <div className="space-y-4">
-                            <div className="group">
-                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-indigo-400">Agent Mobile Number</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-sm">+91</span>
-                                    <input
-                                        type="tel"
-                                        required
-                                        value={mobile}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                            setMobile(value);
-                                        }}
-                                        className="w-full rounded-2xl bg-black/20 border border-slate-800 pl-14 pr-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold tracking-[0.2em] text-lg"
-                                        placeholder="00000 00000"
-                                    />
-                                </div>
-                            </div>
-                            <div className="group">
-                                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2 ml-1 group-focus-within:text-indigo-400">One-Time Password (OTP)</label>
-                                <input
-                                    type="text"
-                                    required
-                                    maxLength={6}
-                                    value={otp}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                                        setOtp(value);
-                                    }}
-                                    className="w-full rounded-2xl bg-black/20 border border-slate-800 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold text-center tracking-[0.3em] text-xl"
-                                    placeholder="••••••"
-                                />
-                            </div>
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={loading || mobile.length < 10 || otp.length < 6}
-                            className="w-full rounded-2xl bg-indigo-600 py-4 font-black shadow-lg shadow-indigo-900/40 hover:bg-indigo-500 transition-all active:scale-[0.98] disabled:opacity-30 uppercase tracking-widest text-sm"
-                        >
-                            {loading ? 'Authenticating...' : 'Enter Dashboard'}
-                        </button>
-                    </form>
+                {error && !isForgotModalOpen && (
+                    <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium text-center">
+                        {error}
+                    </div>
                 )}
+
+                <form onSubmit={handleLogin} className="space-y-5 flex flex-col">
+                    <div className="group space-y-1.5">
+                        <label className="text-xs font-semibold uppercase text-slate-400 ml-1 group-focus-within:text-sky-400 transition-colors">Username</label>
+                        <div className="relative flex items-center">
+                            <User className="absolute left-4 w-5 h-5 text-slate-500 group-focus-within:text-sky-400 transition-colors" />
+                            <input
+                                type="text"
+                                required
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full rounded-2xl bg-black/40 border border-white/5 pl-12 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-sky-500/50 focus:bg-black/60 transition-all sm:text-sm"
+                                placeholder="Enter admin username"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="group space-y-1.5">
+                        <div className="flex items-center justify-between ml-1 leading-none">
+                            <label className="text-xs font-semibold uppercase text-slate-400 group-focus-within:text-sky-400 transition-colors">Password</label>
+                            <button
+                                type="button"
+                                onClick={() => { setIsForgotModalOpen(true); setError(''); setForgotMessage(''); }}
+                                className="text-xs text-sky-400 hover:text-sky-300 font-medium transition-colors"
+                            >
+                                Forgot password?
+                            </button>
+                        </div>
+                        <div className="relative flex items-center">
+                            <Lock className="absolute left-4 w-5 h-5 text-slate-500 group-focus-within:text-sky-400 transition-colors" />
+                            <input
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full rounded-2xl bg-black/40 border border-white/5 pl-12 pr-4 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-sky-500/50 focus:bg-black/60 transition-all sm:text-sm"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading || !username || !password}
+                        className="w-full rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 py-4 font-bold text-white shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 hover:-translate-y-0.5 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:transform-none mt-2"
+                    >
+                        {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
+                    </button>
+                </form>
             </div>
+
+            {/* Forgot Password Modal */}
+            {isForgotModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 shadow-2xl relative">
+                        <button
+                            onClick={() => { setIsForgotModalOpen(false); setForgotStep(1); }}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                        >
+                            ✕
+                        </button>
+
+                        <h2 className="text-xl font-bold text-white mb-2">Reset Password</h2>
+                        <p className="text-sm text-slate-400 mb-6">
+                            {forgotStep === 1 ? 'Enter your username or email to receive a recovery code.' : 'Enter the OTP sent to your email and your new password.'}
+                        </p>
+
+                        {error && (
+                            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium text-center">
+                                {error}
+                            </div>
+                        )}
+                        {forgotMessage && !error && (
+                            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center">
+                                {forgotMessage}
+                            </div>
+                        )}
+
+                        {forgotStep === 1 ? (
+                            <form onSubmit={handleSendResetOtp} className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-400 uppercase mb-1.5 block">Username / Email</label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                        <input
+                                            type="text"
+                                            required
+                                            value={resetUsername}
+                                            onChange={(e) => setResetUsername(e.target.value)}
+                                            className="w-full rounded-xl bg-black/40 border border-white/10 pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500"
+                                            placeholder="admin123"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading || !resetUsername}
+                                    className="w-full bg-white text-black font-bold rounded-xl py-3 text-sm hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                >
+                                    {loading ? 'Sending...' : 'Send Recovery OTP'}
+                                </button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleResetPassword} className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-400 uppercase mb-1.5 block">6-Digit OTP</label>
+                                    <div className="relative">
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                        <input
+                                            type="text"
+                                            required
+                                            maxLength={6}
+                                            value={resetOtp}
+                                            onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
+                                            className="w-full rounded-xl bg-black/40 border border-white/10 pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500 tracking-[0.2em] font-medium"
+                                            placeholder="000000"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-400 uppercase mb-1.5 block">New Password</label>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                        <input
+                                            type="password"
+                                            required
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            className="w-full rounded-xl bg-black/40 border border-white/10 pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500"
+                                            placeholder="New secure password"
+                                            minLength={6}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading || !resetOtp || !newPassword}
+                                    className="w-full bg-emerald-500 text-white font-bold rounded-xl py-3 text-sm hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                                >
+                                    {loading ? 'Saving...' : 'Set New Password'}
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
         </main>
     );
 }
