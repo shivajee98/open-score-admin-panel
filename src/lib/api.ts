@@ -41,18 +41,22 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     if (!response.ok) {
         if (response.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) {
-
-            // Prevent Redirect Loops
             const isLoginPage = window.location.pathname.includes('/login');
-            if (isLoginPage) return response.json(); // Don't redirect if already on login
+            if (isLoginPage) return response.json();
 
-            // DEBUGGING: Log token status
-            // console.warn('[API] 401 Unauthorized - clearing token cache');
-            // clearTokenCache();
-
-            // Debounced Redirect
-            // window.location.href = '/admin/login';
-            console.warn('[API] 401 Error. Token retained for debug.');
+            // Check for session-expired (single-session enforcement)
+            try {
+                const cloned = response.clone();
+                const body = await cloned.json();
+                if (body.code === 'SESSION_EXPIRED') {
+                    clearTokenCache();
+                    alert('Session expired. You have been logged in from another device.');
+                    window.location.href = '/login';
+                    throw new Error(body.error);
+                }
+            } catch (e) {
+                // If parsing fails, just continue to the normal error handling below
+            }
         }
 
         let errorData: any = {};

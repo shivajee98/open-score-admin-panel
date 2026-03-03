@@ -5,52 +5,91 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/AdminLayout';
 import { toast, Toaster } from 'sonner';
-import { User, Mail, Lock } from 'lucide-react';
+import { User, Mail, KeyRound, ShieldCheck, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminProfile() {
     const { user } = useAuth();
     const router = useRouter();
 
+    // Username
     const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [usernameLoading, setUsernameLoading] = useState(false);
+
+    // Email Change  
+    const [emailStep, setEmailStep] = useState(0); // 0: idle, 1: enter new email, 2: enter OTPs
+    const [newEmail, setNewEmail] = useState('');
+    const [oldEmailOtp, setOldEmailOtp] = useState('');
+    const [newEmailOtp, setNewEmailOtp] = useState('');
+    const [maskedOldEmail, setMaskedOldEmail] = useState('');
+    const [maskedNewEmail, setMaskedNewEmail] = useState('');
+    const [emailLoading, setEmailLoading] = useState(false);
 
     useEffect(() => {
         if (user) {
             setUsername(user.username || '');
-            setEmail(user.email || '');
         }
     }, [user]);
 
-    const handleUpdateProfile = async (e: React.FormEvent) => {
+    const handleUpdateUsername = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-
+        setUsernameLoading(true);
         try {
-            const res = await apiFetch('/admin/profile/update', {
+            const res = await apiFetch('/admin/profile/update-username', {
                 method: 'POST',
-                body: JSON.stringify({
-                    username: username !== user?.username ? username : undefined,
-                    email: email !== user?.email ? email : undefined,
-                    new_password: newPassword ? newPassword : undefined,
-                })
+                body: JSON.stringify({ username }),
             });
-
-            if (res.user) {
-                toast.success(res.message || 'Profile updated successfully!');
-                setNewPassword(''); // clear password field
-                // mutate() removed as it is not exported by useAuth
-            }
+            toast.success(res.message || 'Username updated!');
         } catch (error: any) {
-            toast.error(error.message || 'Failed to update profile');
+            toast.error(error.message || 'Failed to update username');
         } finally {
-            setLoading(false);
+            setUsernameLoading(false);
         }
     };
 
-    if (!user) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
+    const handleRequestEmailChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setEmailLoading(true);
+        try {
+            const res = await apiFetch('/admin/profile/request-email-change', {
+                method: 'POST',
+                body: JSON.stringify({ new_email: newEmail }),
+            });
+            setMaskedOldEmail(res.masked_old_email || '');
+            setMaskedNewEmail(res.masked_new_email || '');
+            setEmailStep(2);
+            toast.success('OTPs sent to both email addresses!');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to initiate email change');
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
+    const handleConfirmEmailChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setEmailLoading(true);
+        try {
+            const res = await apiFetch('/admin/profile/confirm-email-change', {
+                method: 'POST',
+                body: JSON.stringify({
+                    old_email_otp: oldEmailOtp,
+                    new_email_otp: newEmailOtp,
+                }),
+            });
+            toast.success(res.message || 'Email updated successfully!');
+            setEmailStep(0);
+            setNewEmail('');
+            setOldEmailOtp('');
+            setNewEmailOtp('');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to verify OTPs');
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
+    if (!user) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>;
 
     if (user.role !== 'ADMIN') {
         router.push('/');
@@ -61,84 +100,168 @@ export default function AdminProfile() {
         <AdminLayout title="My Profile">
             <Toaster position="top-right" richColors />
 
-            <div className="p-8 max-w-4xl mx-auto">
-                <div className="mb-8 border-b border-slate-200 pb-6 flex items-center gap-4">
+            <div className="p-8 max-w-4xl mx-auto space-y-8">
+                {/* Header */}
+                <div className="border-b border-slate-200 pb-6 flex items-center gap-4">
                     <div className="bg-sky-100 text-sky-600 p-4 rounded-2xl">
-                        <User className="w-8 h-8" />
+                        <ShieldCheck className="w-8 h-8" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-800 tracking-tight">System Administrator</h1>
-                        <p className="text-slate-500 font-medium">Manage your security and access credentials</p>
+                        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Admin Profile</h1>
+                        <p className="text-slate-500 font-medium">Manage your access credentials securely</p>
                     </div>
                 </div>
 
+                {/* Username Section */}
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <form onSubmit={handleUpdateProfile} className="p-8 space-y-6">
-
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Master Username</label>
-                                <div className="relative">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <input
-                                        type="text"
-                                        required
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-medium text-slate-700"
-                                        placeholder="admin123"
-                                    />
-                                </div>
-                                <p className="text-xs text-slate-400 ml-1">Used for system login.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Recovery Email</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <input
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-medium text-slate-700"
-                                        placeholder="admin@openscore.com"
-                                    />
-                                </div>
-                                <p className="text-xs text-slate-400 ml-1">Where password reset OTPs will be sent.</p>
+                    <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                        <User className="w-5 h-5 text-slate-400" />
+                        <h2 className="text-lg font-bold text-slate-800">Username</h2>
+                    </div>
+                    <form onSubmit={handleUpdateUsername} className="p-6 flex gap-4 items-end">
+                        <div className="flex-1 space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Login Username</label>
+                            <div className="relative">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                <input
+                                    type="text"
+                                    required
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-medium text-slate-700"
+                                    placeholder="admin123"
+                                    minLength={3}
+                                />
                             </div>
                         </div>
-
-                        <div className="pt-6 border-t border-slate-100">
-                            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <Lock className="w-5 h-5 text-slate-400" /> Reset Password
-                            </h3>
-                            <div className="max-w-md space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">New Password (Optional)</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <input
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        minLength={6}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-medium text-slate-700"
-                                        placeholder="Leave blank to keep unchanged"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-6 flex items-center justify-end gap-4 border-t border-slate-100">
-                            <button
-                                type="submit"
-                                disabled={loading || (!username || !email)}
-                                className="px-8 py-4 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 hover:-translate-y-0.5 hover:shadow-slate-900/40 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-                            >
-                                {loading ? 'Saving Changes...' : 'Save Configuration'}
-                            </button>
-                        </div>
+                        <button
+                            type="submit"
+                            disabled={usernameLoading || !username || username === user.username}
+                            className="px-6 py-4 bg-slate-900 text-white font-bold rounded-xl shadow hover:-translate-y-0.5 transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
+                        >
+                            {usernameLoading ? 'Saving...' : 'Save'}
+                        </button>
                     </form>
+                </div>
+
+                {/* Email Change Section */}
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                        <Mail className="w-5 h-5 text-slate-400" />
+                        <h2 className="text-lg font-bold text-slate-800">Recovery Email</h2>
+                        <span className="ml-auto text-sm text-slate-400 font-medium">{user.email || 'Not set'}</span>
+                    </div>
+
+                    <div className="p-6">
+                        {emailStep === 0 && (
+                            <div className="space-y-4">
+                                <p className="text-sm text-slate-500">
+                                    Your login OTPs are sent to this email. To change it, you must verify both your current and new email addresses.
+                                </p>
+                                <button
+                                    onClick={() => setEmailStep(1)}
+                                    className="px-6 py-3 bg-sky-50 text-sky-600 font-bold rounded-xl hover:bg-sky-100 transition-colors text-sm"
+                                >
+                                    Change Email Address
+                                </button>
+                            </div>
+                        )}
+
+                        {emailStep === 1 && (
+                            <form onSubmit={handleRequestEmailChange} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500">New Email Address</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                        <input
+                                            type="email"
+                                            required
+                                            value={newEmail}
+                                            onChange={(e) => setNewEmail(e.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-medium text-slate-700"
+                                            placeholder="newemail@example.com"
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="submit"
+                                        disabled={emailLoading || !newEmail}
+                                        className="px-6 py-3 bg-sky-500 text-white font-bold rounded-xl hover:bg-sky-400 transition-colors disabled:opacity-50 text-sm"
+                                    >
+                                        {emailLoading ? 'Sending OTPs...' : 'Send Verification OTPs'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setEmailStep(0); setNewEmail(''); }}
+                                        className="px-6 py-3 text-slate-500 font-medium rounded-xl hover:bg-slate-100 transition-colors text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {emailStep === 2 && (
+                            <form onSubmit={handleConfirmEmailChange} className="space-y-5">
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm text-emerald-700">
+                                    <CheckCircle className="w-4 h-4 inline mr-2" />
+                                    OTPs sent to <strong>{maskedOldEmail}</strong> (current) and <strong>{maskedNewEmail}</strong> (new)
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-widest text-slate-500">OTP from Current Email</label>
+                                        <div className="relative">
+                                            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                required
+                                                maxLength={6}
+                                                value={oldEmailOtp}
+                                                onChange={(e) => setOldEmailOtp(e.target.value.replace(/\D/g, ''))}
+                                                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-3 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-bold tracking-[0.2em] text-center text-slate-700"
+                                                placeholder="000000"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-widest text-slate-500">OTP from New Email</label>
+                                        <div className="relative">
+                                            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                required
+                                                maxLength={6}
+                                                value={newEmailOtp}
+                                                onChange={(e) => setNewEmailOtp(e.target.value.replace(/\D/g, ''))}
+                                                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-3 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all font-bold tracking-[0.2em] text-center text-slate-700"
+                                                placeholder="000000"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="submit"
+                                        disabled={emailLoading || oldEmailOtp.length !== 6 || newEmailOtp.length !== 6}
+                                        className="px-6 py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-400 transition-colors disabled:opacity-50 text-sm"
+                                    >
+                                        {emailLoading ? 'Verifying...' : 'Confirm Email Change'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setEmailStep(0); setOldEmailOtp(''); setNewEmailOtp(''); }}
+                                        className="px-6 py-3 text-slate-500 font-medium rounded-xl hover:bg-slate-100 transition-colors text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
                 </div>
             </div>
         </AdminLayout>
