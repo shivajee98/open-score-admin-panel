@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
     const [receiveFlat, setReceiveFlat] = useState(user.receive_cashback_flat_amount ?? '');
     const [isSaving, setIsSaving] = useState(false);
+    const [transferEnabled, setTransferEnabled] = useState(user.transfer_enabled ?? false);
+    const [isTogglingTransfer, setIsTogglingTransfer] = useState(false);
 
     // Sync state if user prop changes (e.g. after reload)
     useEffect(() => {
@@ -23,6 +25,10 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
         setReceivePercent(user.receive_cashback_percentage ?? '');
         setReceiveFlat(user.receive_cashback_flat_amount ?? '');
     }, [user.cashback_percentage, user.cashback_flat_amount, user.receive_cashback_percentage, user.receive_cashback_flat_amount]);
+
+    useEffect(() => {
+        setTransferEnabled(user.transfer_enabled ?? false);
+    }, [user.transfer_enabled]);
 
     const handleSenderPercentChange = (val: string) => {
         setCashbackPercent(val);
@@ -78,6 +84,24 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     };
 
     const isAdmin = currentUser?.role === 'ADMIN';
+
+    const handleToggleTransfer = async () => {
+        setIsTogglingTransfer(true);
+        const newVal = !transferEnabled;
+        setTransferEnabled(newVal); // Optimistic
+        try {
+            await apiFetch(`/admin/users/${user.id}/toggle-transfer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: newVal })
+            });
+        } catch (e) {
+            setTransferEnabled(!newVal); // Revert on error
+            alert('Error toggling transfer');
+        } finally {
+            setIsTogglingTransfer(false);
+        }
+    };
 
     return (
         <tr className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
@@ -243,6 +267,22 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             title="Delete User"
                         >
                             <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
+
+                    {isAdmin && (
+                        <button
+                            onClick={handleToggleTransfer}
+                            disabled={isTogglingTransfer}
+                            className={cn(
+                                "p-2 rounded-lg transition-colors",
+                                transferEnabled
+                                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 ring-1 ring-emerald-200"
+                                    : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                            )}
+                            title={transferEnabled ? 'Transfer Enabled — Click to Disable' : 'Transfer Disabled — Click to Enable'}
+                        >
+                            <ArrowRightLeft className="w-5 h-5" />
                         </button>
                     )}
                 </div>
