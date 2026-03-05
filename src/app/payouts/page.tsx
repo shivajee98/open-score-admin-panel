@@ -10,14 +10,13 @@ import {
     Search,
     Filter,
     Landmark,
-    User,
-    MoreVertical,
     ArrowRight,
-    Ban,
-    DollarSign,
     ExternalLink,
     ChevronLeft,
     ChevronRight,
+    ArrowRightLeft,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
@@ -26,9 +25,11 @@ export default function PayoutsAdminPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [typeFilter, setTypeFilter] = useState('ALL');
     const [selectedPayout, setSelectedPayout] = useState<any>(null);
     const [adminNote, setAdminNote] = useState('');
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -54,22 +55,30 @@ export default function PayoutsAdminPage() {
         if (!selectedPayout) return;
 
         try {
-            const endpoint = status === 'PAID'
-                ? `/admin/payouts/${selectedPayout.id}/approve`
-                : `/admin/payouts/${selectedPayout.id}/reject`;
+            let endpoint: string;
+
+            if (selectedPayout.type === 'BANK_TRANSFER') {
+                endpoint = status === 'PAID'
+                    ? `/admin/bank-transfers/${selectedPayout.batch_id}/approve`
+                    : `/admin/bank-transfers/${selectedPayout.batch_id}/reject`;
+            } else {
+                endpoint = status === 'PAID'
+                    ? `/admin/payouts/${selectedPayout.id}/approve`
+                    : `/admin/payouts/${selectedPayout.id}/reject`;
+            }
 
             await apiFetch(endpoint, {
                 method: 'POST',
                 body: JSON.stringify({ admin_note: adminNote })
             });
 
-            toast.success(`Payout ${status.toLowerCase()} successfully`);
+            toast.success(`${selectedPayout.type === 'BANK_TRANSFER' ? 'Batch' : 'Payout'} ${status === 'PAID' ? 'approved' : 'rejected'} successfully`);
             setIsActionModalOpen(false);
             setAdminNote('');
             setSelectedPayout(null);
             fetchPayouts();
         } catch (err: any) {
-            toast.error(err.message || `Failed to ${status.toLowerCase()} payout`);
+            toast.error(err.message || `Failed to process`);
         }
     };
 
@@ -77,11 +86,13 @@ export default function PayoutsAdminPage() {
         const matchesSearch =
             p.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.user?.mobile_number?.includes(searchQuery) ||
-            p.bank_name?.toLowerCase().includes(searchQuery.toLowerCase());
+            p.bank_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.batch_id?.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
+        const matchesType = typeFilter === 'ALL' || p.type === typeFilter;
 
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && matchesType;
     });
 
     const totalPages = Math.ceil(filteredPayouts.length / itemsPerPage);
@@ -89,11 +100,22 @@ export default function PayoutsAdminPage() {
 
     const getStatusStyle = (status: string) => {
         switch (status) {
-            case 'PAID': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+            case 'PAID':
+            case 'APPROVED': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
             case 'REJECTED': return 'bg-rose-50 text-rose-600 border-rose-100';
             case 'PENDING': return 'bg-amber-50 text-amber-600 border-amber-100';
             default: return 'bg-slate-50 text-slate-600 border-slate-100';
         }
+    };
+
+    const formatIST = (dateStr: string) => {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    const formatISTTime = (dateStr: string) => {
+        const d = new Date(dateStr);
+        return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
     };
 
     return (
@@ -102,8 +124,7 @@ export default function PayoutsAdminPage() {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div>
-                            {/* <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Payout Management</h1> */}
-                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">Process and monitor withdrawal requests</p>
+                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">Process and monitor withdrawal &amp; transfer requests</p>
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -116,12 +137,12 @@ export default function PayoutsAdminPage() {
                     </div>
 
                     {/* Filters */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                         <div className="md:col-span-2 relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                             <input
                                 type="text"
-                                placeholder="Search by name, mobile, or bank..."
+                                placeholder="Search by name, mobile, bank, or batch ID..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all font-bold text-slate-600"
@@ -136,9 +157,23 @@ export default function PayoutsAdminPage() {
                                 className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none font-bold text-slate-600 cursor-pointer"
                             >
                                 <option value="ALL">All Status</option>
-                                <option value="PENDING">Pending Approval</option>
-                                <option value="PAID">Already Paid</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="PAID">Paid</option>
+                                <option value="APPROVED">Approved</option>
                                 <option value="REJECTED">Rejected</option>
+                            </select>
+                        </div>
+
+                        <div className="relative">
+                            <ArrowRightLeft className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+                                className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900/5 appearance-none font-bold text-slate-600 cursor-pointer"
+                            >
+                                <option value="ALL">All Types</option>
+                                <option value="WITHDRAWAL">Withdrawals</option>
+                                <option value="BANK_TRANSFER">Bank Transfers</option>
                             </select>
                         </div>
 
@@ -163,6 +198,7 @@ export default function PayoutsAdminPage() {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-50">
+                                        <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">User / Merchant</th>
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Details</th>
@@ -174,69 +210,118 @@ export default function PayoutsAdminPage() {
                                 <tbody className="divide-y divide-slate-50">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={6} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-xs animate-pulse">
+                                            <td colSpan={7} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-xs animate-pulse">
                                                 Loading Payout Requests...
                                             </td>
                                         </tr>
                                     ) : filteredPayouts.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-xs">
+                                            <td colSpan={7} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-xs">
                                                 No payout requests found
                                             </td>
                                         </tr>
                                     ) : (
                                         paginatedPayouts.map((payout) => (
-                                            <tr key={payout.id} className="group hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-lg">
-                                                            {payout.user?.name?.[0]}
+                                            <>
+                                                <tr key={payout.id} className="group hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-8 py-6">
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wide ${payout.type === 'BANK_TRANSFER'
+                                                                ? 'bg-violet-50 text-violet-600 border border-violet-100'
+                                                                : 'bg-slate-50 text-slate-600 border border-slate-100'
+                                                            }`}>
+                                                            {payout.type === 'BANK_TRANSFER' ? (
+                                                                <><ArrowRightLeft className="w-3 h-3" /> Bulk Pay</>
+                                                            ) : (
+                                                                <><Landmark className="w-3 h-3" /> Withdrawal</>
+                                                            )}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-lg">
+                                                                {payout.user?.name?.[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-black text-slate-900">{payout.user?.name}</p>
+                                                                <p className="text-[10px] font-bold text-slate-400">{payout.user?.mobile_number}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-sm font-black text-slate-900">{payout.user?.name}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400">{payout.user?.mobile_number}</p>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-base font-black text-slate-900 italic">₹{payout.amount?.toLocaleString('en-IN')}</span>
+                                                            {payout.type === 'BANK_TRANSFER' && payout.recipient_count && (
+                                                                <span className="text-[9px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full">
+                                                                    {payout.recipient_count} recipients
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <DollarSign className="w-4 h-4 text-emerald-500" />
-                                                        <span className="text-base font-black text-slate-900 italic">₹{payout.amount}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-900">
-                                                            <Landmark className="w-3 h-3 text-slate-300" />
-                                                            {payout.bank_name}
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        {payout.type === 'BANK_TRANSFER' ? (
+                                                            <button
+                                                                onClick={() => setExpandedBatch(expandedBatch === payout.batch_id ? null : payout.batch_id)}
+                                                                className="flex items-center gap-1 text-[10px] font-black text-violet-600 hover:text-violet-800 transition-colors"
+                                                            >
+                                                                {expandedBatch === payout.batch_id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                                View {payout.recipient_count} recipients
+                                                            </button>
+                                                        ) : (
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-900">
+                                                                    <Landmark className="w-3 h-3 text-slate-300" />
+                                                                    {payout.bank_name}
+                                                                </div>
+                                                                <p className="text-[10px] font-bold text-slate-400">A/C: {payout.account_number}</p>
+                                                                <p className="text-[10px] font-bold text-slate-400">IFSC: {payout.ifsc_code}</p>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wide ${getStatusStyle(payout.status)}`}>
+                                                            {payout.status === 'PENDING' && <Clock className="w-3 h-3" />}
+                                                            {(payout.status === 'PAID' || payout.status === 'APPROVED') && <CheckCircle2 className="w-3 h-3" />}
+                                                            {payout.status === 'REJECTED' && <XCircle className="w-3 h-3" />}
+                                                            {payout.status}
                                                         </div>
-                                                        <p className="text-[10px] font-bold text-slate-400">A/C: {payout.account_number}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400">IFSC: {payout.ifsc_code}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wide ${getStatusStyle(payout.status)}`}>
-                                                        {payout.status === 'PENDING' && <Clock className="w-3 h-3" />}
-                                                        {payout.status === 'PAID' && <CheckCircle2 className="w-3 h-3" />}
-                                                        {payout.status === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                                                        {payout.status}
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <p className="text-[10px] font-black text-slate-900">{new Date(payout.created_at).toLocaleDateString()}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400">{new Date(payout.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                                </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    {payout.status === 'PENDING' && (
-                                                        <button
-                                                            onClick={() => { setSelectedPayout(payout); setIsActionModalOpen(true); }}
-                                                            className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-90"
-                                                        >
-                                                            <ArrowRight className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <p className="text-[10px] font-black text-slate-900">{formatIST(payout.created_at)}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400">{formatISTTime(payout.created_at)}</p>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        {payout.status === 'PENDING' && (
+                                                            <button
+                                                                onClick={() => { setSelectedPayout(payout); setIsActionModalOpen(true); }}
+                                                                className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-90"
+                                                            >
+                                                                <ArrowRight className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+
+                                                {/* Expanded recipients for bank transfers */}
+                                                {payout.type === 'BANK_TRANSFER' && expandedBatch === payout.batch_id && payout.recipients && (
+                                                    <tr key={`${payout.id}-detail`}>
+                                                        <td colSpan={7} className="px-8 py-4 bg-violet-50/30">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                {payout.recipients.map((r: any, i: number) => (
+                                                                    <div key={i} className="bg-white rounded-xl p-4 border border-violet-100 space-y-1">
+                                                                        <p className="text-xs font-black text-slate-900">{r.recipient_name}</p>
+                                                                        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                                                            <Landmark className="w-3 h-3" /> {r.bank_name}
+                                                                        </div>
+                                                                        <p className="text-[10px] font-bold text-slate-400 font-mono">A/C: {r.account_number}</p>
+                                                                        <p className="text-[10px] font-bold text-slate-400 font-mono">IFSC: {r.ifsc_code}</p>
+                                                                        <p className="text-sm font-black text-emerald-600 mt-1">₹{r.amount?.toLocaleString('en-IN')}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </>
                                         ))
                                     )}
                                 </tbody>
@@ -274,9 +359,13 @@ export default function PayoutsAdminPage() {
                 {isActionModalOpen && selectedPayout && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-0">
                         <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsActionModalOpen(false)}></div>
-                        <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 border border-slate-100 overflow-hidden">
-                            <h2 className="text-2xl font-black text-slate-900 mb-2">Process Payout</h2>
-                            <p className="text-slate-500 font-bold mb-8 uppercase text-[10px] tracking-widest">Request Details</p>
+                        <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 border border-slate-100 overflow-hidden max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-2xl font-black text-slate-900 mb-2">
+                                {selectedPayout.type === 'BANK_TRANSFER' ? 'Process Bulk Transfer' : 'Process Payout'}
+                            </h2>
+                            <p className="text-slate-500 font-bold mb-8 uppercase text-[10px] tracking-widest">
+                                {selectedPayout.type === 'BANK_TRANSFER' ? `Batch: ${selectedPayout.batch_id}` : 'Request Details'}
+                            </p>
 
                             <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100 space-y-4">
                                 <div className="flex justify-between items-center text-sm">
@@ -284,23 +373,46 @@ export default function PayoutsAdminPage() {
                                     <span className="font-black text-slate-900">{selectedPayout.user?.name}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="font-bold text-slate-400 uppercase text-[10px]">Amount</span>
-                                    <span className="text-lg font-black text-emerald-600">₹{selectedPayout.amount}</span>
+                                    <span className="font-bold text-slate-400 uppercase text-[10px]">Total Amount</span>
+                                    <span className="text-lg font-black text-emerald-600">₹{selectedPayout.amount?.toLocaleString('en-IN')}</span>
                                 </div>
-                                <div className="h-px bg-slate-200"></div>
-                                <div className="space-y-2">
-                                    <p className="font-bold text-slate-400 uppercase text-[10px]">Settlement Account</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-[10px] font-bold text-slate-400">Bank</p>
-                                            <p className="text-xs font-black text-slate-900">{selectedPayout.bank_name}</p>
+
+                                {selectedPayout.type === 'BANK_TRANSFER' && selectedPayout.recipients && (
+                                    <>
+                                        <div className="h-px bg-slate-200"></div>
+                                        <p className="font-bold text-slate-400 uppercase text-[10px]">Recipients ({selectedPayout.recipient_count})</p>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {selectedPayout.recipients.map((r: any, i: number) => (
+                                                <div key={i} className="flex justify-between items-center bg-white rounded-xl p-3">
+                                                    <div>
+                                                        <p className="text-xs font-black text-slate-900">{r.recipient_name}</p>
+                                                        <p className="text-[9px] font-bold text-slate-400">{r.bank_name} • {r.account_number}</p>
+                                                    </div>
+                                                    <span className="text-xs font-black text-emerald-600">₹{r.amount?.toLocaleString('en-IN')}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold text-slate-400">A/C Number</p>
-                                            <p className="text-xs font-black text-slate-900">{selectedPayout.account_number}</p>
+                                    </>
+                                )}
+
+                                {selectedPayout.type === 'WITHDRAWAL' && (
+                                    <>
+                                        <div className="h-px bg-slate-200"></div>
+                                        <div className="space-y-2">
+                                            <p className="font-bold text-slate-400 uppercase text-[10px]">Settlement Account</p>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400">Bank</p>
+                                                    <p className="text-xs font-black text-slate-900">{selectedPayout.bank_name}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400">A/C Number</p>
+                                                    <p className="text-xs font-black text-slate-900">{selectedPayout.account_number}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="mb-8">
@@ -318,13 +430,13 @@ export default function PayoutsAdminPage() {
                                     onClick={() => handleAction('PAID')}
                                     className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black text-base hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-95"
                                 >
-                                    <CheckCircle2 className="w-5 h-5" /> Mark as Paid
+                                    <CheckCircle2 className="w-5 h-5" /> {selectedPayout.type === 'BANK_TRANSFER' ? 'Approve Batch' : 'Mark as Paid'}
                                 </button>
                                 <button
                                     onClick={() => handleAction('REJECTED')}
                                     className="flex-1 py-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-black text-base hover:bg-rose-100 transition-all flex items-center justify-center gap-2 active:scale-95"
                                 >
-                                    <XCircle className="w-5 h-5" /> Reject Request
+                                    <XCircle className="w-5 h-5" /> Reject{selectedPayout.type === 'BANK_TRANSFER' ? ' & Refund' : ' Request'}
                                 </button>
                             </div>
                         </div>
