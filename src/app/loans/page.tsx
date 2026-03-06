@@ -181,6 +181,11 @@ export default function LoanApprovals() {
                     'Mobile': user.mobile_number || '',
                     'Email': user.email || formData.email || '',
                     'Amount': loan.amount,
+                    'Referral Code': loan.agent
+                        ? `${loan.agent.name} (${loan.agent.referral_code})`
+                        : loan.referrer
+                            ? `${loan.referrer.name} (${loan.referrer.my_referral_code})`
+                            : 'Direct',
                     'Tenure': loan.tenure,
                     'Payout Frequency': loan.payout_frequency,
                     'Application Date': loan.created_at ? new Date(loan.created_at).toLocaleDateString() : '',
@@ -424,10 +429,30 @@ export default function LoanApprovals() {
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
 
                                                     {/* Referral Info */}
-                                                    {loan.user?.sub_user && (
-                                                        <p className="text-[10px] font-bold text-indigo-500 mt-1">
-                                                            Ref: {loan.user.sub_user.name} ({loan.user.sub_user.referral_code})
-                                                        </p>
+                                                    {loan.agent ? (
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
+                                                                AGENT: {loan.agent.name}
+                                                            </span>
+                                                            <span className="text-[9px] font-mono font-bold text-slate-400">
+                                                                {loan.agent.referral_code}
+                                                            </span>
+                                                        </div>
+                                                    ) : loan.referrer ? (
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 border border-violet-100 shadow-sm">
+                                                                REF: {loan.referrer.name}
+                                                            </span>
+                                                            <span className="text-[9px] font-mono font-bold text-slate-400">
+                                                                {loan.referrer.my_referral_code}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-1">
+                                                            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 border border-slate-100">
+                                                                DIRECT
+                                                            </span>
+                                                        </div>
                                                     )}
 
                                                     {/* Approval Info */}
