@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import KycReviewModal from '@/components/ui/KycReviewModal';
 import { apiFetch } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import {
@@ -30,6 +31,7 @@ interface SubUserDetails {
         credit_balance: number;
         credit_limit: number;
         is_active: boolean;
+        kyc_verification?: any;
     };
     stats: {
         total_users: number;
@@ -55,6 +57,7 @@ export default function SubUserDetailPage() {
     const router = useRouter();
     const [data, setData] = useState<SubUserDetails | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showKycReview, setShowKycReview] = useState(false);
 
     useEffect(() => {
         fetchDetails();
@@ -103,6 +106,12 @@ export default function SubUserDetailPage() {
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${data.sub_user?.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
                                     {data.sub_user?.is_active ? 'Active Agent' : 'Inactive'}
                                 </span>
+                                <button
+                                    onClick={() => setShowKycReview(true)}
+                                    className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors flex items-center gap-1"
+                                >
+                                    <Shield size={12} /> KYC Review
+                                </button>
                             </div>
                             <p className="text-slate-500 font-bold mt-1 uppercase tracking-widest text-xs">
                                 Global Referral ID: <span className="text-indigo-600 font-black">{data.sub_user?.referral_code}</span> • {data.sub_user?.mobile_number}
@@ -123,6 +132,25 @@ export default function SubUserDetailPage() {
                         </div>
                     </div>
                 </div>
+
+                {showKycReview && (
+                    <KycReviewModal
+                        agent={data.sub_user}
+                        kyc={data.sub_user?.kyc_verification}
+                        onClose={() => setShowKycReview(false)}
+                        onSuccess={(updatedKyc) => {
+                            setData((prev: any) => ({
+                                ...prev,
+                                sub_user: {
+                                    ...prev.sub_user,
+                                    kyc_verification: updatedKyc
+                                }
+                            }));
+                            setShowKycReview(false);
+                            toast.success("KYC status updated successfully");
+                        }}
+                    />
+                )}
 
                 {/* Growth Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
