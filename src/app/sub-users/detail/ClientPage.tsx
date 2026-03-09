@@ -74,6 +74,25 @@ export default function SubUserDetailPage() {
         }
     };
 
+    const handleReKyc = async () => {
+        if (!confirm('Are you sure you want to request Re-KYC? This will delete their current KYC records and force them to submit fresh documents.')) return;
+        
+        try {
+            await apiFetch(`/admin/sub-users/${id}/re-kyc`, { method: 'POST' });
+            toast.success('Re-KYC requested successfully.');
+            // Update local state to show pending
+            setData((prev: any) => ({
+                ...prev,
+                sub_user: {
+                    ...prev.sub_user,
+                    kyc_verification: null // clear it out locally
+                }
+            }));
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to request Re-KYC');
+        }
+    };
+
     if (loading) {
         return (
             <AdminLayout title="Agent Insights">
@@ -106,12 +125,31 @@ export default function SubUserDetailPage() {
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${data.sub_user?.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
                                     {data.sub_user?.is_active ? 'Active Agent' : 'Inactive'}
                                 </span>
-                                <button
-                                    onClick={() => setShowKycReview(true)}
-                                    className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors flex items-center gap-1"
-                                >
-                                    <Shield size={12} /> KYC Review
-                                </button>
+                                
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setShowKycReview(true)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-2 shadow-sm ${
+                                            data.sub_user?.kyc_verification?.status === 'approved' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' :
+                                            data.sub_user?.kyc_verification?.status === 'rejected' ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' :
+                                            'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                        }`}
+                                    >
+                                        <Shield size={16} /> 
+                                        {data.sub_user?.kyc_verification?.status ? `KYC: ${data.sub_user.kyc_verification.status}` : 'Pending KYC Docs'}
+                                    </button>
+                                    
+                                    {/* Re-KYC Button */}
+                                    {data.sub_user?.kyc_verification && (
+                                        <button
+                                            onClick={handleReKyc}
+                                            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-600 transition-colors shadow-sm"
+                                            title="Force agent to submit new KYC documents"
+                                        >
+                                            Request Re-KYC
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <p className="text-slate-500 font-bold mt-1 uppercase tracking-widest text-xs">
                                 Global Referral ID: <span className="text-indigo-600 font-black">{data.sub_user?.referral_code}</span> • {data.sub_user?.mobile_number}

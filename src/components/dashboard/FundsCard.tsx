@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown, History, Sparkles } from 'lucide-react';
+import { Wallet, IndianRupee, AlertTriangle, ArrowUpRight, TrendingDown, History, Sparkles, QrCode } from 'lucide-react';
 import FundHistoryModal from './FundHistoryModal';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -25,6 +25,7 @@ interface FundStats {
     total_profit: number;
     cashback_transfer: number;
     total_merchant_credits: number;
+    qr_deposits: number;
 }
 
 export default function FundsCard() {
@@ -287,6 +288,17 @@ export default function FundsCard() {
                     <CardContent>
                         <div className="text-2xl font-bold text-cyan-700">₹{stats?.total_merchant_credits?.toLocaleString()}</div>
                         <p className="text-xs text-cyan-600 mt-1">Total incoming via Customer QR</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-indigo-100 bg-indigo-50/30 cursor-pointer hover:bg-indigo-100/50 transition-colors col-span-1 md:col-span-2 lg:col-span-1" onClick={() => router.push('/qr-control?view=history')}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-indigo-700">QR Deposits</CardTitle>
+                        <QrCode className="h-4 w-4 text-indigo-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-indigo-700">₹{stats?.qr_deposits?.toLocaleString() || 0}</div>
+                        <p className="text-xs text-indigo-600 mt-1">Total security deposits from QR</p>
                     </CardContent>
                 </Card>
             </div>

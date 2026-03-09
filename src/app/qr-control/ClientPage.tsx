@@ -51,6 +51,7 @@ import {
 import AdminLayout from '@/components/AdminLayout';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import AdminQrReview from '@/components/qr/AdminQrReview';
 
 // --- Types ---
 interface FileItem {
@@ -74,6 +75,14 @@ export default function QRControlClient() {
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [activeTab, setActiveTab] = useState<'explorer' | 'history'>('explorer');
+
+    const searchParams = useSearchParams();
+    
+    useEffect(() => {
+        const view = searchParams.get('view');
+        if (view === 'history') setActiveTab('history');
+    }, [searchParams]);
 
     // Print State
     const [isPreparingPrint, setIsPreparingPrint] = useState(false);
@@ -614,6 +623,7 @@ export default function QRControlClient() {
                 }
             `}</style>
 
+            <>
             <div className="no-print">
                 <div className="flex flex-col lg:flex-row gap-4 min-h-[750px] bg-slate-50/10 p-2 rounded-[3rem]">
                     {/* File Sidebar */}
@@ -706,19 +716,36 @@ export default function QRControlClient() {
                                 )}
 
                                 <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-xl shadow-blue-900/5">
-                                    {['all', 'assigned', 'active'].map((status) => (
+                                    {['explorer', 'history'].map((tab) => (
                                         <button
-                                            key={status}
-                                            onClick={() => { setFilterStatus(status as any); setCurrentPage(1); }}
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab as any)}
                                             className={cn(
                                                 "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                filterStatus === status ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                                                activeTab === tab ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
                                             )}
                                         >
-                                            {status === 'all' ? 'All Assets' : status === 'assigned' ? 'Linked' : 'Available'}
+                                            {tab === 'explorer' ? 'Cluster Explorer' : 'Booking History'}
                                         </button>
                                     ))}
                                 </div>
+                                
+                                {activeTab === 'explorer' && (
+                                    <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-xl shadow-blue-900/5">
+                                        {['all', 'assigned', 'active'].map((status) => (
+                                            <button
+                                                key={status}
+                                                onClick={() => { setFilterStatus(status as any); setCurrentPage(1); }}
+                                                className={cn(
+                                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                    filterStatus === status ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                                                )}
+                                            >
+                                                {status === 'all' ? 'All Assets' : status === 'assigned' ? 'Linked' : 'Available'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                                 <Button onClick={() => fetchData()} className="bg-indigo-600 hover:bg-indigo-700 rounded-2xl h-12 w-12 p-0 shadow-lg shadow-indigo-600/20">
                                     <Zap size={20} />
                                 </Button>
@@ -754,7 +781,11 @@ export default function QRControlClient() {
                             </div>
                         </div>
 
-                        {/* Breadcrumbs Control */}
+                        {activeTab === 'history' ? (
+                            <AdminQrReview />
+                        ) : (
+                            <>
+                                {/* Breadcrumbs Control */}
                         <div className="flex flex-col md:flex-row items-center justify-between px-8 py-3 bg-white border border-slate-100/50 rounded-[1.8rem] shadow-2xl shadow-blue-900/5 gap-3">
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full">
                                 <button onClick={() => setCurrentFolderId(null)} className="p-2.5 bg-slate-50 rounded-xl text-slate-400 hover:bg-indigo-600 hover:text-white transition-all shrink-0 border border-slate-100">
@@ -867,9 +898,12 @@ export default function QRControlClient() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                        </>
+                    )}
+                </div>
                 </div>
             </div>
+
 
             {/* Context Menu */}
             {contextMenu && (
@@ -967,6 +1001,7 @@ export default function QRControlClient() {
                     ))}
                 </div>
             )}
+            </>
         </AdminLayout>
     );
 }

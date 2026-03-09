@@ -25,8 +25,10 @@ export const clearTokenCache = () => {
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const token = await getToken();
 
+    const isFormData = options.body instanceof FormData;
+
     const headers: HeadersInit = {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         'Accept': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,

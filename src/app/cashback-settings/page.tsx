@@ -119,7 +119,7 @@ export default function CashbackSettingsPage() {
                         <h4 className="font-bold text-amber-900">Important Note</h4>
                         <p className="text-sm text-amber-700 font-medium leading-relaxed">
                             These settings define the default welcome bonus for users who register without a specific referral link.
-                            Users referred by Agents (Sub-Users) will receive the bonus amount defined in that specific Agent's profile.
+                            Users referred by Agents (Vendor) will receive the bonus amount defined in that specific Agent's profile.
                         </p>
                     </div>
                 </div>

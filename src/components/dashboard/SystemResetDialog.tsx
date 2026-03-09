@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 const RESET_OPTIONS = [
     { id: 'loans', label: 'Loans & Repayments', description: 'Truncates loans, EMIs, and allocations.', color: 'text-amber-600', bg: 'bg-amber-50' },
     { id: 'users', label: 'Customers & Merchants', description: 'Deletes all users except Admins and System.', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 'agents', label: 'Agents (Sub-Users)', description: 'Deletes all agent records and their stats.', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { id: 'agents', label: 'Vendor Agents', description: 'Deletes all agent records and their stats.', color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { id: 'transactions', label: 'Wallet Transactions', description: 'Clears all ledger history for all wallets.', color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { id: 'audit_logs', label: 'Audit & Admin Logs', description: 'Clears all admin action and history logs.', color: 'text-slate-600', bg: 'bg-slate-50' },
     { id: 'cashback_logs', label: 'Cashback History', description: 'Clears only cashback and bonus transaction logs.', color: 'text-orange-600', bg: 'bg-orange-50' },

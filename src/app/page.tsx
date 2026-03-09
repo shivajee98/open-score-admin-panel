@@ -24,7 +24,9 @@ export default function AdminDashboard() {
         activeLoans: 0,
         defaultedLoans: 0,
         pendingLoans: 0,
-        recentRepayments: []
+        recentRepayments: [],
+        totalReferralPaid: 0,
+        totalQrDeposits: 0
     });
     const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [pendingRepayments, setPendingRepayments] = useState<any[]>([]);
@@ -41,12 +43,13 @@ export default function AdminDashboard() {
     const loadData = async () => {
         try {
             // Parallel fetch for speed
-            const [analytics, pending, users, pendingRepays, referralsData] = await Promise.all([
+            const [analytics, pending, users, pendingRepays, referralsData, qrData] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
                 apiFetch('/admin/users'),
                 apiFetch('/admin/repayments/pending'),
-                apiFetch('/admin/all-referrals')
+                apiFetch('/admin/all-referrals'),
+                apiFetch('/admin/qr-bookings')
             ]);
 
             const referralList = referralsData?.data || [];
@@ -68,7 +71,10 @@ export default function AdminDashboard() {
                 defaultedLoans: analytics?.defaulted_loans || 0,
                 pendingLoans: analytics?.pending_loans || 0,
                 recentRepayments: analytics?.recent_repayments || [],
-                totalReferralPaid: totalReferralPaid
+                totalReferralPaid: totalReferralPaid,
+                totalQrDeposits: Array.isArray(qrData?.data) 
+                    ? qrData.data.reduce((sum: number, b: any) => sum + (b.status !== 'rejected' && b.status !== 'pending' ? Number(b.security_amount) : 0), 0)
+                    : 0
             } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
@@ -186,6 +192,15 @@ export default function AdminDashboard() {
                         <p className="text-3xl font-black text-amber-600">₹{(stats as any).totalReferralPaid?.toLocaleString('en-IN') || 0}</p>
                     </div>
                 </div>
+                <Link href="/qr-control?view=history" className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-indigo-200 transition-all group">
+                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                        <QrCode className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">QR Deposits</p>
+                        <p className="text-3xl font-black text-slate-900">₹{(stats as any).totalQrDeposits?.toLocaleString('en-IN') || 0}</p>
+                    </div>
+                </Link>
             </div>
 
             {/* Recent Repayments & Health Grid */}

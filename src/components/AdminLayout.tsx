@@ -67,7 +67,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Maintenance Mode', href: '/maintenance-settings', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'] },
 
         // Internal Users Group
-        { label: 'Sub-Users', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Internal Users' },
+        { label: 'Vendor', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Internal Users' },
         { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Internal Users' },
 
         { label: 'Support Inbox', href: '/support/tickets', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'] },
@@ -76,6 +76,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Agent Cashouts', href: '/agent-payouts', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'] },
+        { label: 'Team Transfers', href: '/team-transfers', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Cashback Logs', href: '/cashback-logs', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'] },
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'] },

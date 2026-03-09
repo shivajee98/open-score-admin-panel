@@ -71,7 +71,7 @@ export default function SubUsersPage() {
             const data = await apiFetch('/admin/sub-users');
             setSubUsers(Array.isArray(data) ? data : []);
         } catch (e) {
-            toast.error('Failed to load sub-users');
+            toast.error('Failed to load Vendors');
         } finally {
             setLoading(false);
         }
@@ -142,12 +142,12 @@ export default function SubUsersPage() {
     };
 
     return (
-        <AdminLayout title="Sub-Users Management">
+        <AdminLayout title="Vendor Management">
             <div className="space-y-6">
                 <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
                     <div>
-                        <h2 className="text-xl font-black text-slate-900 px-1">Agent Network</h2>
-                        <p className="text-slate-500 text-sm font-medium px-1">Manage sub-users and their credit limits.</p>
+                        <h2 className="text-xl font-black text-slate-900 px-1">Vendor Network</h2>
+                        <p className="text-slate-500 text-sm font-medium px-1">Manage vendors and their credit limits.</p>
                     </div>
                     <button
                         onClick={() => {
@@ -161,31 +161,6 @@ export default function SubUsersPage() {
                         Create Agent
                     </button>
                 </div>
-
-                {/* Global Agent Bonus Setting */}
-                {globalReferralSettings && (
-                    <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-
-                        <div className="flex items-center gap-4 w-full md:w-auto">
-                            <div className="relative flex-1 md:w-40">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300 font-bold text-sm">₹</span>
-                                <input
-                                    type="number"
-                                    className="w-full pl-8 pr-4 py-3 bg-white border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-black text-indigo-900 shadow-sm transition-all"
-                                    value={globalReferralSettings.agent_signup_bonus}
-                                    onChange={(e) => setGlobalReferralSettings({ ...globalReferralSettings, agent_signup_bonus: parseFloat(e.target.value) || 0 })}
-                                />
-                            </div>
-                            <button
-                                onClick={handleSaveGlobal}
-                                disabled={savingGlobal}
-                                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 active:scale-95 whitespace-nowrap text-sm"
-                            >
-                                {savingGlobal ? 'Saving...' : 'Update Default'}
-                            </button>
-                        </div>
-                    </div>
-                )}
 
                 {loading ? (
                     <div className="flex justify-center items-center py-20">
