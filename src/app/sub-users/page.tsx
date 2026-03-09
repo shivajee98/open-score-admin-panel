@@ -16,6 +16,7 @@ interface SubUser {
     credit_balance: number;
     credit_limit: number;
     default_signup_amount: number;
+    admin_loan_commission: number;
     is_active: boolean;
 }
 
@@ -30,7 +31,8 @@ export default function SubUsersPage() {
         mobile_number: '',
         password: '',
         credit_limit: '',
-        default_signup_amount: ''
+        default_signup_amount: '',
+        admin_loan_commission: ''
     });
 
     const [creditAmount, setCreditAmount] = useState('');
@@ -88,7 +90,8 @@ export default function SubUsersPage() {
             mobile_number: subUser.mobile_number,
             password: '', // Leave blank to keep current
             credit_limit: (subUser.credit_limit ?? 0).toString(),
-            default_signup_amount: (subUser.default_signup_amount ?? 0).toString()
+            default_signup_amount: (subUser.default_signup_amount ?? 0).toString(),
+            admin_loan_commission: (subUser.admin_loan_commission ?? 0).toString()
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -114,7 +117,7 @@ export default function SubUsersPage() {
 
             toast.success(isEditMode ? 'Agent updated successfully' : 'Agent created successfully');
             setShowModal(false);
-            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '' });
+            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '' });
             setIsEditMode(false);
             setEditingId(null);
             fetchSubUsers();
@@ -152,7 +155,7 @@ export default function SubUsersPage() {
                     <button
                         onClick={() => {
                             setIsEditMode(false);
-                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '' });
+                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '' });
                             setShowModal(true);
                         }}
                         className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
@@ -236,7 +239,10 @@ export default function SubUsersPage() {
                                                     </div>
                                                 </td>
                                                 <td className="p-6">
-                                                    <span className="font-black text-emerald-600">₹{(subUser.default_signup_amount ?? 0).toLocaleString()}</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-black text-emerald-600 text-sm">₹{(subUser.admin_loan_commission ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase">(Disburse)</span></span>
+                                                        <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
+                                                    </div>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">
                                                     <div className="flex justify-end gap-2">
@@ -348,7 +354,7 @@ export default function SubUsersPage() {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Commission</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup Bonus</label>
                                     <input
                                         type="number"
                                         required
@@ -358,6 +364,17 @@ export default function SubUsersPage() {
                                         onChange={(e) => setFormData({ ...formData, default_signup_amount: e.target.value })}
                                     />
                                 </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Disbursement Commission (Admin to Agent)</label>
+                                <input
+                                    type="number"
+                                    required
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                    value={formData.admin_loan_commission}
+                                    placeholder="2000"
+                                    onChange={(e) => setFormData({ ...formData, admin_loan_commission: e.target.value })}
+                                />
                             </div>
                             <div className="flex gap-4 pt-4">
                                 <button
