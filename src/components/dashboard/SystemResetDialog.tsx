@@ -18,6 +18,7 @@ const RESET_OPTIONS = [
     { id: 'audit_logs', label: 'Audit & Admin Logs', description: 'Clears all admin action and history logs.', color: 'text-slate-600', bg: 'bg-slate-50' },
     { id: 'cashback_logs', label: 'Cashback History', description: 'Clears only cashback and bonus transaction logs.', color: 'text-orange-600', bg: 'bg-orange-50' },
     { id: 'referral_settings', label: 'Referral Settings', description: 'Resets all referral campaigns and rules.', color: 'text-purple-600', bg: 'bg-purple-50' },
+    { id: 'qr_history', label: 'QR Booking History', description: 'Clears all user and public QR booking requests.', color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
     { id: 'treasury', label: 'Treasury Balance', description: 'Resets System Treasury (AdminFund) to ₹0.', color: 'text-rose-600', bg: 'bg-rose-50' },
     { id: 'everything', label: 'Master Wipe (Everything)', description: 'Reset the entire system to a fresh state.', color: 'text-red-600', bg: 'bg-red-50' },
 ];

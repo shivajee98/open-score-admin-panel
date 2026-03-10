@@ -125,12 +125,29 @@ export default function AdminQrReview() {
                                     <User className="text-indigo-600" size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-slate-900 leading-none">{item.user?.name}</h3>
+                                    <h3 className="font-black text-slate-900 leading-none">
+                                        {item.is_public ? `${item.full_name} (Individual)` : item.user?.name}
+                                    </h3>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Requested On: {new Date(item.created_at).toLocaleDateString()}</p>
                                 </div>
                             </div>
-                            <div className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${getStatusTheme(item.status)}`}>
-                                {item.status.replace('_', ' ')}
+                            <div className="flex items-center gap-3">
+                                {item.is_public && (
+                                    <button
+                                        onClick={() => {
+                                            const url = `${window.location.protocol}//${window.location.hostname.replace('admin.', '')}${window.location.port === '3001' ? ':3000' : ''}/qr-update/${item.id}`;
+                                            navigator.clipboard.writeText(url);
+                                            toast.success('Tracking Link Copied!');
+                                        }}
+                                        className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-full transition-all"
+                                        title="Copy Public Tracking Link"
+                                    >
+                                        <ExternalLink size={16} />
+                                    </button>
+                                )}
+                                <div className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${getStatusTheme(item.status)}`}>
+                                    {item.status.replace('_', ' ')}
+                                </div>
                             </div>
                         </div>
 
