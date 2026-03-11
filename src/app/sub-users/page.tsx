@@ -17,7 +17,12 @@ interface SubUser {
     credit_limit: number;
     default_signup_amount: number;
     admin_loan_commission: number;
+    bonus_milestone_count?: number;
+    bonus_milestone_amount?: number;
     is_active: boolean;
+    kyc_verification?: {
+        status: string;
+    };
 }
 
 export default function SubUsersPage() {
@@ -32,7 +37,9 @@ export default function SubUsersPage() {
         password: '',
         credit_limit: '',
         default_signup_amount: '',
-        admin_loan_commission: ''
+        admin_loan_commission: '',
+        bonus_milestone_count: '',
+        bonus_milestone_amount: ''
     });
 
     const [creditAmount, setCreditAmount] = useState('');
@@ -91,7 +98,9 @@ export default function SubUsersPage() {
             password: '', // Leave blank to keep current
             credit_limit: (subUser.credit_limit ?? 0).toString(),
             default_signup_amount: (subUser.default_signup_amount ?? 0).toString(),
-            admin_loan_commission: (subUser.admin_loan_commission ?? 0).toString()
+            admin_loan_commission: (subUser.admin_loan_commission ?? 0).toString(),
+            bonus_milestone_count: (subUser.bonus_milestone_count ?? 0).toString(),
+            bonus_milestone_amount: (subUser.bonus_milestone_amount ?? 0).toString()
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -117,7 +126,7 @@ export default function SubUsersPage() {
 
             toast.success(isEditMode ? 'Agent updated successfully' : 'Agent created successfully');
             setShowModal(false);
-            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '' });
+            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '' });
             setIsEditMode(false);
             setEditingId(null);
             fetchSubUsers();
@@ -144,6 +153,30 @@ export default function SubUsersPage() {
         }
     };
 
+    const handleKycAction = async (subUserId: number, action: 'approve' | 'reject' | 're_kyc') => {
+        try {
+            if (action === 'approve' || action === 'reject') {
+                await apiFetch(`/admin/sub-users/${subUserId}/kyc-review`, {
+                    method: 'POST',
+                    body: JSON.stringify({ status: action === 'approve' ? 'approved' : 'rejected' })
+                });
+                toast.success(`Agent KYC marked as ${action.toUpperCase()}`);
+            } else if (action === 're_kyc') {
+                if (window.confirm('Are you sure you want to lock this agent out and ask for Re-KYC?')) {
+                    await apiFetch(`/admin/sub-users/${subUserId}/re-kyc`, {
+                        method: 'POST'
+                    });
+                    toast.success('Agent locked for Re-KYC.');
+                } else {
+                    return;
+                }
+            }
+            fetchSubUsers();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to update KYC status');
+        }
+    };
+
     return (
         <AdminLayout title="Vendor Management">
             <div className="space-y-6">
@@ -155,7 +188,7 @@ export default function SubUsersPage() {
                     <button
                         onClick={() => {
                             setIsEditMode(false);
-                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '' });
+                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '' });
                             setShowModal(true);
                         }}
                         className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
@@ -176,6 +209,7 @@ export default function SubUsersPage() {
                                 <thead className="bg-slate-50/50">
                                     <tr>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-8">Agent Details</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Status</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
@@ -205,6 +239,23 @@ export default function SubUsersPage() {
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="p-6">
+                                                    {subUser.kyc_verification?.status === 'APPROVED' ? (
+                                                        <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Approved</span>
+                                                    ) : subUser.kyc_verification?.status === 'PENDING' ? (
+                                                        <div className="flex flex-col gap-2 items-start">
+                                                            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pending</span>
+                                                            <div className="flex gap-1">
+                                                                <button onClick={() => handleKycAction(subUser.id, 'approve')} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 font-bold">Approve</button>
+                                                                <button onClick={() => handleKycAction(subUser.id, 'reject')} className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded hover:bg-rose-600 font-bold">Reject</button>
+                                                            </div>
+                                                        </div>
+                                                    ) : subUser.kyc_verification?.status === 'REJECTED' ? (
+                                                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Rejected / Wait</span>
+                                                    ) : (
+                                                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Not Submitted</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-6">
                                                     <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
@@ -245,7 +296,15 @@ export default function SubUsersPage() {
                                                     </div>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">
-                                                    <div className="flex justify-end gap-2">
+                                                    <div className="flex justify-end gap-2 flex-wrap">
+                                                        {subUser.kyc_verification?.status === 'APPROVED' && (
+                                                            <button
+                                                                onClick={() => handleKycAction(subUser.id, 're_kyc')}
+                                                                className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs hover:bg-amber-100 transition-colors border border-amber-200"
+                                                            >
+                                                                Ask for Re-KYC
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleEditSubUser(subUser)}
                                                             className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
@@ -354,7 +413,7 @@ export default function SubUsersPage() {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup Bonus</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Onboarding QR</label>
                                     <input
                                         type="number"
                                         required
@@ -375,6 +434,28 @@ export default function SubUsersPage() {
                                     placeholder="2000"
                                     onChange={(e) => setFormData({ ...formData, admin_loan_commission: e.target.value })}
                                 />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bonus Milestone Count</label>
+                                    <input
+                                        type="number"
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                        value={formData.bonus_milestone_count}
+                                        placeholder="10"
+                                        onChange={(e) => setFormData({ ...formData, bonus_milestone_count: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bonus Milestone Amount</label>
+                                    <input
+                                        type="number"
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                        value={formData.bonus_milestone_amount}
+                                        placeholder="200"
+                                        onChange={(e) => setFormData({ ...formData, bonus_milestone_amount: e.target.value })}
+                                    />
+                                </div>
                             </div>
                             <div className="flex gap-4 pt-4">
                                 <button
