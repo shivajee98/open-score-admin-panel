@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
-import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp } from 'lucide-react';
+import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine } from 'lucide-react';
 
 interface SubUser {
     id: number;
@@ -19,13 +20,28 @@ interface SubUser {
     admin_loan_commission: number;
     bonus_milestone_count?: number;
     bonus_milestone_amount?: number;
+    loan_bonus_milestone_count?: number;
+    loan_bonus_milestone_amount?: number;
+    can_create_vendors?: boolean;
+    show_letter?: boolean;
     is_active: boolean;
     kyc_verification?: {
-        status: string;
+        status?: 'approved' | 'pending' | 'rejected';
     };
+    visible_pin?: string;
 }
 
+const normalizeKycStatus = (status?: string): 'approved' | 'pending' | 'rejected' | undefined => {
+    if (!status) return undefined;
+    const normalized = status.trim().toLowerCase();
+    if (normalized === 'approved' || normalized === 'pending' || normalized === 'rejected') {
+        return normalized as 'approved' | 'pending' | 'rejected';
+    }
+    return undefined;
+};
+
 export default function SubUsersPage() {
+    const { counts } = useAdminNotifications();
     const router = useRouter();
     const [subUsers, setSubUsers] = useState<SubUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,8 +55,12 @@ export default function SubUsersPage() {
         default_signup_amount: '',
         admin_loan_commission: '',
         bonus_milestone_count: '',
-        bonus_milestone_amount: ''
-    });
+        bonus_milestone_amount: '',
+        loan_bonus_milestone_count: '',
+        loan_bonus_milestone_amount: '',
+        can_create_vendors: false,
+        show_letter: false
+    } as any);
 
     const [creditAmount, setCreditAmount] = useState('');
     const [globalReferralSettings, setGlobalReferralSettings] = useState<any>(null);
@@ -95,12 +115,16 @@ export default function SubUsersPage() {
         setFormData({
             name: subUser.name,
             mobile_number: subUser.mobile_number,
-            password: '', // Leave blank to keep current
             credit_limit: (subUser.credit_limit ?? 0).toString(),
             default_signup_amount: (subUser.default_signup_amount ?? 0).toString(),
             admin_loan_commission: (subUser.admin_loan_commission ?? 0).toString(),
             bonus_milestone_count: (subUser.bonus_milestone_count ?? 0).toString(),
-            bonus_milestone_amount: (subUser.bonus_milestone_amount ?? 0).toString()
+            bonus_milestone_amount: (subUser.bonus_milestone_amount ?? 0).toString(),
+            loan_bonus_milestone_count: (subUser.loan_bonus_milestone_count ?? 0).toString(),
+            loan_bonus_milestone_amount: (subUser.loan_bonus_milestone_amount ?? 0).toString(),
+            can_create_vendors: subUser.can_create_vendors ?? false,
+            show_letter: subUser.show_letter ?? false,
+            password: subUser.visible_pin || '', // Using password field for PIN in form
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -126,7 +150,7 @@ export default function SubUsersPage() {
 
             toast.success(isEditMode ? 'Agent updated successfully' : 'Agent created successfully');
             setShowModal(false);
-            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '' });
+            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: false, show_letter: false } as any);
             setIsEditMode(false);
             setEditingId(null);
             fetchSubUsers();
@@ -179,23 +203,31 @@ export default function SubUsersPage() {
 
     return (
         <AdminLayout title="Vendor Management">
-            <div className="space-y-6">
-                <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-8 gap-6">
                     <div>
                         <h2 className="text-xl font-black text-slate-900 px-1">Vendor Network</h2>
                         <p className="text-slate-500 text-sm font-medium px-1">Manage vendors and their credit limits.</p>
                     </div>
-                    <button
-                        onClick={() => {
-                            setIsEditMode(false);
-                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '' });
-                            setShowModal(true);
-                        }}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Create Agent
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => router.push('/sub-users/tree')}
+                            className="flex items-center gap-2 px-5 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-all border border-indigo-100"
+                        >
+                            <TreePine className="w-5 h-5" />
+                            Vendor Tree
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsEditMode(false);
+                                setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: false, show_letter: false } as any);
+                                setShowModal(true);
+                            }}
+                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Create Agent
+                        </button>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -224,26 +256,42 @@ export default function SubUsersPage() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        subUsers.map((subUser) => (
-                                            <tr key={subUser.id} className="hover:bg-slate-50/80 transition-colors group">
-                                                <td className="p-6 pl-8">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black group-hover:bg-blue-600 transition-colors shadow-lg shadow-slate-200 group-hover:shadow-blue-200">
-                                                            {subUser.name?.[0] || '?'}
+                                        subUsers.map((subUser) => {
+                                            const normalizedKycStatus = normalizeKycStatus(subUser.kyc_verification?.status);
+                                            const showPendingDot = normalizedKycStatus === 'pending';
+                                            return (
+                                                <tr key={subUser.id} className="hover:bg-slate-50/80 transition-colors group">
+                                                    <td className="p-6 pl-8">
+                                                        <div className="flex items-center gap-4">
+                                                    <div className="relative">
+                                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm border-2 border-indigo-100 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                                                            {subUser.name[0]}
                                                         </div>
+                                                        {showPendingDot && (
+                                                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
+                                                        )}
+                                                    </div>
                                                         <div>
                                                             <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
-                                                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                                                <UsersIcon className="w-3 h-3 text-blue-500" />
-                                                                Agent #{subUser.id} • {subUser.mobile_number}
+                                                            <div className="flex flex-col gap-1 mt-1">
+                                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                                                    <UsersIcon className="w-3 h-3 text-blue-500" />
+                                                                    Agent #{subUser.id} • {subUser.mobile_number}
+                                                                </div>
+                                                                {subUser.visible_pin && (
+                                                                    <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded-md">
+                                                                        <Shield className="w-3 h-3" />
+                                                                        PIN: {subUser.visible_pin}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-6">
-                                                    {subUser.kyc_verification?.status === 'APPROVED' ? (
+                                                    {normalizedKycStatus === 'approved' ? (
                                                         <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Approved</span>
-                                                    ) : subUser.kyc_verification?.status === 'PENDING' ? (
+                                                    ) : normalizedKycStatus === 'pending' ? (
                                                         <div className="flex flex-col gap-2 items-start">
                                                             <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pending</span>
                                                             <div className="flex gap-1">
@@ -251,7 +299,7 @@ export default function SubUsersPage() {
                                                                 <button onClick={() => handleKycAction(subUser.id, 'reject')} className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded hover:bg-rose-600 font-bold">Reject</button>
                                                             </div>
                                                         </div>
-                                                    ) : subUser.kyc_verification?.status === 'REJECTED' ? (
+                                                    ) : normalizedKycStatus === 'rejected' ? (
                                                         <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Rejected / Wait</span>
                                                     ) : (
                                                         <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Not Submitted</span>
@@ -297,9 +345,9 @@ export default function SubUsersPage() {
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">
                                                     <div className="flex justify-end gap-2 flex-wrap">
-                                                        {subUser.kyc_verification?.status === 'APPROVED' && (
+                                                        {normalizedKycStatus === 'approved' && (
                                                             <button
-                                                                onClick={() => handleKycAction(subUser.id, 're_kyc')}
+                                                               onClick={() => handleKycAction(subUser.id, 're_kyc')}
                                                                 className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs hover:bg-amber-100 transition-colors border border-amber-200"
                                                             >
                                                                 Ask for Re-KYC
@@ -336,18 +384,18 @@ export default function SubUsersPage() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
+                                        );
+                                    })
+                                )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 )}
-            </div>
 
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95">
+                    <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center gap-4 mb-8">
                             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
                                 <UserPlus size={24} />
@@ -387,19 +435,25 @@ export default function SubUsersPage() {
                                     readOnly={isEditMode} // Cannot change mobile as it matches ID often
                                 />
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    {isEditMode ? 'New Password (Optional)' : 'Login Password'}
-                                </label>
-                                <input
-                                    type="password"
-                                    required={!isEditMode}
-                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
-                                    value={formData.password}
-                                    placeholder={isEditMode ? "Leave blank to keep current" : "••••••••"}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                />
-                            </div>
+
+                            {isEditMode && (
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Agent PIN (4-6 digits)</label>
+                                    <input
+                                        type="text"
+                                        maxLength={6}
+                                        className="w-full px-5 py-4 bg-blue-50 border border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-black text-blue-700 transition-all placeholder:text-blue-300"
+                                        value={formData.password}
+                                        placeholder="Enter new PIN"
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                            setFormData({ ...formData, password: value });
+                                        }}
+                                    />
+                                    <p className="text-[9px] text-slate-400 font-bold ml-1 uppercase">Changes take effect immediately upon saving.</p>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Credit Limit</label>
@@ -454,8 +508,67 @@ export default function SubUsersPage() {
                                         value={formData.bonus_milestone_amount}
                                         placeholder="200"
                                         onChange={(e) => setFormData({ ...formData, bonus_milestone_amount: e.target.value })}
+                                />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Milestone Count</label>
+                                    <input
+                                        type="number"
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                        value={formData.loan_bonus_milestone_count}
+                                        placeholder="10"
+                                        onChange={(e) => setFormData({ ...formData, loan_bonus_milestone_count: e.target.value })}
                                     />
                                 </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Milestone Amount</label>
+                                    <input
+                                        type="number"
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                        value={formData.loan_bonus_milestone_amount}
+                                        placeholder="200"
+                                        onChange={(e) => setFormData({ ...formData, loan_bonus_milestone_amount: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            {/* Vendor Creation Permission Toggle */}
+                            <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                <div>
+                                    <p className="text-sm font-black text-indigo-900">Can Create Sub-Vendors</p>
+                                    <p className="text-[10px] text-indigo-500 font-bold">Allow this agent to create child vendors in hierarchy</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, can_create_vendors: !formData.can_create_vendors })}
+                                    className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${
+                                        formData.can_create_vendors ? 'bg-indigo-600' : 'bg-slate-300'
+                                    }`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${
+                                        formData.can_create_vendors ? 'translate-x-7' : 'translate-x-0'
+                                    }`} />
+                                </button>
+                            </div>
+
+                            {/* Show Letter Toggle */}
+                            <div className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                <div>
+                                    <p className="text-sm font-black text-amber-900">Show Auth Letter</p>
+                                    <p className="text-[10px] text-amber-500 font-bold">Allow vendor to view their authorization letter</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, show_letter: !formData.show_letter })}
+                                    className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${
+                                        formData.show_letter ? 'bg-amber-600' : 'bg-slate-300'
+                                    }`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${
+                                        formData.show_letter ? 'translate-x-7' : 'translate-x-0'
+                                    }`} />
+                                </button>
                             </div>
                             <div className="flex gap-4 pt-4">
                                 <button

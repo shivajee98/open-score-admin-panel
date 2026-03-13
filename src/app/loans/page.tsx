@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import FormDetailsModal from '@/components/loans/FormDetailsModal';
@@ -22,6 +23,7 @@ const hasPlatformFee = (loan: any): boolean => {
 };
 
 export default function LoanApprovals() {
+    const { counts } = useAdminNotifications();
     const searchParams = useSearchParams();
     const [loans, setLoans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -421,8 +423,13 @@ export default function LoanApprovals() {
                                         </td>
                                         <td className="p-6 pl-2">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                    {loan.user?.name?.[0] || 'U'}
+                                                <div className="relative">
+                                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                                        {loan.user?.name?.[0] || 'U'}
+                                                    </div>
+                                                    {(loan.status === 'APPLIED' || loan.status === 'KYC_SUBMITTED' || loan.status === 'FORM_SUBMITTED') && (
+                                                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>

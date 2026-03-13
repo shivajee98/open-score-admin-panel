@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Banknote, Users, CheckCircle, XCircle, Settings, X, Search } from 'lucide-react';
+import { Banknote, Users, CheckCircle, XCircle, Settings, X, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TeamTransfer {
@@ -42,10 +42,36 @@ export default function TeamTransfersPage() {
     const [autoApprovalMode, setAutoApprovalMode] = useState('MANUAL');
     const [autoApprovalLimit, setAutoApprovalLimit] = useState('0');
     const [autoApprovalPercentage, setAutoApprovalPercentage] = useState('0');
+    const [isVendorConfig, setIsVendorConfig] = useState(false);
+
+    // New Selection States (Loan Plan Style)
+    const [targetableUsers, setTargetableUsers] = useState<any[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [userFilters, setUserFilters] = useState({
+        search: '',
+        min_loan_completed: '',
+        min_loans_count: ''
+    });
+
+    const [ruleHistory, setRuleHistory] = useState<any[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
     useEffect(() => {
         loadTransfers();
+        loadRuleHistory();
     }, []);
+
+    const loadRuleHistory = async () => {
+        setLoadingHistory(true);
+        try {
+            const res = await apiFetch('/admin/team-transfers/rule-history');
+            setRuleHistory(res || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
 
     const loadTransfers = async () => {
         try {
@@ -55,6 +81,78 @@ export default function TeamTransfersPage() {
             toast.error(e.message || 'Failed to load transfers');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadSettingsData = async () => {
+        setLoading(true);
+        try {
+            const res = await apiFetch('/admin/team-transfers/recent');
+            setTransfers(res || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEditRule = (log: any) => {
+        let details = log.details;
+        if (typeof details === 'string') {
+            try { details = JSON.parse(details); } catch (e) { details = null; }
+        }
+
+        if (details) {
+            setIsVendorConfig(details.target_type === 'VENDOR');
+            setApplyToAll(details.user_ids === 'ALL');
+            if (Array.isArray(details.user_ids)) {
+                setSelectedUsers(details.user_ids);
+            } else {
+                setSelectedUsers([]);
+            }
+            setIntervalDays(String(details.interval_days || '0'));
+            setIntervalHours(String(details.interval_hours || '0'));
+            setMinAmount(String(details.min_amount || '0'));
+            setAutoApprovalMode(details.auto_approval_mode || 'MANUAL');
+            setAutoApprovalLimit(String(details.auto_approval_limit || '0'));
+            setAutoApprovalPercentage(String(details.auto_approval_percentage || '0'));
+            
+            setRulesModal(true);
+            toast.info('Rule configuration loaded. You can now adjust and deploy.');
+        } else if (log.description) {
+            // Fallback: Parse from description string
+            const desc = log.description;
+            const daysMatch = desc.match(/(\d+)d/);
+            const hoursMatch = desc.match(/(\d+)h/);
+            const minAmountMatch = desc.match(/Min ₹([\d\.]+)/);
+            const modeMatch = desc.match(/Mode: (\w+)/);
+
+            setIntervalDays(daysMatch ? daysMatch[1] : '0');
+            setIntervalHours(hoursMatch ? hoursMatch[1] : '0');
+            setMinAmount(minAmountMatch ? minAmountMatch[1] : '0');
+            setAutoApprovalMode(modeMatch ? modeMatch[1] : 'MANUAL');
+            
+            setApplyToAll(true); 
+            setRulesModal(true);
+            toast.success('Partially recovered configuration from legacy log description.');
+        } else {
+            toast.error('Could not recover configuration for this log entry.');
+        }
+    };
+
+    const handleDeleteHistory = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this rule history? This action cannot be undone.')) return;
+        
+        setActionLoading(true);
+        try {
+            const res = await apiFetch(`/admin/team-transfers/rule-history/${id}`, { method: 'DELETE' });
+            if (res.error) throw new Error(res.error);
+            toast.success('Rule history deleted.');
+            loadRuleHistory();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to delete history');
+        } finally {
+            setActionLoading(true);
         }
     };
 
@@ -102,29 +200,58 @@ export default function TeamTransfersPage() {
         }
     };
 
-    // User Search for Rules
-    useEffect(() => {
-        const fetchUsers = async () => {
-            if (searchQuery.length < 2) {
-                setSearchResults([]);
-                return;
-            }
-            try {
-                const res = await apiFetch(`/admin/users?search=${encodeURIComponent(searchQuery)}&per_page=5`);
-                setSearchResults(res.data?.data || []);
-            } catch (e) {
-                console.error(e);
-            }
-        };
-        const timeoutId = setTimeout(fetchUsers, 500);
-        return () => clearTimeout(timeoutId);
-    }, [searchQuery]);
+    const fetchTargetableUsers = async () => {
+        setSearching(true);
+        try {
+            const endpoint = isVendorConfig ? '/admin/sub-users' : '/admin/users/targetable?linked_only=1';
+            const res = await apiFetch(endpoint);
+            setTargetableUsers(res || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSearching(false);
+        }
+    };
 
-    const handleSaveRules = async (e: React.FormEvent) => {
-        e.preventDefault();
+    useEffect(() => {
+        if (rulesModal) {
+            fetchTargetableUsers();
+        }
+    }, [rulesModal, isVendorConfig]);
+
+
+    const filteredUsersList = targetableUsers.filter(user => {
+        const matchesSearch = !userFilters.search || 
+            user.name?.toLowerCase().includes(userFilters.search.toLowerCase()) ||
+            user.mobile_number?.includes(userFilters.search) ||
+            user.mobile?.includes(userFilters.search);
+        
+        return matchesSearch;
+    });
+
+    const toggleUser = (id: number) => {
+        if (selectedUsers.includes(id)) {
+            setSelectedUsers(selectedUsers.filter(uid => uid !== id));
+        } else {
+            setSelectedUsers([...selectedUsers, id]);
+        }
+    };
+
+    const selectAllFiltered = () => {
+        const allIds = filteredUsersList.map(u => u.id);
+        const newSelected = Array.from(new Set([...selectedUsers, ...allIds]));
+        setSelectedUsers(newSelected);
+    };
+
+    const deselectAllFiltered = () => {
+        const filteredIds = filteredUsersList.map(u => u.id);
+        setSelectedUsers(selectedUsers.filter(id => !filteredIds.includes(id)));
+    };
+
+    const handleSaveRules = async () => {
         setActionLoading(true);
         try {
-            const userIds = applyToAll ? 'ALL' : selectedUsers.map(u => u.id);
+            const userIds = applyToAll ? 'ALL' : selectedUsers;
             if (!applyToAll && userIds.length === 0) {
                 throw new Error("Please select at least one user.");
             }
@@ -133,6 +260,7 @@ export default function TeamTransfersPage() {
                 method: 'POST',
                 body: JSON.stringify({
                     user_ids: userIds,
+                    target_type: isVendorConfig ? 'VENDOR' : 'WORKER',
                     interval_days: parseInt(intervalDays || '0'),
                     interval_hours: parseInt(intervalHours || '0'),
                     min_amount: parseFloat(minAmount || '0'),
@@ -145,7 +273,8 @@ export default function TeamTransfersPage() {
             toast.success('Transfer Rules Updated Successfully.');
             setRulesModal(false);
             setSelectedUsers([]);
-            setSearchQuery('');
+            setUserFilters({ ...userFilters, search: '' });
+            loadRuleHistory();
         } catch (e: any) {
             toast.error(e.message || 'Failed to update rules');
         } finally {
@@ -168,15 +297,33 @@ export default function TeamTransfersPage() {
     };
 
     return (
-        <AdminLayout title="Team Earning Transfers">
+        <AdminLayout title="Team Transfers">
             <div className="space-y-6">
-                <div className="flex justify-end">
-                     <button
-                        onClick={() => setRulesModal(true)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
-                     >
-                         <Settings size={18} /> Configure Rules
-                     </button>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Team Transfers</h1>
+                        <p className="text-slate-500 text-sm font-medium">Manage worker payouts and withdrawal rules</p>
+                    </div>
+                    <div className="flex gap-3">
+                         <button
+                            onClick={() => {
+                                setIsVendorConfig(false);
+                                setRulesModal(true);
+                            }}
+                            className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+                         >
+                             <Users size={18} /> Configure Workers
+                         </button>
+                         <button
+                            onClick={() => {
+                                setIsVendorConfig(true);
+                                setRulesModal(true);
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+                         >
+                             <Settings size={18} /> Configure Vendors
+                         </button>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -258,6 +405,78 @@ export default function TeamTransfersPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Rule History Section */}
+                <div className="mt-12 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Deployed Rules History</h3>
+                            <p className="text-sm text-slate-500 font-medium">Click on any card to re-apply or edit the configuration</p>
+                        </div>
+                    </div>
+
+                    {loadingHistory ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="bg-white rounded-3xl p-6 border border-slate-100 animate-pulse h-44" />
+                            ))}
+                        </div>
+                    ) : ruleHistory.length === 0 ? (
+                        <div className="bg-white rounded-[2.5rem] p-12 text-center border border-slate-100 shadow-sm">
+                             <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Settings size={32} />
+                             </div>
+                             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No implementation history found</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {ruleHistory.map((log) => (
+                                <div 
+                                    key={log.id} 
+                                    className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group relative overflow-hidden flex flex-col justify-between"
+                                >
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50/50 rounded-full -mr-12 -mt-12 group-hover:bg-indigo-100/50 transition-colors" />
+                                    
+                                    <div>
+                                        <div className="flex justify-between items-start mb-4 relative z-10">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">
+                                                    {new Date(log.created_at).toLocaleDateString()}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {new Date(log.created_at).toLocaleTimeString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => handleDeleteHistory(log.id)}
+                                                    className="p-2 bg-slate-50 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all border border-transparent hover:border-red-100"
+                                                    title="Delete History"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                                <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-white group-hover:scale-110 transition-all border border-transparent group-hover:border-slate-100">
+                                                    <Settings size={16} className="text-slate-400 group-hover:text-indigo-600" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-sm font-bold text-slate-700 leading-relaxed mb-6 line-clamp-3">
+                                            {log.description}
+                                        </p>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => handleEditRule(log)}
+                                        className="w-full py-3 bg-slate-50 hover:bg-indigo-600 hover:text-white text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/btn active:scale-95"
+                                    >
+                                        Edit Configuration
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Approval Modal */}
@@ -308,21 +527,21 @@ export default function TeamTransfersPage() {
 
             {/* Rules Configuration Modal */}
             {rulesModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                            <div>
-                                <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
-                                    <Settings size={22} className="text-indigo-600" /> Transfer Rules
-                                </h3>
-                                <p className="text-sm text-slate-500 mt-1">Configure limits and intervals for team earning requests.</p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-indigo-600 text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                            <div className="shrink-0 relative z-10">
+                                <h2 className="text-2xl font-black tracking-tight">{isVendorConfig ? 'Configure Vendors' : 'Configure Workers'}</h2>
+                                <p className="text-indigo-100 text-xs font-medium uppercase tracking-widest mt-1">Transfer Withdrawal Rules</p>
                             </div>
-                            <button onClick={() => setRulesModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X size={20}/></button>
+                            <button onClick={() => setRulesModal(false)} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors relative z-10">
+                                <X size={20} />
+                            </button>
                         </div>
-                        
-                        <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                            {/* Target Selection */}
-                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
+
+                        <div className="p-8 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <div className="relative flex items-center justify-center">
                                         <input
@@ -336,53 +555,80 @@ export default function TeamTransfersPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <span className="font-bold text-sm text-slate-900 block">Apply to ALL Workers & Merchants</span>
+                                        <span className="font-bold text-sm text-slate-900 block">Apply to ALL {isVendorConfig ? 'Vendors' : 'Workers'}</span>
                                         <span className="text-xs text-slate-500">Applies rule to everyone active. Leave unchecked to target specific users.</span>
                                     </div>
                                 </label>
 
                                 {!applyToAll && (
-                                    <div className="mt-4 space-y-3">
+                                    <div className="mt-4 space-y-4">
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                             <input
                                                 type="text"
                                                 placeholder="Search user by name or mobile..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                value={userFilters.search}
+                                                onChange={(e) => setUserFilters({ ...userFilters, search: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                                             />
-                                            
-                                            {searchResults.length > 0 && (
-                                                <div className="absolute top-12 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-10">
-                                                    {searchResults.map(user => (
-                                                        <button
-                                                            key={user.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (!selectedUsers.find(u => u.id === user.id)) {
-                                                                    setSelectedUsers([...selectedUsers, user]);
-                                                                }
-                                                                setSearchQuery('');
-                                                                setSearchResults([]);
-                                                            }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center"
-                                                        >
-                                                            <div className="font-medium text-sm text-slate-900">{user.name}</div>
-                                                            <div className="text-xs text-slate-500">{user.mobile_number}</div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
-                                        {/* Selected Badges */}
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {selectedUsers.map(u => (
-                                                <div key={u.id} className="bg-white border border-indigo-200 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
-                                                    {u.name}
-                                                    <button onClick={() => setSelectedUsers(selectedUsers.filter(x => x.id !== u.id))} className="text-indigo-400 hover:text-indigo-600"><X size={14}/></button>
+
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase">
+                                                        {filteredUsersList.length} Found
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-indigo-600">
+                                                        {selectedUsers.length} Selected
+                                                    </span>
                                                 </div>
-                                            ))}
+                                                <div className="flex gap-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={selectAllFiltered}
+                                                        className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition"
+                                                    >
+                                                        Select All
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={deselectAllFiltered}
+                                                        className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:text-red-700 transition"
+                                                    >
+                                                        Clear All
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="max-h-[300px] overflow-y-auto border border-slate-100 rounded-2xl bg-white/50 space-y-1 p-1">
+                                                {searching ? (
+                                                    <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Fetching...</div>
+                                                ) : filteredUsersList.length > 0 ? (
+                                                    filteredUsersList.map(user => (
+                                                        <div
+                                                            key={user.id}
+                                                            onClick={() => toggleUser(user.id)}
+                                                            className={`p-3 flex items-center justify-between cursor-pointer rounded-xl transition-all ${selectedUsers.includes(user.id) ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${selectedUsers.includes(user.id) ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                                                    {user.name?.[0] || '?'}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs font-bold text-slate-800">{user.name}</p>
+                                                                    <p className="text-[10px] text-slate-500 font-medium">{user.mobile_number}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${selectedUsers.includes(user.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
+                                                                {selectedUsers.includes(user.id) && <CheckCircle size={12} className="text-white" />}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-8 text-center text-slate-400 text-xs italic">No users found</div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -500,6 +746,7 @@ export default function TeamTransfersPage() {
                     </div>
                 </div>
             )}
+
         </AdminLayout>
     );
 }

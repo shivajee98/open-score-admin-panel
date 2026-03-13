@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -224,6 +224,30 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     </div>
                 ) : (
                     <span className="text-xs text-slate-300 font-medium italic">Direct Join</span>
+                )}
+            </td>
+            <td className="p-6">
+                {user.referred_by?.code ? (
+                    <span className="text-xs font-mono font-black text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                        {user.referred_by.code}
+                    </span>
+                ) : (
+                    <span className="text-slate-200">-</span>
+                )}
+            </td>
+            <td className="p-6">
+                {user.location_url ? (
+                    <a 
+                        href={user.location_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                        title="View Location"
+                    >
+                        <MapPin size={18} />
+                    </a>
+                ) : (
+                    <span className="text-slate-200">-</span>
                 )}
             </td>
             <td className="p-6">
@@ -548,6 +572,8 @@ export default function MerchantsPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Ref CODE</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status QR</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>

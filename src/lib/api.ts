@@ -3,6 +3,13 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 // Trigger redeploy to bake in new API URL: https://api.msmeloan.sbs/api
 
+export const getStorageUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const apiHost = BASE_URL.split('/api')[0];
+    return `${apiHost}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 const getToken = async (): Promise<string | null> => {
     // Check localStorage
     if (typeof window !== 'undefined') {
