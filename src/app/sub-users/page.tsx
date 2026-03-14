@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
-import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar } from 'lucide-react';
 
 interface SubUser {
     id: number;
@@ -47,6 +48,28 @@ export default function SubUsersPage() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [selectedSubUser, setSelectedSubUser] = useState<SubUser | null>(null);
+
+    // Filters and Pagination
+    const [search, setSearch] = useState('');
+    const [filters, setFilters] = useState({
+        from_date: '',
+        to_date: '',
+        min_balance: '',
+        max_balance: '',
+        min_signup: '',
+        max_signup: '',
+        sort_by: 'created_at',
+        sort_order: 'desc'
+    });
+    const [pagination, setPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        total: 0,
+        per_page: 15
+    });
+
+    const [showFilters, setShowFilters] = useState(false);
+
     const [formData, setFormData] = useState({
         name: '',
         mobile_number: '',
@@ -68,6 +91,9 @@ export default function SubUsersPage() {
 
     useEffect(() => {
         fetchSubUsers();
+    }, [pagination.current_page, filters, search]);
+
+    useEffect(() => {
         fetchGlobalSettings();
     }, []);
 
@@ -96,9 +122,22 @@ export default function SubUsersPage() {
     };
 
     const fetchSubUsers = async () => {
+        setLoading(true);
         try {
-            const data = await apiFetch('/admin/sub-users');
-            setSubUsers(Array.isArray(data) ? data : []);
+            const params = new URLSearchParams({
+                page: pagination.current_page.toString(),
+                per_page: pagination.per_page.toString(),
+                search: search,
+                ...filters
+            });
+            const data = await apiFetch(`/admin/sub-users?${params.toString()}`);
+            setSubUsers(data.data || []);
+            setPagination({
+                current_page: data.current_page,
+                last_page: data.last_page,
+                total: data.total,
+                per_page: data.per_page
+            });
         } catch (e) {
             toast.error('Failed to load Vendors');
         } finally {
@@ -208,6 +247,32 @@ export default function SubUsersPage() {
                         <h2 className="text-xl font-black text-slate-900 px-1">Vendor Network</h2>
                         <p className="text-slate-500 text-sm font-medium px-1">Manage vendors and their credit limits.</p>
                     </div>
+                    <div className="flex flex-1 items-center gap-3 w-full md:w-auto">
+                        <div className="relative flex-1 md:max-w-xs">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, phone, code..."
+                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                value={search}
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setPagination(prev => ({ ...prev, current_page: 1 }));
+                                }}
+                            />
+                        </div>
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all border",
+                                showFilters ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200" : "bg-white text-slate-600 border-slate-100 hover:bg-slate-50"
+                            )}
+                        >
+                            <Filter className="w-4 h-4" />
+                            Filters
+                        </button>
+                    </div>
+
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => router.push('/sub-users/tree')}
@@ -229,6 +294,116 @@ export default function SubUsersPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* Advanced Filters */}
+                {showFilters && (
+                    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-8 animate-in slide-in-from-top-4 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Joining Date Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.from_date}
+                                        onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
+                                    />
+                                    <span className="text-slate-300">-</span>
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.to_date}
+                                        onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Wallet Balance Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_balance}
+                                        onChange={(e) => setFilters({ ...filters, min_balance: e.target.value })}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_balance}
+                                        onChange={(e) => setFilters({ ...filters, max_balance: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup Amount Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_signup}
+                                        onChange={(e) => setFilters({ ...filters, min_signup: e.target.value })}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_signup}
+                                        onChange={(e) => setFilters({ ...filters, max_signup: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sort By</label>
+                                <div className="flex gap-2">
+                                    <select
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_by}
+                                        onChange={(e) => setFilters({ ...filters, sort_by: e.target.value })}
+                                    >
+                                        <option value="created_at">Joining Date</option>
+                                        <option value="name">Name</option>
+                                        <option value="credit_balance">Wallet Balance</option>
+                                        <option value="default_signup_amount">Signup Amount</option>
+                                    </select>
+                                    <select
+                                        className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_order}
+                                        onChange={(e) => setFilters({ ...filters, sort_order: e.target.value })}
+                                    >
+                                        <option value="desc">Desc</option>
+                                        <option value="asc">Asc</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end mt-4">
+                            <button
+                                onClick={() => {
+                                    setFilters({
+                                        from_date: '',
+                                        to_date: '',
+                                        min_balance: '',
+                                        max_balance: '',
+                                        min_signup: '',
+                                        max_signup: '',
+                                        sort_by: 'created_at',
+                                        sort_order: 'desc'
+                                    });
+                                    setSearch('');
+                                }}
+                                className="text-xs font-black text-rose-600 uppercase tracking-widest hover:text-rose-700 transition-colors"
+                            >
+                                Reset All Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="flex justify-center items-center py-20">
@@ -390,6 +565,31 @@ export default function SubUsersPage() {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Controls */}
+                        {pagination.last_page > 1 && (
+                            <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Page {pagination.current_page} of {pagination.last_page} ({pagination.total} total vendors)
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setPagination(prev => ({ ...prev, current_page: Math.max(1, prev.current_page - 1) }))}
+                                        disabled={pagination.current_page === 1}
+                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setPagination(prev => ({ ...prev, current_page: Math.min(pagination.last_page, prev.current_page + 1) }))}
+                                        disabled={pagination.current_page === pagination.last_page}
+                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
