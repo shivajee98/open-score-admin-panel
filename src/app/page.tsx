@@ -74,7 +74,10 @@ export default function AdminDashboard() {
                 totalReferralPaid: totalReferralPaid,
                 totalQrDeposits: Array.isArray(qrData?.data) 
                     ? qrData.data.reduce((sum: number, b: any) => sum + (b.status !== 'rejected' && b.status !== 'pending' ? Number(b.security_amount) : 0), 0)
-                    : 0
+                    : 0,
+                totalVendors: analytics?.total_vendors || 0,
+                totalVendorsTransactionSum: analytics?.total_vendors_transaction_sum || 0,
+                totalAgents: analytics?.total_agents || 0
             } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
@@ -192,6 +195,33 @@ export default function AdminDashboard() {
                         <p className="text-3xl font-black text-amber-600">₹{(stats as any).totalReferralPaid?.toLocaleString('en-IN') || 0}</p>
                     </div>
                 </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                        <Users className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Vendors Overview</p>
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-black text-slate-900">{(stats as any).totalVendors || 0}</p>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Sub-Users</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-tight mt-1">
+                            Volume: ₹{(stats as any).totalVendorsTransactionSum?.toLocaleString('en-IN') || 0}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                        <BadgeCheck className="w-7 h-7" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Field Agents</p>
+                        <p className="text-3xl font-black text-slate-900">{(stats as any).totalAgents || 0}</p>
+                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight">Active Force</p>
+                    </div>
+                </div>
+
                 <Link href="/qr-control?view=history" className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-indigo-200 transition-all group">
                     <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
                         <QrCode className="w-7 h-7" />

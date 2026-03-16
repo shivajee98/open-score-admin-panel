@@ -27,11 +27,12 @@ interface Category {
 }
 
 const AVAILABLE_PERMISSIONS = [
-    { id: 'view_profile', label: 'View Profile' },
-    { id: 'view_transaction', label: 'View Transactions' },
-    { id: 'add_cashback', label: 'Add Cashback (Credit)' },
-    { id: 'approve_emi', label: 'Approve EMI Updates' },
-    { id: 'approve_loan', label: 'Process Loan Approvals' },
+    { id: 'approve_loan', label: 'Approve & Reject Loans' },
+    { id: 'approve_emi', label: 'Verify & Approve EMIs' },
+    { id: 'add_cashback', label: 'Add Cashback/Reward' },
+    { id: 'view_profile', label: 'View Customer Full Profile' },
+    { id: 'manage_agents', label: 'Manage Agent Support' },
+    { id: 'manage_vendors', label: 'Manage Vendor Support' },
     { id: 'update_kyc', label: 'Update KYC' },
 ];
 

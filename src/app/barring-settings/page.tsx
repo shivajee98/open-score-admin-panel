@@ -118,8 +118,6 @@ export default function BarringSettings() {
     const [capacityModal, setCapacityModal] = useState(false);
     const [tieredTiers, setTieredTiers] = useState([{ minBalance: '0', spendPercentage: '0' }]);
     const [selectedTieredLoanPlanId, setSelectedTieredLoanPlanId] = useState<any>('');
-    const [merchantSearch, setMerchantSearch] = useState('');
-    const [merchantResults, setMerchantResults] = useState<any[]>([]);
     const [selectedTargetUserIds, setSelectedTargetUserIds] = useState<number[]>([]);
     const [tieredUserCategory, setTieredUserCategory] = useState('CUSTOMER');
 
@@ -174,28 +172,22 @@ export default function BarringSettings() {
         }
     };
 
-    const searchTargetUsers = async (val: string) => {
-        setMerchantSearch(val);
-        if (val.length < 3) {
-            setMerchantResults([]);
-            return;
-        }
-        try {
-            // Fetch users but exclude VENDOR role as per requirement
-            const res = await apiFetch(`/admin/users/search-for-barring?search=${val}`);
-            const filtered = (res || []).filter((u: any) => u.role !== 'VENDOR' && ['CUSTOMER', 'MERCHANT', 'STUDENT'].includes(u.role));
-            setMerchantResults(filtered);
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
     const toggleTargetUser = (userId: number) => {
         if (selectedTargetUserIds.includes(userId)) {
             setSelectedTargetUserIds(selectedTargetUserIds.filter(id => id !== userId));
         } else {
             setSelectedTargetUserIds([...selectedTargetUserIds, userId]);
         }
+    };
+
+    const selectAllFilteredCapacity = () => {
+        const filteredIds = filteredUsersList.map(u => u.id);
+        setSelectedTargetUserIds(prev => Array.from(new Set([...prev, ...filteredIds])));
+    };
+
+    const deselectAllFilteredCapacity = () => {
+        const filteredIds = filteredUsersList.map(u => u.id);
+        setSelectedTargetUserIds(prev => prev.filter(id => !filteredIds.includes(id)));
     };
 
     const addTieredTier = () => {
@@ -275,10 +267,10 @@ export default function BarringSettings() {
     };
 
     useEffect(() => {
-        if (isWizardOpen && targetType === 'SPECIFIC_USER') {
+        if ((isWizardOpen && targetType === 'SPECIFIC_USER') || capacityModal) {
             fetchTargetableUsers();
         }
-    }, [isWizardOpen, targetType]);
+    }, [isWizardOpen, targetType, capacityModal]);
 
     const fetchTargetableUsers = async () => {
         setSearching(true);
@@ -1134,21 +1126,42 @@ export default function BarringSettings() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest">Selected Users (Empty = Apply to Role)</label>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Selected Users (Empty = Apply to Role)</h4>
+                                        <div className="flex gap-4">
+                                            <button
+                                                type="button"
+                                                onClick={selectAllFilteredCapacity}
+                                                className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-700 transition"
+                                            >
+                                                Select All Results
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={deselectAllFilteredCapacity}
+                                                className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:text-red-700 transition"
+                                            >
+                                                Clear Results
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                         <input
                                             type="text"
-                                            placeholder="Search by name or mobile..."
-                                            value={merchantSearch}
-                                            onChange={(e) => searchTargetUsers(e.target.value)}
+                                            placeholder="Search users to target..."
+                                            value={userFilters.search}
+                                            onChange={(e) => setUserFilters({ ...userFilters, search: e.target.value })}
                                             className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
                                         />
                                     </div>
 
-                                    {merchantResults.length > 0 && (
-                                        <div className="max-h-48 overflow-y-auto border border-slate-100 rounded-2xl bg-slate-50 p-1 space-y-1 shadow-inner">
-                                            {merchantResults.map(user => (
+                                    <div className="max-h-64 overflow-y-auto border border-slate-100 rounded-2xl bg-slate-50 p-1 space-y-1 shadow-inner">
+                                        {searching ? (
+                                            <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Loading users...</div>
+                                        ) : filteredUsersList.length > 0 ? (
+                                            filteredUsersList.map(user => (
                                                 <div 
                                                     key={user.id}
                                                     onClick={() => toggleTargetUser(user.id)}
@@ -1156,7 +1169,7 @@ export default function BarringSettings() {
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${selectedTargetUserIds.includes(user.id) ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                                            {user.name?.[0]}
+                                                            {user.name?.[0] || 'U'}
                                                         </div>
                                                         <div>
                                                             <p className="text-xs font-bold text-slate-800">{user.name}</p>
@@ -1167,21 +1180,25 @@ export default function BarringSettings() {
                                                         {selectedTargetUserIds.includes(user.id) && <CheckCircle size={12} className="text-white" />}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            ))
+                                        ) : (
+                                            <div className="p-10 text-center text-slate-400 text-sm italic">
+                                                No users match your criteria
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {selectedTargetUserIds.length > 0 && (
                                         <div className="flex flex-wrap gap-2 pt-2">
                                             <span className="text-[10px] font-black text-emerald-600 uppercase bg-emerald-50 px-2 py-1 rounded-md">
-                                                {selectedTargetUserIds.length} Users Selected
+                                                {selectedTargetUserIds.length} Total Users Selected
                                             </span>
                                             <button 
                                                 type="button" 
                                                 onClick={() => setSelectedTargetUserIds([])}
                                                 className="text-[10px] font-black text-red-500 uppercase hover:underline"
                                             >
-                                                Clear Selection
+                                                Unselect All
                                             </button>
                                         </div>
                                     )}

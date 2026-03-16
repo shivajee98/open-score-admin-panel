@@ -13,7 +13,7 @@ interface CashbackSetting {
     is_active: boolean;
 }
 
-export default function CashbackSettingsPage() {
+export default function OnboardingRewardsPage() {
     const [settings, setSettings] = useState<CashbackSetting[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -46,7 +46,7 @@ export default function CashbackSettingsPage() {
     };
 
     return (
-        <AdminLayout title="System Configurations">
+        <AdminLayout title="Onboarding Rewards">
             <div className="max-w-4xl space-y-6">
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4 mb-8">

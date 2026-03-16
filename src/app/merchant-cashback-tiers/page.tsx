@@ -17,7 +17,7 @@ interface Tier {
     is_active: boolean;
 }
 
-export default function ScheduledCashbackPage() {
+export default function MerchantCashbackTiersPage() {
     const [tiers, setTiers] = useState<Tier[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +116,7 @@ export default function ScheduledCashbackPage() {
     };
 
     return (
-        <AdminLayout title="Scheduled Cashback">
+        <AdminLayout title="Merchant Cashback Tiers">
             <div className="space-y-6">
 
                 {/* Add New Tier Form */}

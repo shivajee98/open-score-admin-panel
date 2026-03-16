@@ -76,7 +76,8 @@ export default function TeamTransfersPage() {
     const loadTransfers = async () => {
         try {
             const res = await apiFetch('/admin/team-transfers');
-            setTransfers(res?.data?.data || res?.data || []);
+            // Handle both direct array and paginated response { data: [...] }
+            setTransfers(res?.data || (Array.isArray(res) ? res : []));
         } catch (e: any) {
             toast.error(e.message || 'Failed to load transfers');
         } finally {
@@ -88,7 +89,7 @@ export default function TeamTransfersPage() {
         setLoading(true);
         try {
             const res = await apiFetch('/admin/team-transfers/recent');
-            setTransfers(res || []);
+            setTransfers(res?.data || (Array.isArray(res) ? res : []));
         } catch (e) {
             console.error(e);
         } finally {
@@ -205,7 +206,8 @@ export default function TeamTransfersPage() {
         try {
             const endpoint = isVendorConfig ? '/admin/sub-users' : '/admin/users/targetable?linked_only=1';
             const res = await apiFetch(endpoint);
-            setTargetableUsers(res || []);
+            // sub-users is paginated, users/targetable is array
+            setTargetableUsers(res?.data || (Array.isArray(res) ? res : []));
         } catch (e) {
             console.error(e);
         } finally {
@@ -220,7 +222,7 @@ export default function TeamTransfersPage() {
     }, [rulesModal, isVendorConfig]);
 
 
-    const filteredUsersList = targetableUsers.filter(user => {
+    const filteredUsersList = (Array.isArray(targetableUsers) ? targetableUsers : []).filter(user => {
         const matchesSearch = !userFilters.search || 
             user.name?.toLowerCase().includes(userFilters.search.toLowerCase()) ||
             user.mobile_number?.includes(userFilters.search) ||

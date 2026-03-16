@@ -17,6 +17,7 @@ interface SubUser {
     referral_code: string;
     credit_balance: number;
     credit_limit: number;
+    earnings_balance: number;
     default_signup_amount: number;
     admin_loan_commission: number;
     bonus_milestone_count?: number;
@@ -284,13 +285,46 @@ export default function SubUsersPage() {
                         <button
                             onClick={() => {
                                 setIsEditMode(false);
-                                setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: false, show_letter: false } as any);
+                                setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: globalReferralSettings?.default_can_create_vendors ?? false, show_letter: false } as any);
                                 setShowModal(true);
                             }}
                             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
                         >
                             <Plus className="w-5 h-5" />
                             Create Agent
+                        </button>
+                    </div>
+
+                    {/* Global Toggle for Vendor Creation */}
+                    <div className="flex items-center gap-4 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100 h-full">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">Global Permission</span>
+                            <span className="text-xs font-bold text-slate-700">Sub-Vendor Creation</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const newVal = !globalReferralSettings.default_can_create_vendors;
+                                setGlobalReferralSettings({ ...globalReferralSettings, default_can_create_vendors: newVal });
+                                try {
+                                    await apiFetch('/admin/referral-settings', {
+                                        method: 'PUT',
+                                        body: JSON.stringify({ ...globalReferralSettings, default_can_create_vendors: newVal })
+                                    });
+                                    toast.success(newVal ? 'Vendor creation ENABLED for all agents' : 'Vendor creation DISABLED for all agents');
+                                    fetchSubUsers(); // Refresh to show bulk update
+                                } catch (e) {
+                                    toast.error('Sync failed');
+                                    setGlobalReferralSettings({ ...globalReferralSettings, default_can_create_vendors: !newVal });
+                                }
+                            }}
+                            className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
+                                globalReferralSettings?.default_can_create_vendors ? 'bg-indigo-600' : 'bg-slate-300'
+                            }`}
+                        >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                                globalReferralSettings?.default_can_create_vendors ? 'translate-x-6' : 'translate-x-0'
+                            }`} />
                         </button>
                     </div>
                 </div>
@@ -415,11 +449,12 @@ export default function SubUsersPage() {
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50">
                                     <tr>
-                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-8">Agent Details</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-8">Vendor Details</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Status</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Dues</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                                     </tr>
                                 </thead>
@@ -516,6 +551,14 @@ export default function SubUsersPage() {
                                                     <div className="flex flex-col gap-1">
                                                         <span className="font-black text-emerald-600 text-sm">₹{(subUser.admin_loan_commission ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase">(Disburse)</span></span>
                                                         <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-rose-600 text-base tabular-nums truncate max-w-[120px]" title={`₹${(subUser.earnings_balance ?? 0).toLocaleString()}`}>
+                                                            ₹{(subUser.earnings_balance ?? 0).toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Pending Payout</span>
                                                     </div>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">

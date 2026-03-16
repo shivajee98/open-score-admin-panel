@@ -76,11 +76,10 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Coupons', href: '/coupon-generator', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
 
-        // Cashback System
-        { label: 'Cashback Requests', href: '/cashback-requests', icon: <Wallet className="w-5 h-5" />, roles: ['ADMIN'], group: 'Cashback System' },
-        { label: 'Scheduled Cashback', href: '/scheduled-cashback', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Cashback System' },
-        { label: 'Cashback Settings', href: '/cashback-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Cashback System' },
-        { label: 'Cashback Logs', href: '/cashback-logs', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Cashback System' },
+        // Rewards & Incentives
+        { label: 'Merchant Tiers', href: '/merchant-cashback-tiers', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
+        { label: 'Onboarding Bonuses', href: '/onboarding-rewards', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
+        { label: 'Rewards History', href: '/cashback-logs', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
 
         // Financial Operations
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },

@@ -191,16 +191,16 @@ const IssueReporter: React.FC<IssueReporterProps> = ({ appName }) => {
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="group relative flex items-center gap-2 bg-slate-900/90 hover:bg-slate-950 text-white px-5 py-4 rounded-full shadow-2xl backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105 active:scale-95"
+                    className="group relative flex items-center gap-2 bg-slate-900/90 hover:bg-slate-950 text-white px-3 py-2 rounded-full shadow-2xl backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105 active:scale-95"
                 >
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 transition-colors">
-                        <MessageSquare className="w-4 h-4 text-white" />
+                        <MessageSquare className="w-1 h-1 text-white" />
                     </div>
                     <span className="font-bold pr-1">Support & Feedback</span>
                     
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="absolute -top-1 -right-1 flex h-1 w-1">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                        <span className="relative inline-flex rounded-full h-1 w-1 bg-blue-500"></span>
                     </span>
                 </button>
             )}

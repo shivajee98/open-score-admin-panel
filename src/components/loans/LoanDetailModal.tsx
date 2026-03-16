@@ -271,11 +271,25 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                     <p className="text-sm font-bold text-slate-900">{loan.form_data.email || 'N/A'}</p>
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Current Address</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Permanent Address</p>
                                                     <p className="text-xs font-bold text-slate-700 leading-relaxed">
                                                         {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code]
                                                             .filter(Boolean).join(', ')}
                                                     </p>
+                                                </div>
+                                                <div className="col-span-2 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                                        <Shield size={10} className="text-blue-500" />
+                                                        Address Consistency
+                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${loan.form_data.is_address_same !== false ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                            {loan.form_data.is_address_same !== false ? 'Same as Permanent' : 'Different Address'}
+                                                        </span>
+                                                        {loan.form_data.is_address_same === false && (
+                                                            <p className="text-xs font-bold text-slate-700 flex-1">{loan.form_data.current_address}</p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -302,6 +316,41 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                 <div>
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Occupation</p>
                                                     <p className="text-sm font-bold text-slate-900">{loan.form_data.occupation || 'N/A'}</p>
+                                                </div>
+                                                <div className="col-span-2 pt-2 border-t border-slate-100">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Employment Type: <span className="text-blue-600 ml-1 underline decoration-2 underline-offset-4 font-mono">{loan.form_data.employment_type?.replace(/_/g, ' ').toUpperCase() || 'UNSPECIFIED'}</span></p>
+                                                    
+                                                    {loan.form_data.employment_type === 'self_employed' && (
+                                                        <div className="grid grid-cols-2 gap-4 bg-amber-50/30 p-3 rounded-xl border border-amber-100/50">
+                                                            <div>
+                                                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Business Type</p>
+                                                                <p className="text-xs font-bold text-amber-900">{loan.form_data.business_type || 'N/A'}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Location</p>
+                                                                <p className="text-xs font-bold text-amber-900">{loan.form_data.business_location || 'N/A'}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {loan.form_data.employment_type === 'employed' && (
+                                                        <div className="space-y-3 bg-blue-50/30 p-3 rounded-xl border border-blue-100/50">
+                                                            <div>
+                                                                <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-0.5">Company Name</p>
+                                                                <p className="text-xs font-bold text-blue-900">{loan.form_data.company_name || 'N/A'}</p>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-0.5">Role</p>
+                                                                    <p className="text-xs font-bold text-blue-900">{loan.form_data.job_role || 'N/A'}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-0.5">Location</p>
+                                                                    <p className="text-xs font-bold text-blue-900">{loan.form_data.company_location || 'N/A'}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
