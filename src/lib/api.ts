@@ -29,22 +29,23 @@ export const clearTokenCache = () => {
     }
 };
 
-export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
+export const apiFetch = async (endpoint: string, options: RequestInit & { responseType?: 'json' | 'blob' | 'text' } = {}) => {
+    const { responseType = 'json', ...fetchOptions } = options;
     const token = await getToken();
 
-    const isFormData = options.body instanceof FormData;
+    const isFormData = fetchOptions.body instanceof FormData;
 
     const headers: HeadersInit = {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         'Accept': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
+        ...fetchOptions.headers,
     };
 
     const url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
 
     const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         headers,
     });
 
@@ -78,6 +79,14 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         const errorMessage = errorData.error || errorData.message || `HTTP Error ${response.status}`;
         console.error(`[API Error] ${errorMessage}`, errorData);
         throw new Error(errorMessage);
+    }
+
+    if (responseType === 'blob') {
+        return response.blob();
+    }
+
+    if (responseType === 'text') {
+        return response.text();
     }
 
     return response.json();

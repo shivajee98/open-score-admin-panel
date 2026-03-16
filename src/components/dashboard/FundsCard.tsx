@@ -91,16 +91,16 @@ export default function FundsCard() {
     if (loading) return <div className="h-40 animate-pulse bg-slate-100 rounded-xl" />;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <Card className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white border-none shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-indigo-100">Total Capital (Principal)</CardTitle>
-                        <Wallet className="h-4 w-4 text-indigo-100" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-indigo-100">Total Capital (Principal)</CardTitle>
+                        <Wallet className="h-3.5 w-3.5 text-indigo-100" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{stats?.total_funds.toLocaleString()}</div>
-                        <p className="text-xs text-indigo-200 mt-1">Lendable Capital</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold">₹{stats?.total_funds.toLocaleString()}</div>
+                        <p className="text-[10px] text-indigo-200 mt-1">Lendable Capital</p>
                         <div className="mt-4 flex gap-2">
                             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                                 <DialogTrigger asChild>
@@ -180,125 +180,114 @@ export default function FundsCard() {
                 />
 
                 <Card className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-none shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-100">Total Profit Collection</CardTitle>
-                        <TrendingDown className="h-4 w-4 text-emerald-100 rotate-180" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-emerald-100">Total Profit Collection</CardTitle>
+                        <TrendingDown className="h-3.5 w-3.5 text-emerald-100 rotate-180" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{stats?.total_profit.toLocaleString()}</div>
-                        <p className="text-xs text-emerald-200 mt-1">Total (Interest + Fees)</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold">₹{stats?.total_profit.toLocaleString()}</div>
+                        <p className="text-[10px] text-emerald-200 mt-1">Total (Interest + Fees)</p>
                     </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white border-none shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-blue-100">Available to Lend</CardTitle>
-                        <IndianRupee className="h-4 w-4 text-blue-100" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-blue-100">Available to Lend</CardTitle>
+                        <IndianRupee className="h-3.5 w-3.5 text-blue-100" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{stats?.available_funds.toLocaleString()}</div>
-                        <p className="text-xs text-blue-200 mt-1">Remaining principal reserve</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold">₹{stats?.available_funds.toLocaleString()}</div>
+                        <p className="text-[10px] text-blue-200 mt-1">Remaining principal reserve</p>
                     </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-cyan-600 to-cyan-700 text-white border-none shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-cyan-100">Sub-User Limit Pool</CardTitle>
-                        <IndianRupee className="h-4 w-4 text-cyan-100" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-cyan-100">Sub-User Limit Pool</CardTitle>
+                        <IndianRupee className="h-3.5 w-3.5 text-cyan-100" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{stats?.sub_user_capitals_pool?.toLocaleString()}</div>
-                        <p className="text-xs text-cyan-200 mt-1">Total limits assigned</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold">₹{stats?.sub_user_capitals_pool?.toLocaleString()}</div>
+                        <p className="text-[10px] text-cyan-200 mt-1">Total limits assigned</p>
                     </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-br from-slate-700 to-slate-800 text-white border-none shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-100">Total Disbursed</CardTitle>
-                        <Wallet className="h-4 w-4 text-slate-100" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-slate-100">Total Disbursed</CardTitle>
+                        <Wallet className="h-3.5 w-3.5 text-slate-100" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{stats?.disbursed_funds.toLocaleString()}</div>
-                        <p className="text-xs text-slate-300 mt-1">Principal out in market</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold">₹{stats?.disbursed_funds.toLocaleString()}</div>
+                        <p className="text-[10px] text-slate-300 mt-1">Principal out in market</p>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <Card className="border-green-100 bg-green-50/30">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-green-700">Interest Earned</CardTitle>
-                        <ArrowUpRight className="h-4 w-4 text-green-600" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-green-700">Interest Earned</CardTitle>
+                        <ArrowUpRight className="h-3.5 w-3.5 text-green-600" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-700">₹{stats?.profit_collection?.toLocaleString()}</div>
-                        <p className="text-xs text-green-600 mt-1">Interest collected from loans</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold text-green-700">₹{stats?.profit_collection?.toLocaleString()}</div>
+                        <p className="text-[10px] text-green-600 mt-1">Interest collected from loans</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-emerald-100 bg-emerald-50/30">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-700">Loan Fee Income</CardTitle>
-                        <ArrowUpRight className="h-4 w-4 text-emerald-600" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-emerald-700">Loan Fee Income</CardTitle>
+                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-emerald-700">₹{stats?.fee_collection?.toLocaleString()}</div>
-                        <p className="text-xs text-emerald-600 mt-1">Processing fees + Platform charges</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold text-emerald-700">₹{stats?.fee_collection?.toLocaleString()}</div>
+                        <p className="text-[10px] text-emerald-600 mt-1">Processing fees + Platform charges</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-blue-100 bg-blue-50/30">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-blue-700">Outstanding Principal</CardTitle>
-                        <TrendingDown className="h-4 w-4 text-blue-600" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-blue-700">Outstanding Principal</CardTitle>
+                        <TrendingDown className="h-3.5 w-3.5 text-blue-600" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-blue-700">₹{stats?.outstanding_amount?.toLocaleString()}</div>
-                        <p className="text-xs text-blue-600 mt-1">Pending principal recovery</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold text-blue-700">₹{stats?.outstanding_amount?.toLocaleString()}</div>
+                        <p className="text-[10px] text-blue-600 mt-1">Pending principal recovery</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-red-100 bg-red-50/30">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-red-700">Overdue Amount</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-red-700">Overdue Amount</CardTitle>
+                        <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-700">₹{stats?.overdue_amount?.toLocaleString()}</div>
-                        <p className="text-xs text-red-600 mt-1">Total past due EMI</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold text-red-700">₹{stats?.overdue_amount?.toLocaleString()}</div>
+                        <p className="text-[10px] text-red-600 mt-1">Total past due EMI</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-purple-100 bg-purple-50/30 cursor-pointer hover:bg-purple-100/50 transition-colors" onClick={() => router.push('/cashback-logs')}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-purple-700">Cashback Paid</CardTitle>
-                        <TrendingDown className="h-4 w-4 text-purple-600" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-purple-700">Cashback Paid</CardTitle>
+                        <TrendingDown className="h-3.5 w-3.5 text-purple-600" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-purple-700">₹{stats?.cashback_transfer?.toLocaleString()}</div>
-                        <p className="text-xs text-purple-600 mt-1">Rewards & Bonuses</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold text-purple-700">₹{stats?.cashback_transfer?.toLocaleString()}</div>
+                        <p className="text-[10px] text-purple-600 mt-1">Rewards & Bonuses</p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-cyan-100 bg-cyan-50/30 cursor-pointer hover:bg-cyan-100/50 transition-colors" onClick={() => router.push('/merchants')}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-cyan-700">Merchant Credit Volume</CardTitle>
-                        <ArrowUpRight className="h-4 w-4 text-cyan-600" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
+                        <CardTitle className="text-[12px] font-medium text-cyan-700">Merchant Credit Volume</CardTitle>
+                        <ArrowUpRight className="h-3.5 w-3.5 text-cyan-600" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-cyan-700">₹{stats?.total_merchant_credits?.toLocaleString()}</div>
-                        <p className="text-xs text-cyan-600 mt-1">Total incoming via Customer QR</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-indigo-100 bg-indigo-50/30 cursor-pointer hover:bg-indigo-100/50 transition-colors col-span-1 md:col-span-2 lg:col-span-1" onClick={() => router.push('/qr-control?view=history')}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-indigo-700">QR Deposits</CardTitle>
-                        <QrCode className="h-4 w-4 text-indigo-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-indigo-700">₹{stats?.qr_deposits?.toLocaleString() || 0}</div>
-                        <p className="text-xs text-indigo-600 mt-1">Total security deposits from QR</p>
+                    <CardContent className="p-3 pt-0">
+                        <div className="text-xl font-bold text-cyan-700">₹{stats?.total_merchant_credits?.toLocaleString()}</div>
+                        <p className="text-[10px] text-cyan-600 mt-1">Total incoming via Customer QR</p>
                     </CardContent>
                 </Card>
             </div>

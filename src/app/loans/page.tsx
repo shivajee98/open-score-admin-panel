@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download } from 'lucide-react';
@@ -170,10 +170,21 @@ export default function LoanApprovals() {
                 return;
             }
 
-            // Flatten loan data for Excel
             const rows = allLoans.map((loan: any) => {
                 const formData = loan.form_data || {};
                 const user = loan.user || {};
+
+                // Extract any available geo data
+                let latitude = '';
+                let longitude = '';
+                const photoKeys = ['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'];
+                for (const key of photoKeys) {
+                    if (formData[key]?.geo?.lat && formData[key]?.geo?.lng) {
+                        latitude = formData[key].geo.lat;
+                        longitude = formData[key].geo.lng;
+                        break;
+                    }
+                }
 
                 return {
                     'Loan ID': loan.id,
@@ -194,6 +205,10 @@ export default function LoanApprovals() {
                     'Approved Date': loan.approved_at ? new Date(loan.approved_at).toLocaleDateString() : '',
                     'Disbursed Date': loan.disbursed_at ? new Date(loan.disbursed_at).toLocaleDateString() : '',
                     'Paid Amount': loan.paid_amount || 0,
+                    // GPS Data
+                    'Latitude': latitude,
+                    'Longitude': longitude,
+                    'Google Maps Link': latitude && longitude ? `https://www.google.com/maps?q=${latitude},${longitude}` : '',
                     // KYC Form Fields
                     'First Name': formData.first_name || '',
                     'Last Name': formData.last_name || '',
@@ -204,7 +219,7 @@ export default function LoanApprovals() {
                     'Street Address': formData.street_address || '',
                     'City': formData.city || '',
                     'State': formData.state || '',
-                    'PIN Code': formData.postal_code || '',
+                    'PIN Code': formData.postal_code || user.pincode || '',
                     'Aadhaar Number': formData.aadhar_number || '',
                     'PAN Number': formData.pan_number || '',
                     'Is Address Same?': formData.is_address_same !== false ? 'Yes' : 'No',
@@ -228,14 +243,14 @@ export default function LoanApprovals() {
                     'Account Holder': user.account_holder_name || formData.account_holder_name || '',
                     'Account Number': user.account_number || formData.account_number || '',
                     // KYC Photo URLs
-                    'Aadhaar Front': formData.aadhar_front?.url || formData.aadhar_front || '',
-                    'Aadhaar Back': formData.aadhar_back?.url || formData.aadhar_back || '',
-                    'PAN Front': formData.pan_front?.url || formData.pan_front || '',
-                    'Applicant Selfie': formData.applicant_selfie?.url || formData.applicant_selfie || formData.selfie?.url || formData.selfie || '',
-                    'Selfie with Agent': formData.agent_selfie?.url || formData.agent_selfie || '',
-                    'Property Photo 1': formData.prop_1?.url || formData.prop_1 || '',
-                    'Property Photo 2': formData.prop_2?.url || formData.prop_2 || '',
-                    'Property Photo 3': formData.prop_3?.url || formData.prop_3 || '',
+                    'Aadhaar Front': getStorageUrl(formData.aadhar_front?.url || formData.aadhar_front || ''),
+                    'Aadhaar Back': getStorageUrl(formData.aadhar_back?.url || formData.aadhar_back || ''),
+                    'PAN Front': getStorageUrl(formData.pan_front?.url || formData.pan_front || ''),
+                    'Applicant Selfie': getStorageUrl(formData.applicant_selfie?.url || formData.applicant_selfie || formData.selfie?.url || formData.selfie || ''),
+                    'Selfie with Agent': getStorageUrl(formData.agent_selfie?.url || formData.agent_selfie || ''),
+                    'Property Photo 1': getStorageUrl(formData.prop_1?.url || formData.prop_1 || ''),
+                    'Property Photo 2': getStorageUrl(formData.prop_2?.url || formData.prop_2 || ''),
+                    'Property Photo 3': getStorageUrl(formData.prop_3?.url || formData.prop_3 || ''),
                     'Location URL': formData.location_url || user.location_url || '',
                 };
             });

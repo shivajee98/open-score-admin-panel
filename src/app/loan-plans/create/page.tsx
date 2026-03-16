@@ -67,7 +67,10 @@ export default function CreateLoanPlan() {
         locked_roles: [] as string[],
         hidden_roles: [] as string[],
         tenure_type: 'months',
-        assigned_user_ids: [] as number[]
+        assigned_user_ids: [] as number[],
+        milestone_enabled: false,
+        milestone_min_amount: '',
+        milestone_max_amount: '',
     });
 
     const [targetableUsers, setTargetableUsers] = useState<any[]>([]);
@@ -224,7 +227,9 @@ export default function CreateLoanPlan() {
                             Object.entries(c.interest_rates || {}).map(([k, v]) => [k, Number(v)])
                         ),
                         fees: (c.fees || []).map(f => ({ ...f, amount: Number(f.amount) }))
-                    }))
+                    })),
+                    milestone_min_amount: formData.milestone_enabled ? Number(formData.milestone_min_amount) : null,
+                    milestone_max_amount: formData.milestone_enabled ? Number(formData.milestone_max_amount) : null,
                 })
             });
 
@@ -320,7 +325,56 @@ export default function CreateLoanPlan() {
                         </div>
                     </div>
 
-                    {/* Tenure Configurations */}
+                    {/* Milestone Section */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-700">Merchant Loan Milestone</h3>
+                                <p className="text-xs font-medium text-slate-400">Enable this to show a progress bar for this loan on the merchant dashboard.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${formData.milestone_enabled ? 'text-indigo-500' : 'text-slate-400'}`}>
+                                    {formData.milestone_enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, milestone_enabled: !formData.milestone_enabled })}
+                                    className={`w-12 h-6 rounded-full relative transition-colors ${formData.milestone_enabled ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                                >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.milestone_enabled ? 'right-1' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {formData.milestone_enabled && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Min Wallet Hits Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.milestone_min_amount}
+                                        onChange={(e) => setFormData({ ...formData, milestone_min_amount: e.target.value })}
+                                        placeholder="e.g. 5000"
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">Minimum transaction volume required to start showing progress.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Max Wallet Hits Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={formData.milestone_max_amount}
+                                        onChange={(e) => setFormData({ ...formData, milestone_max_amount: e.target.value })}
+                                        placeholder="e.g. 25000"
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">Total volume required to unlock eligibility for this loan.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-bold text-slate-800">Tenure Configurations</h3>

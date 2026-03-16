@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,7 @@ export default function AdminLayout({ children, title }: { children: React.React
     const { counts, monitoring, refreshMonitoring } = useAdminNotifications();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [expandedSubGroups, setExpandedSubGroups] = useState<Record<string, boolean>>({});
 
     // Let's use Ref for silence
     const txRef = useRef<string | null>(null);
@@ -68,8 +69,11 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Internal Team & Funds', href: '/internal-users', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
-        { label: 'Vendor', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
+        
+        // Nested Vendors inside User & Team
+        { label: 'Vendor List', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
+        { label: 'Agents', href: '/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
 
         // Promotions & Tools
         { label: 'QR Generator', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
@@ -86,6 +90,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Agent Cashouts', href: '/agent-payouts', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Team Transfers', href: '/team-transfers', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
+        { label: 'Cashback Usage', href: '/cashback-usage', icon: <Percent className="w-5 h-5 text-blue-400" />, roles: ['ADMIN'], group: 'Financial Operations' },
 
         // System & Support
         { label: 'Support Inbox', href: '/support/tickets', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
@@ -100,9 +105,12 @@ export default function AdminLayout({ children, title }: { children: React.React
 
     // Auto-expand the group that contains the active item
     useEffect(() => {
-        const currentItem = navItems.find(item => pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href)));
+        const currentItem = navItems.find((item: any) => pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href)));
         if (currentItem?.group) {
             setExpandedGroups(prev => ({ ...prev, [currentItem.group!]: true }));
+        }
+        if (currentItem?.subGroup) {
+            setExpandedSubGroups(prev => ({ ...prev, [currentItem.subGroup!]: true }));
         }
     }, [pathname, user]); // Re-run when pathname or user changes
 
@@ -213,30 +221,79 @@ export default function AdminLayout({ children, title }: { children: React.React
                                             </button>
                                             {isExpanded && (
                                                 <div className="space-y-1 pl-4 border-l-2 border-slate-800 ml-4 animate-in slide-in-from-top-2 duration-200">
-                                                    {items.map(item => {
-                                                        const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
-                                                        return (
-                                                            <Link
-                                                                key={item.href}
-                                                                href={item.href}
-                                                                onClick={() => setIsMobileMenuOpen(false)}
-                                                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all duration-200 group text-sm ${isActive ? (user?.role === 'SUB_USER' ? 'bg-indigo-600/20 text-indigo-400' : 'bg-blue-600/20 text-blue-400') : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                                                            >
-                                                                <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'} relative`}>
-                                                                    {item.icon}
-                                                                    {item.href === '/monitoring' && monitoring?.unread > 0 && (
-                                                                        <span className="absolute -top-1 -right-3 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                                                                            {monitoring.unread}
-                                                                        </span>
-                                                                    )}
-                                                                    {((item.href === '/loans' && counts.loans > 0) || (item.href === '/sub-users' && counts.kyc > 0)) && (
-                                                                        <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border border-slate-900"></span>
-                                                                    )}
-                                                                </div>
-                                                                {item.label}
-                                                            </Link>
-                                                        );
-                                                    })}
+                                                    {(() => {
+                                                        const groupElements: React.ReactNode[] = [];
+                                                        const processedSubGroups = new Set();
+
+                                                        items.forEach(item => {
+                                                            if (!item.subGroup) {
+                                                                const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+                                                                groupElements.push(
+                                                                    <Link
+                                                                        key={item.href}
+                                                                        href={item.href}
+                                                                        onClick={() => setIsMobileMenuOpen(false)}
+                                                                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all duration-200 group text-sm ${isActive ? (user?.role === 'SUB_USER' ? 'bg-indigo-600/20 text-indigo-400' : 'bg-blue-600/20 text-blue-400') : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                                                                    >
+                                                                        <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'} relative`}>
+                                                                            {item.icon}
+                                                                            {item.href === '/monitoring' && monitoring?.unread > 0 && (
+                                                                                <span className="absolute -top-1 -right-3 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                                                                                    {monitoring.unread}
+                                                                                </span>
+                                                                            )}
+                                                                            {((item.href === '/loans' && counts.loans > 0) || (item.href === '/sub-users' && counts.kyc > 0)) && (
+                                                                                <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border border-slate-900"></span>
+                                                                            )}
+                                                                        </div>
+                                                                        {item.label}
+                                                                    </Link>
+                                                                );
+                                                            } else if (!processedSubGroups.has(item.subGroup)) {
+                                                                const subGroupName = item.subGroup;
+                                                                processedSubGroups.add(subGroupName);
+                                                                const subItems = items.filter(i => i.subGroup === subGroupName);
+                                                                const isSubExpanded = !!expandedSubGroups[subGroupName];
+                                                                const hasActiveSubItem = subItems.some(si => pathname === si.href || (si.href !== '/' && pathname?.startsWith(si.href)));
+
+                                                                groupElements.push(
+                                                                    <div key={subGroupName} className="space-y-1">
+                                                                        <button
+                                                                            onClick={() => setExpandedSubGroups(prev => ({ ...prev, [subGroupName]: !prev[subGroupName] }))}
+                                                                            className={`flex items-center justify-between w-full px-4 py-2 rounded-xl font-bold transition-all duration-200 text-xs ${hasActiveSubItem ? 'text-blue-300' : 'text-slate-500 hover:bg-slate-800/50 hover:text-white'}`}
+                                                                        >
+                                                                            <span className="uppercase tracking-widest">{subGroupName}</span>
+                                                                            <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isSubExpanded ? 'rotate-180' : ''}`} />
+                                                                        </button>
+                                                                        {isSubExpanded && (
+                                                                            <div className="space-y-1 pl-4 border-l border-slate-700/50 ml-2 animate-in slide-in-from-top-1 duration-200">
+                                                                                {subItems.map(si => {
+                                                                                    const isActive = pathname === si.href || (si.href !== '/' && pathname?.startsWith(si.href));
+                                                                                    return (
+                                                                                        <Link
+                                                                                            key={si.href}
+                                                                                            href={si.href}
+                                                                                            onClick={() => setIsMobileMenuOpen(false)}
+                                                                                            className={`flex items-center gap-3 px-4 py-2 rounded-xl font-bold transition-all duration-200 group text-xs ${isActive ? 'bg-blue-600/10 text-blue-300' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                                                                                        >
+                                                                                            <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'} relative`}>
+                                                                                                {si.icon}
+                                                                                                {si.href === '/sub-users' && counts.kyc > 0 && (
+                                                                                                    <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border border-slate-900"></span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            {si.label}
+                                                                                        </Link>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            }
+                                                        });
+                                                        return groupElements;
+                                                    })()}
                                                 </div>
                                             )}
                                         </div>

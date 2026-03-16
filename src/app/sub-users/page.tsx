@@ -452,6 +452,7 @@ export default function SubUsersPage() {
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-8">Vendor Details</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Status</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Auth PIN</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Dues</th>
@@ -519,6 +520,15 @@ export default function SubUsersPage() {
                                                     <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
                                                         {subUser.referral_code}
                                                     </span>
+                                                </td>
+                                                <td className="p-6">
+                                                    {subUser.visible_pin ? (
+                                                        <span className="font-mono text-xs bg-blue-50 px-3 py-1.5 rounded-lg text-blue-700 font-black border border-blue-100">
+                                                            {subUser.visible_pin}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-300">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-2">

@@ -213,6 +213,9 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 </div>
             </td>
             <td className="p-6">
+                <p className="text-xs font-bold text-slate-700">{user.pincode || 'N/A'}</p>
+            </td>
+            <td className="p-6">
                 {user.referred_by ? (
                     <div className="flex flex-col">
                         <p className="text-xs font-black text-blue-600">{user.referred_by.name}</p>
@@ -822,14 +825,17 @@ export default function UsersPage() {
                     <button
                         onClick={async () => {
                             try {
-                                const res = await apiFetch('/admin/users/export?search=' + search);
-                                const url = window.URL.createObjectURL(new Blob([res]));
+                                const blob = await apiFetch(`/admin/users/export?type=customer&search=${search}`, { responseType: 'blob' });
+                                const url = window.URL.createObjectURL(blob);
                                 const link = document.createElement('a');
                                 link.href = url;
                                 link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
                                 document.body.appendChild(link);
                                 link.click();
+                                link.remove();
+                                window.URL.revokeObjectURL(url);
                             } catch (e) {
+                                console.error('Export failed', e);
                                 alert('Export failed. Please try again.');
                             }
                         }}
@@ -888,6 +894,7 @@ export default function UsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback % (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Pin Code</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
