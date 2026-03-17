@@ -8,6 +8,7 @@ import { Percent, Save, Loader2, Info } from 'lucide-react';
 
 export default function CashbackSettings() {
     const [percentage, setPercentage] = useState<string>('0');
+    const [threshold, setThreshold] = useState<string>('0');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -18,8 +19,9 @@ export default function CashbackSettings() {
     const fetchSettings = async () => {
         try {
             const res = await apiFetch('/admin/settings');
-            if (res && res.cashback_usage_percentage !== undefined) {
-                setPercentage(res.cashback_usage_percentage.toString());
+            if (res) {
+                if (res.cashback_usage_percentage !== undefined) setPercentage(res.cashback_usage_percentage.toString());
+                if (res.cashback_threshold_amount !== undefined) setThreshold(res.cashback_threshold_amount.toString());
             }
         } catch (error) {
             toast.error('Failed to load settings');
@@ -30,8 +32,15 @@ export default function CashbackSettings() {
 
     const handleSave = async () => {
         const val = parseFloat(percentage);
+        const threshVal = parseFloat(threshold);
+        
         if (isNaN(val) || val < 0 || val > 100) {
             toast.error('Please enter a valid percentage between 0 and 100');
+            return;
+        }
+
+        if (isNaN(threshVal) || threshVal < 0) {
+            toast.error('Please enter a valid threshold amount');
             return;
         }
 
@@ -39,7 +48,10 @@ export default function CashbackSettings() {
         try {
             await apiFetch('/admin/settings', {
                 method: 'POST',
-                body: JSON.stringify({ cashback_usage_percentage: val }),
+                body: JSON.stringify({ 
+                    cashback_usage_percentage: val,
+                    cashback_threshold_amount: threshVal
+                }),
             });
             toast.success('Cashback settings updated');
         } catch (error) {
@@ -62,6 +74,7 @@ export default function CashbackSettings() {
                         <p className="text-blue-700 mt-1 leading-relaxed">
                             This percentage determines how much of a user's <strong>Available Cashback</strong> is automatically used to pay for their transactions. 
                             If set to 10%, every time a user pays, 10% of their cashback balance (capped by the transaction amount) will be used, and the remaining balance will be deducted from their main wallet.
+                            <strong> Note:</strong> Cashback usage will only be triggered if the user's cashback balance is above the configured threshold.
                         </p>
                     </div>
                 </div>
@@ -97,8 +110,24 @@ export default function CashbackSettings() {
                                     %
                                 </div>
                             </div>
+                        </label>
+
+                        <label className="block">
+                            <span className="text-slate-700 font-bold mb-2 block">Cashback Usage Threshold (₹)</span>
+                            <div className="relative">
+                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl italic">₹</span>
+                                <input
+                                    type="number"
+                                    value={threshold}
+                                    onChange={(e) => setThreshold(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-6 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-black text-xl text-slate-900 appearance-none"
+                                    placeholder="e.g., 2000"
+                                    min="0"
+                                    disabled={isLoading || isSaving}
+                                />
+                            </div>
                             <p className="mt-3 text-sm text-slate-400 font-medium">
-                                Changes will take effect immediately for all new transactions.
+                                If cashback balance is less than this amount, it will not be used in transfers.
                             </p>
                         </label>
 

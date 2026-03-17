@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, User, Smartphone, Lock, Shield, Settings, Check, Users } from 'lucide-react';
+import { Plus, Trash2, Edit, User, Smartphone, Lock, Shield, Settings, Check, Users, Clock } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import AdminLayout from '@/components/AdminLayout';
@@ -41,11 +41,19 @@ export default function SupportAgentsPage() {
     const [agents, setAgents] = useState<Agent[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSavingAvailability, setIsSavingAvailability] = useState(false);
+
+    // Support Availability
+    const [availability, setAvailability] = useState({
+        start_time: '',
+        end_time: '',
+        message: ''
+    });
 
     // Modals
     const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-
+    
     // Editing
     const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -64,10 +72,35 @@ export default function SupportAgentsPage() {
         slug: '',
         permissions: [] as string[]
     });
-
     useEffect(() => {
         fetchData();
+        fetchAvailability();
     }, []);
+
+    const fetchAvailability = async () => {
+        try {
+            const data = await apiFetch('/admin/support/availability');
+            setAvailability(data);
+        } catch (error) {
+            console.error('Failed to fetch availability');
+        }
+    };
+
+    const handleAvailabilitySubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingAvailability(true);
+        try {
+            await apiFetch('/admin/support/availability', {
+                method: 'POST',
+                body: JSON.stringify(availability)
+            });
+            toast.success('Availability updated');
+        } catch (error) {
+            toast.error('Failed to update availability');
+        } finally {
+            setIsSavingAvailability(false);
+        }
+    };
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -85,7 +118,6 @@ export default function SupportAgentsPage() {
         }
     };
 
-    // Agent Handlers
     const handleAgentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (agentFormData.mobile_number.length !== 10) {
@@ -234,6 +266,64 @@ export default function SupportAgentsPage() {
                         >
                             <Settings size={14} /> Categories
                         </button>
+                    </div>
+                </div>
+
+                {/* Support Availability Box */}
+                <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                                <Clock size={20} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900 tracking-tight">Support Availability</h2>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Global operating hours</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleAvailabilitySubmit} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Start Time</label>
+                                <input 
+                                    type="text" 
+                                    value={availability.start_time} 
+                                    onChange={e => setAvailability({...availability, start_time: e.target.value})} 
+                                    placeholder="e.g. 10:00 AM"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">End Time</label>
+                                <input 
+                                    type="text" 
+                                    value={availability.end_time} 
+                                    onChange={e => setAvailability({...availability, end_time: e.target.value})} 
+                                    placeholder="e.g. 06:00 PM"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all outline-none"
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Display Message</label>
+                                <input 
+                                    type="text" 
+                                    value={availability.message} 
+                                    onChange={e => setAvailability({...availability, message: e.target.value})} 
+                                    placeholder="e.g. Support available from 10 AM to 6 PM"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSavingAvailability}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-[0.2em] py-3.5 rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+                                >
+                                    {isSavingAvailability ? 'Saving...' : 'Update Status'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 

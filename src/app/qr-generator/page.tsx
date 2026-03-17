@@ -669,7 +669,7 @@ export default function QrGenerator() {
 
                                         <div className="mb-4 mt-2">
                                             <div className="p-3 bg-white rounded-3xl shadow-lg border border-slate-100">
-                                                <QRCode value={code.code} size={160} level="H" />
+                                                <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={160} level="H" />
                                             </div>
                                         </div>
 
@@ -771,7 +771,7 @@ export default function QrGenerator() {
                                         <div className="qr-ring-container">
                                             <div className="qr-ring"></div>
                                             <div className="qr-box">
-                                                <QRCode value={code.code} size={220} level="H" />
+                                                <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={220} level="H" />
                                                 <div className="check-badge">
                                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                                                         <path d="M20 6L9 17l-5-5" />
@@ -807,7 +807,7 @@ export default function QrGenerator() {
                         <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-3xl animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
                             <div className="flex flex-col items-center">
                                 <div className="p-4 bg-white rounded-[2rem] shadow-2xl border-4 border-slate-50 mb-8">
-                                    <QRCode value={selectedCode.code} size={180} />
+                                    <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${selectedCode.code}`} size={180} />
                                 </div>
 
                                 <div className="w-full space-y-6 text-center">
