@@ -282,7 +282,7 @@ export default function FundsCard() {
 
                 <Card className="border-cyan-100 bg-cyan-50/30 cursor-pointer hover:bg-cyan-100/50 transition-colors" onClick={() => router.push('/merchants')}>
                     <CardHeader className="flex flex-row items-center justify-between pb-1 p-3">
-                        <CardTitle className="text-[12px] font-medium text-cyan-700">Merchant Credit Volume</CardTitle>
+                        <CardTitle className="text-[12px] font-medium text-cyan-700">Merchant Floating</CardTitle>
                         <ArrowUpRight className="h-3.5 w-3.5 text-cyan-600" />
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
