@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Search, Filter, MessageSquare, Clock, CheckCircle2, User, Send, Paperclip, ShieldAlert, Wallet, BadgeCheck, Ban, AlertCircle, Briefcase, PlayCircle, ExternalLink, Eye, XCircle, TrendingUp, IndianRupee } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, Clock, User, Send, ShieldAlert, Wallet, BadgeCheck, Ban, AlertCircle, Briefcase, PlayCircle, ExternalLink, Eye, XCircle, TrendingUp, IndianRupee } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import AdminLayout from '@/components/AdminLayout';
@@ -22,8 +22,91 @@ interface Ticket {
         name: string;
         mobile_number: string;
     };
-    messages?: any[];
+    messages?: TicketMessage[];
 }
+
+interface TicketMessage {
+    id?: number;
+    user_id?: number;
+    message: string;
+    is_admin_reply?: boolean;
+    created_at: string;
+    attachment_url?: string;
+    user?: {
+        id?: number;
+        name?: string;
+        mobile_number?: string;
+        role?: string;
+    };
+    admin?: {
+        id?: number;
+        name?: string;
+        mobile_number?: string;
+        role?: string;
+    };
+    agent?: {
+        id?: number;
+        name?: string;
+        mobile_number?: string;
+        role?: string;
+    };
+    support_user?: {
+        id?: number;
+        name?: string;
+        mobile_number?: string;
+        role?: string;
+    };
+    sender?: {
+        id?: number;
+        name?: string;
+        mobile_number?: string;
+        role?: string;
+    };
+}
+
+interface SupportPersonInfo {
+    id?: number;
+    name: string;
+    mobile_number?: string;
+    role?: string;
+}
+
+interface ActiveLoanResponse {
+    loan?: {
+        id: number;
+    };
+}
+
+interface LoanRepayment {
+    id: number;
+    amount: number | string;
+    due_date: string;
+    status: string;
+}
+
+interface LoanDetails {
+    loan?: {
+        id: number;
+        status: string;
+        amount: number | string;
+        created_at: string;
+    };
+    repayments?: LoanRepayment[];
+    user?: {
+        wallet?: {
+            balance?: number | string;
+        };
+    };
+}
+
+interface ApiMessageResponse {
+    message?: string;
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+};
 
 export default function SupportTicketsPage() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -39,7 +122,7 @@ export default function SupportTicketsPage() {
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [processData, setProcessData] = useState({ action: 'recharge', amount: '', target_id: '' });
     const [rejectReason, setRejectReason] = useState('');
-    const [loanDetails, setLoanDetails] = useState<any>(null);
+    const [loanDetails, setLoanDetails] = useState<LoanDetails | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
 
     // Cashback state
@@ -48,64 +131,19 @@ export default function SupportTicketsPage() {
     const [cashbackReason, setCashbackReason] = useState('Support Ticket Reward');
     const [isProcessingCashback, setIsProcessingCashback] = useState(false);
 
-    useEffect(() => {
-        fetchTickets();
-    }, [statusFilter]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            fetchTickets(true);
-        }, 15000); // 15s poll for new tickets
-        return () => clearInterval(interval);
-    }, [statusFilter]);
-
-    useEffect(() => {
-        if (selectedTicket) {
-            const interval = setInterval(() => {
-                fetchMessages(selectedTicket.id, true);
-            }, 5000);
-            return () => clearInterval(interval);
-        }
-    }, [selectedTicket?.id]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [selectedTicket?.messages]);
-
-    const fetchTickets = async (silent = false) => {
+    const fetchTickets = useCallback(async (silent = false) => {
         if (!silent) setIsLoading(true);
         try {
             const res = await apiFetch(`/admin/support/tickets?status=${statusFilter}`);
             setTickets(res.data || []);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load tickets');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [statusFilter]);
 
-    const selectTicket = async (ticket: Ticket) => {
-        setSelectedTicket(ticket);
-        fetchMessages(ticket.id);
-        fetchUserLoans(ticket.user.id);
-    };
-
-    const fetchUserLoans = async (userId: number) => {
-        try {
-            const loanRes: any = await apiFetch(`/admin/users/${userId}/active-loan`);
-            if (loanRes && loanRes.loan) {
-                const fullLoanRes: any = await apiFetch(`/admin/loans/${loanRes.loan.id}/details`);
-                setLoanDetails(fullLoanRes);
-            } else {
-                setLoanDetails(null);
-            }
-        } catch (error) {
-            console.error("Failed to fetch user loan details", error);
-            setLoanDetails(null);
-        }
-    };
-
-    const fetchMessages = async (ticketId: number, silent = false) => {
+    const fetchMessages = useCallback(async (ticketId: number, silent = false) => {
         if (!silent) setIsMessageLoading(true);
         try {
             const res = await apiFetch(`/support/tickets/${ticketId}/messages`);
@@ -116,10 +154,61 @@ export default function SupportTicketsPage() {
                 }
                 return prev;
             });
-        } catch (error) {
+        } catch {
             console.error('Failed to load messages');
         } finally {
             if (!silent) setIsMessageLoading(false);
+        }
+    }, []);
+
+    const selectedTicketId = selectedTicket?.id;
+
+    useEffect(() => {
+        fetchTickets();
+    }, [fetchTickets]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchTickets(true);
+        }, 15000); // 15s poll for new tickets
+        return () => clearInterval(interval);
+    }, [fetchTickets]);
+
+    useEffect(() => {
+        if (selectedTicketId) {
+            const interval = setInterval(() => {
+                fetchMessages(selectedTicketId, true);
+            }, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [fetchMessages, selectedTicketId]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [selectedTicket?.messages]);
+
+    const selectTicket = async (ticket: Ticket) => {
+        setSelectedTicket(ticket);
+        fetchMessages(ticket.id);
+        if (ticket.user?.id) {
+            fetchUserLoans(ticket.user.id);
+        } else {
+            setLoanDetails(null);
+        }
+    };
+
+    const fetchUserLoans = async (userId: number) => {
+        try {
+            const loanRes = await apiFetch(`/admin/users/${userId}/active-loan`) as ActiveLoanResponse;
+            if (loanRes && loanRes.loan) {
+                const fullLoanRes = await apiFetch(`/admin/loans/${loanRes.loan.id}/details`) as LoanDetails;
+                setLoanDetails(fullLoanRes);
+            } else {
+                setLoanDetails(null);
+            }
+        } catch (error) {
+            console.error("Failed to fetch user loan details", error);
+            setLoanDetails(null);
         }
     };
 
@@ -136,7 +225,7 @@ export default function SupportTicketsPage() {
                 body: JSON.stringify({ message: msg })
             });
             fetchMessages(selectedTicket.id, true);
-        } catch (error) {
+        } catch {
             toast.error('Failed to send message');
         }
     };
@@ -150,7 +239,7 @@ export default function SupportTicketsPage() {
             toast.success(`Ticket marked as ${newStatus}`);
             fetchTickets();
             if (selectedTicket?.id === ticketId) setSelectedTicket(null);
-        } catch (error) {
+        } catch {
             toast.error('Failed to update status');
         }
     };
@@ -184,8 +273,8 @@ export default function SupportTicketsPage() {
             setProcessModalOpen(false);
             fetchTickets();
             setSelectedTicket(null);
-        } catch (error: any) {
-            toast.error(error.message || 'Processing failed');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Processing failed'));
         }
     };
 
@@ -201,8 +290,8 @@ export default function SupportTicketsPage() {
             setRejectModalOpen(false);
             fetchTickets();
             setSelectedTicket(null);
-        } catch (error: any) {
-            toast.error(error.message || 'Rejection failed');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Rejection failed'));
         }
     };
 
@@ -220,15 +309,36 @@ export default function SupportTicketsPage() {
 
     const hasAttachment = selectedTicket?.messages?.some(m => !!m.attachment_url);
 
+    const getSupportPersonFromMessages = (messages?: TicketMessage[]): SupportPersonInfo | null => {
+        if (!messages || messages.length === 0) return null;
+
+        const adminMessages = messages.filter((msg) => msg?.is_admin_reply);
+        if (adminMessages.length === 0) return null;
+
+        const latestAdminMessage = adminMessages[adminMessages.length - 1];
+        const actor = latestAdminMessage.user || latestAdminMessage.admin || latestAdminMessage.agent || latestAdminMessage.support_user || latestAdminMessage.sender;
+
+        if (!actor && !latestAdminMessage.user_id) return null;
+
+        return {
+            id: actor?.id || latestAdminMessage.user_id,
+            name: actor?.name || 'Customer Support',
+            mobile_number: actor?.mobile_number,
+            role: actor?.role
+        };
+    };
+
+    const supportPerson = getSupportPersonFromMessages(selectedTicket?.messages);
+
     const handleLoanAction = async (loanId: number, endpoint: string, successMsg: string) => {
         if (!confirm(`Are you sure you want to ${endpoint.replace('-', ' ')}?`)) return;
         setIsActionLoading(true);
         try {
             await apiFetch(`/admin/loans/${loanId}/${endpoint}`, { method: 'POST' });
             toast.success(successMsg);
-            if (selectedTicket) fetchUserLoans(selectedTicket.user.id);
-        } catch (error: any) {
-            toast.error(error.message || 'Action failed');
+            if (selectedTicket?.user?.id) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Action failed'));
         } finally {
             setIsActionLoading(false);
         }
@@ -244,9 +354,9 @@ export default function SupportTicketsPage() {
                 body: JSON.stringify({ reason })
             });
             toast.success('Loan rejected');
-            if (selectedTicket) fetchUserLoans(selectedTicket.user.id);
-        } catch (error: any) {
-            toast.error(error.message || 'Rejection failed');
+            if (selectedTicket?.user?.id) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Rejection failed'));
         } finally {
             setIsActionLoading(false);
         }
@@ -254,23 +364,23 @@ export default function SupportTicketsPage() {
 
     const handleAddCashback = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedTicket) return;
+        if (!selectedTicket || !selectedTicket.user?.id) return;
         if (!cashbackAmount || isNaN(Number(cashbackAmount))) {
             toast.error('Enter valid amount');
             return;
         }
         setIsProcessingCashback(true);
         try {
-            const res: any = await apiFetch(`/admin/users/${selectedTicket.user.id}/credit-cashback`, {
+            const res = await apiFetch(`/admin/users/${selectedTicket.user.id}/credit-cashback`, {
                 method: 'POST',
                 body: JSON.stringify({ amount: Number(cashbackAmount), description: cashbackReason })
-            });
+            }) as ApiMessageResponse;
             toast.success(res.message || 'Cashback processed successfully');
             setCashbackModalOpen(false);
             setCashbackAmount('');
-            fetchUserLoans(selectedTicket.user.id);
-        } catch (error: any) {
-            toast.error(error.message || 'Cashback operation failed');
+            if (selectedTicket.user.id) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Cashback operation failed'));
         } finally {
             setIsProcessingCashback(false);
         }
@@ -282,9 +392,9 @@ export default function SupportTicketsPage() {
         try {
             await apiFetch(`/admin/repayments/${repaymentId}/approve`, { method: 'POST' });
             toast.success('EMI approved successfully');
-            if (selectedTicket) fetchUserLoans(selectedTicket.user.id);
-        } catch (error: any) {
-            toast.error(error.message || 'EMI approval failed');
+            if (selectedTicket?.user?.id) fetchUserLoans(selectedTicket.user.id);
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'EMI approval failed'));
         } finally {
             setIsActionLoading(false);
         }
@@ -341,7 +451,7 @@ export default function SupportTicketsPage() {
                                         <p className="text-[11px] text-slate-500 truncate">
                                             {ticket.messages && ticket.messages.length > 0
                                                 ? ticket.messages[0].message
-                                                : ticket.user.name}
+                                                : (ticket.user?.name || 'Unknown User')}
                                         </p>
                                     </div>
                                 </button>
@@ -361,11 +471,17 @@ export default function SupportTicketsPage() {
                                         <User size={20} />
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-black text-slate-900">{selectedTicket.user.name}</h4>
-                                        <p className="text-[10px] text-slate-400 font-mono">{selectedTicket.user.mobile_number}</p>
+                                        <h4 className="text-sm font-black text-slate-900">{selectedTicket.user?.name || 'Unknown User'}</h4>
+                                        <p className="text-[10px] text-slate-400 font-mono">{selectedTicket.user?.mobile_number || 'N/A'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => selectedTicket.user?.id && window.location.assign(`/users/detail/?id=${selectedTicket.user.id}`)}
+                                        className="px-3 py-1.5 border border-blue-200 text-blue-600 rounded-lg text-[10px] font-black hover:bg-blue-50 transition-colors"
+                                    >
+                                        View Profile
+                                    </button>
                                     {selectedTicket.payment_status && ['PENDING_VERIFICATION', 'AGENT_APPROVED'].includes(selectedTicket.payment_status) && (
                                         <div className="flex items-center gap-1">
                                             <button onClick={() => setRejectModalOpen(true)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100"><Ban size={16} /></button>
@@ -444,7 +560,7 @@ export default function SupportTicketsPage() {
                                     </div>
 
                                     <div className="p-4 space-y-4">
-                                        {!loanDetails ? (
+                                        {!loanDetails || !loanDetails.loan ? (
                                             <div className="text-center py-6">
                                                 <AlertCircle size={24} className="mx-auto text-slate-300 mb-2" />
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">No active loan found</p>
@@ -469,17 +585,17 @@ export default function SupportTicketsPage() {
                                                 <div className="grid grid-cols-1 gap-2">
                                                     {loanDetails.loan.status === 'PENDING' && (
                                                         <button
-                                                            onClick={() => handleLoanAction(loanDetails.loan.id, 'proceed', 'Loan marked as proceed')}
+                                                            onClick={() => handleLoanAction(loanDetails.loan!.id, 'proceed', 'Loan marked as proceed')}
                                                             disabled={isActionLoading}
                                                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50"
                                                         >
                                                             <PlayCircle size={14} /> Proceed Application
                                                         </button>
-                                                    )}
+                                                        )}
 
                                                     {(loanDetails.loan.status === 'PROCEEDED' || loanDetails.loan.status === 'KYC_SENT') && (
                                                         <button
-                                                            onClick={() => handleLoanAction(loanDetails.loan.id, 'send-kyc', 'KYC link sent to customer')}
+                                                            onClick={() => handleLoanAction(loanDetails.loan!.id, 'send-kyc', 'KYC link sent to customer')}
                                                             disabled={isActionLoading}
                                                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-indigo-200"
                                                         >
@@ -489,7 +605,7 @@ export default function SupportTicketsPage() {
 
                                                     {['FORM_SUBMITTED', 'PROCEEDED', 'KYC_SENT'].includes(loanDetails.loan.status) && (
                                                         <button
-                                                            onClick={() => handleLoanAction(loanDetails.loan.id, 'approve', 'Loan approved successfully')}
+                                                            onClick={() => handleLoanAction(loanDetails.loan!.id, 'approve', 'Loan approved successfully')}
                                                             disabled={isActionLoading}
                                                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-emerald-200"
                                                         >
@@ -499,7 +615,7 @@ export default function SupportTicketsPage() {
 
                                                     {['PENDING', 'PROCEEDED', 'KYC_SENT', 'FORM_SUBMITTED'].includes(loanDetails.loan.status) && (
                                                         <button
-                                                            onClick={() => handleRejectLoan(loanDetails.loan.id)}
+                                                            onClick={() => handleRejectLoan(loanDetails.loan!.id)}
                                                             disabled={isActionLoading}
                                                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95 disabled:opacity-50"
                                                         >
@@ -508,7 +624,7 @@ export default function SupportTicketsPage() {
                                                     )}
 
                                                     <button
-                                                        onClick={() => window.open(`/admin/loans/${loanDetails.loan.id}`, '_blank')}
+                                                        onClick={() => window.open(`/admin/loans/${loanDetails.loan!.id}`, '_blank')}
                                                         className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                                                     >
                                                         <Eye size={14} /> View Full File
@@ -538,7 +654,7 @@ export default function SupportTicketsPage() {
                                             </div>
                                         )}
 
-                                        {loanDetails?.repayments?.filter((r: any) => r.status === 'PENDING').map((rem: any) => (
+                                        {loanDetails?.repayments?.filter((r) => r.status === 'PENDING').map((rem) => (
                                             <div key={rem.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-[11px] font-black text-slate-900">₹{Number(rem.amount).toLocaleString()}</span>
@@ -554,7 +670,7 @@ export default function SupportTicketsPage() {
                                             </div>
                                         ))}
 
-                                        {loanDetails?.repayments?.filter((r: any) => r.status === 'PENDING').length === 0 && (
+                                        {loanDetails?.repayments?.filter((r) => r.status === 'PENDING').length === 0 && (
                                             <div className="text-center py-4">
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">No pending EMIs</p>
                                             </div>
@@ -583,6 +699,25 @@ export default function SupportTicketsPage() {
                                         + Instantly Credit Cashback
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* Support Person Card */}
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Support Person</h4>
+                                {supportPerson ? (
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-black text-slate-900">{supportPerson.name}</div>
+                                        <div className="text-[11px] text-slate-500 font-mono">{supportPerson.mobile_number || 'Mobile not available'}</div>
+                                        {supportPerson.id && (
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ID: {supportPerson.id}</div>
+                                        )}
+                                        {supportPerson.role && (
+                                            <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">{supportPerson.role}</div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-slate-400 font-medium">No support agent details available in chat yet.</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -644,7 +779,7 @@ export default function SupportTicketsPage() {
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setCashbackModalOpen(false)}></div>
                     <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative z-10">
                         <h2 className="text-xl font-black text-slate-900 mb-1">Credit Wallet</h2>
-                        <p className="text-slate-500 text-xs mb-6">Instantly add funds to user's available balance.</p>
+                        <p className="text-slate-500 text-xs mb-6">Instantly add funds to user&apos;s available balance.</p>
                         <form onSubmit={handleAddCashback} className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase">Amount (₹)</label>

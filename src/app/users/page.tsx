@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -130,6 +130,9 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
             <td className="p-6">
                 <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
+            </td>
+            <td className="p-6">
+                <span className="font-mono font-bold text-yellow-600">₹{parseFloat(user.cashback_balance || '0').toLocaleString('en-IN')}</span>
             </td>
 
             {/* Inline Cashback Inputs - Only for Admin */}
@@ -282,10 +285,29 @@ export default function UsersPage() {
     const [pendingPartnerRepayments, setPendingPartnerRepayments] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState({
+        from_date: '',
+        to_date: '',
+        min_balance: '',
+        max_balance: '',
+        min_signup: '',
+        max_signup: '',
+        pincode: '',
+        sort_by: 'created_at',
+        sort_order: 'desc'
+    });
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(12);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        current_page: 1,
+        last_page: 1,
+        per_page: 12
+    });
+    const [jumpPage, setJumpPage] = useState('');
 
     // Add Funds Modal State
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -323,9 +345,27 @@ export default function UsersPage() {
     };
 
     const loadUsers = async () => {
+        setLoading(true);
         try {
-            const data = await apiFetch('/admin/users?type=customer');
-            setUsers(data);
+            const params = new URLSearchParams({
+                type: 'customer',
+                page: currentPage.toString(),
+                per_page: itemsPerPage.toString(),
+                search: search,
+                ...filters
+            });
+            const data = await apiFetch(`/admin/users?${params.toString()}`);
+            if (data.data) {
+                setUsers(data.data);
+                setPagination({
+                    total: data.total,
+                    current_page: data.current_page,
+                    last_page: data.last_page,
+                    per_page: data.per_page
+                });
+            } else {
+                setUsers(data);
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -365,6 +405,9 @@ export default function UsersPage() {
 
     useEffect(() => {
         loadUsers();
+    }, [currentPage, itemsPerPage, search, filters]);
+
+    useEffect(() => {
         if (currentUser?.role === 'ADMIN') {
             loadPendingTransactions();
             loadPendingServiceFees();
@@ -384,91 +427,15 @@ export default function UsersPage() {
                     description: description
                 })
             });
-
-            const msg = currentUser?.role === 'ADMIN'
-                ? 'Success! Funds added successfully.'
-                : 'Request Submitted! Pending Admin Approval.';
-
-            alert(msg);
+            alert('Success!');
             setIsCreditsModalOpen(false);
             setAmount('');
             setDescription('');
-            setCreditType('WALLET_TOPUP');
-
             loadUsers();
-            if (currentUser?.role === 'ADMIN') loadPendingTransactions();
+            loadPendingTransactions();
         } catch (e) {
+            console.error(e);
             alert('Error adding funds');
-        }
-    };
-
-    const handleApproveFund = async (id: number) => {
-        if (!confirm('Approve this transaction?')) return;
-        try {
-            await apiFetch(`/admin/funds/${id}/approve`, { method: 'POST' });
-            loadPendingTransactions();
-            loadUsers(); // Update balances
-        } catch (e) {
-            alert('Failed to approve');
-        }
-    };
-
-    const handleRejectFund = async (id: number) => {
-        if (!confirm('Reject this transaction?')) return;
-        try {
-            await apiFetch(`/admin/funds/${id}/reject`, { method: 'POST' });
-            loadPendingTransactions();
-        } catch (e) {
-            alert('Failed to reject');
-        }
-    };
-
-    const handleApproveServiceFee = async (id: number) => {
-        if (!confirm('Approve this service fee payment?')) return;
-        try {
-            await apiFetch(`/admin/support/tickets/${id}/approve-payment`, { method: 'POST' });
-            loadPendingServiceFees();
-            loadUsers(); // Update balances as needed
-        } catch (e: any) {
-            alert('Service Fee Processing: ' + e.message);
-            loadPendingServiceFees(); // Refresh anyway to remove stale cards
-        }
-    };
-
-    const handleFinalizePartnerRepayment = async (id: number) => {
-        if (!confirm('Finalize this partner-verified repayment?')) return;
-        try {
-            await apiFetch(`/admin/loans/repayments/${id}/finalize`, { method: 'POST' });
-            loadPendingPartnerRepayments();
-            loadUsers();
-        } catch (e: any) {
-            alert('Error finalizing: ' + e.message);
-        }
-    };
-
-    const handleRejectPartnerRepayment = async (id: number) => {
-        if (!confirm('Reject this partner verification and return to pending?')) return;
-        try {
-            await apiFetch(`/admin/loans/repayments/${id}/reject-partner`, { method: 'POST' });
-            loadPendingPartnerRepayments();
-            loadUsers();
-        } catch (e: any) {
-            alert('Error rejecting: ' + e.message);
-        }
-    };
-
-    const handleRejectServiceFee = async (id: number) => {
-        const reason = prompt("Enter rejection reason:");
-        if (!reason) return;
-        try {
-            await apiFetch(`/admin/support/tickets/${id}/reject-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason })
-            });
-            loadPendingServiceFees();
-        } catch (e) {
-            alert('Failed to reject service fee');
         }
     };
 
@@ -531,34 +498,28 @@ export default function UsersPage() {
         }
     };
 
-    const filteredUsers = users.filter((u: any) =>
-        (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (u.mobile_number || '').includes(search)
-    );
+    const isAdmin = currentUser?.role === 'ADMIN';
 
-    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    // Fixed: Use users directly from state as it's already paginated from server
+    const displayedUsers = users;
 
     const toggleSelectAll = () => {
-        if (selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0) {
+        if (selectedIds.length === displayedUsers.length && displayedUsers.length > 0) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(paginatedUsers.map((u: any) => u.id));
+            setSelectedIds(displayedUsers.map((u: any) => u.id));
         }
     };
-
-    const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
         <AdminLayout title="User Management">
 
             {/* Pending Approvals Section (Admin Only) */}
-            {isAdmin && pendingTransactions.length > 0 && (
+            {isAdmin && (pendingTransactions.length > 0 || pendingServiceFees.length > 0 || pendingPartnerRepayments.length > 0) && (
                 <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center gap-3 mb-4">
                         <Clock className="text-amber-500" />
-                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Fund Requests</h3>
-                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-black">{pendingTransactions.length}</span>
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Actions</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -570,237 +531,98 @@ export default function UsersPage() {
                                 <div className="relative z-10">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Request Amount</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fund Request</p>
                                             <p className="text-2xl font-black text-slate-900">₹{parseFloat(tx.amount).toLocaleString()}</p>
-                                            <span className={cn(
-                                                "inline-block mt-2 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest",
-                                                tx.type === 'CASHBACK' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-                                            )}>
-                                                {tx.type === 'CASHBACK' ? 'System Cashback' : 'Wallet Deposit'}
-                                            </span>
-                                        </div>
-                                        <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                                            <Clock size={20} />
                                         </div>
                                     </div>
-
-                                    <div className="space-y-2 mb-6">
-                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Beneficiary (User)</p>
-                                            <p className="font-bold text-slate-800 text-sm">{tx.user_name}</p>
-                                            <p className="font-mono text-xs text-slate-500">{tx.user_mobile}</p>
-                                        </div>
-                                        {tx.agent_name && (
-                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Requested By (Agent)</p>
-                                                <p className="font-bold text-blue-800 text-sm">{tx.agent_name}</p>
-                                                <p className="text-[10px] font-bold text-blue-500 uppercase">{tx.agent_role}</p>
-                                            </div>
-                                        )}
-                                        {tx.description && (
-                                            <div className="p-2">
-                                                <p className="text-[10px] text-slate-500 italic">"{tx.description}"</p>
-                                            </div>
-                                        )}
-                                    </div>
-
+                                    <p className="text-sm font-bold text-slate-600 mb-1">{tx.user?.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono mb-4">{tx.user?.mobile_number}</p>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleRejectFund(tx.id)}
-                                            className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleApproveFund(tx.id)}
-                                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                                            onClick={async () => {
+                                                if (!confirm("Approve fund request?")) return;
+                                                await apiFetch(`/admin/funds/${tx.id}/approve`, { method: 'POST' });
+                                                loadPendingTransactions();
+                                                loadUsers();
+                                            }}
+                                            className="flex-1 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
                                         >
                                             Approve
                                         </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Pending Partner Approvals Section (Admin Only) */}
-            {isAdmin && pendingPartnerRepayments.length > 0 && (
-                <div className="mb-8 animate-in slide-in-from-top-4 duration-500 delay-75">
-                    <div className="flex items-center gap-3 mb-4">
-                        <ShieldCheck className="text-emerald-500" />
-                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Partner-Verified Repayments</h3>
-                        <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-black">{pendingPartnerRepayments.length}</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {pendingPartnerRepayments.map((rep: any) => (
-                            <div key={rep.id} className="bg-white p-6 rounded-[2rem] border border-emerald-100 shadow-lg shadow-emerald-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <ShieldCheck size={48} className="text-emerald-500" />
-                                </div>
-                                <div className="relative z-10">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">EMI #{rep.emi_number}</p>
-                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(rep.amount).toLocaleString()}</p>
-                                        </div>
-                                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                                            <ShieldCheck size={20} />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2 mb-6">
-                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p>
-                                            <p className="font-bold text-slate-800 text-sm">{rep.loan?.user?.name}</p>
-                                            <p className="font-mono text-xs text-slate-500">{rep.loan?.user?.mobile_number}</p>
-                                        </div>
-                                        {rep.agent && (
-                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Verified By (Partner)</p>
-                                                <p className="font-bold text-blue-800 text-sm">{rep.agent.name}</p>
-                                                <p className="text-[10px] text-slate-400">{new Date(rep.agent_approved_at).toLocaleString()}</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleRejectPartnerRepayment(rep.id)}
-                                            className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+                                            onClick={async () => {
+                                                if (!confirm("Reject fund request?")) return;
+                                                await apiFetch(`/admin/funds/${tx.id}/reject`, { method: 'POST' });
+                                                loadPendingTransactions();
+                                            }}
+                                            className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-all"
                                         >
                                             Reject
                                         </button>
-                                        <button
-                                            onClick={() => handleFinalizePartnerRepayment(rep.id)}
-                                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
-                                        >
-                                            Finalize
-                                        </button>
                                     </div>
-
-                                    {rep.loan_id && (
-                                        <Link
-                                            href={`/loans?openLoan=${rep.loan_id}`}
-                                            className="mt-3 w-full block text-center py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
-                                        >
-                                            View Loan #{rep.loan_id + 4000}
-                                        </Link>
-                                    )}
                                 </div>
                             </div>
                         ))}
-                    </div>
-                </div>
-            )}
 
-            {/* Pending Service/Platform Fees Section (Admin Only) */}
-            {isAdmin && pendingServiceFees.length > 0 && (
-                <div className="mb-8 animate-in slide-in-from-top-4 duration-500 delay-100">
-                    <div className="flex items-center gap-3 mb-4">
-                        <CheckCircle className="text-indigo-500" />
-                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pending Service Fee Payment Approvals</h3>
-                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-black">{pendingServiceFees.length}</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {pendingServiceFees.map((ticket: any) => (
-                            <div key={ticket.id} className="bg-white p-6 rounded-[2rem] border border-indigo-100 shadow-lg shadow-indigo-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
+                            <div key={ticket.id} className="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-lg shadow-blue-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <ReceiptIndianRupee size={48} className="text-indigo-500" />
+                                    <ShieldCheck size={48} className="text-blue-500" />
                                 </div>
                                 <div className="relative z-10">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fee Amount</p>
-                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(ticket.payment_amount).toLocaleString()}</p>
-                                        </div>
-                                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                                            <CheckCircle size={20} />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2 mb-6">
-                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">User Details</p>
-                                            <p className="font-bold text-slate-800 text-sm">{ticket.user?.name}</p>
-                                            <p className="font-mono text-xs text-slate-500">{ticket.user?.mobile_number}</p>
-                                        </div>
-                                        {ticket.assigned_agent && (
-                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Completed By (Agent)</p>
-                                                <p className="font-bold text-blue-800 text-sm">{ticket.assigned_agent.name}</p>
-                                                <p className="text-[10px] font-bold text-blue-500 uppercase">{ticket.payment_status}</p>
-                                            </div>
-                                        )}
-                                        <div className="p-2">
-                                            <p className="text-[10px] text-slate-500 italic">Action: {ticket.sub_action?.replace(/_/g, ' ') || 'Service Fee'}</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Fee ({ticket.sub_action || 'N/A'})</p>
+                                            {ticket.payment_amount && (
+                                                <p className="text-2xl font-black text-slate-900">₹{parseFloat(ticket.payment_amount).toLocaleString()}</p>
+                                            )}
                                         </div>
                                     </div>
-
+                                    <p className="text-sm font-bold text-slate-600 mb-1">{ticket.user?.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono mb-4">{ticket.user?.mobile_number}</p>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleRejectServiceFee(ticket.id)}
-                                            className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+                                            onClick={async () => {
+                                                if (!confirm("Confirm service fee payment receipt?")) return;
+                                                await apiFetch(`/admin/support/payment-tickets/${ticket.id}/confirm`, { method: 'POST' });
+                                                loadPendingServiceFees();
+                                                loadUsers();
+                                            }}
+                                            className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
                                         >
-                                            Reject
+                                            Confirm Receipt
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {pendingPartnerRepayments.map((tx: any) => (
+                            <div key={tx.id} className="bg-white p-6 rounded-[2rem] border border-indigo-100 shadow-lg shadow-indigo-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <UsersIcon size={48} className="text-indigo-500" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Partner Repayment Approval</p>
+                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(tx.amount).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-600 mb-1">{tx.borrower_name}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono mb-4">Loan #{tx.loan_id + 4000}</p>
+                                    <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleApproveServiceFee(ticket.id)}
-                                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                                            onClick={async () => {
+                                                if (!confirm("Approve this repayment?")) return;
+                                                await apiFetch(`/admin/loans/partner-approval/${tx.id}/approve`, { method: 'POST' });
+                                                loadPendingPartnerRepayments();
+                                            }}
+                                            className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all"
                                         >
                                             Approve
                                         </button>
                                     </div>
-
-                                    {(() => {
-                                        // 1. Identify Target Loan if possible
-                                        const matchMatch = ticket.subject?.match(/Loan #(\d+)/i);
-                                        const loanId = matchMatch ? parseInt(matchMatch[1]) - 4000 : null;
-
-                                        // 2. Conditional Display based on Purpose (sub_action)
-                                        if (ticket.sub_action === 'platform_fee' || ticket.sub_action === 'emi' || ticket.sub_action === 'loan') {
-                                            if (!loanId) return null;
-                                            return (
-                                                <Link
-                                                    href={`/loans?openLoan=${loanId}`}
-                                                    className="mt-3 w-full block text-center py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100"
-                                                >
-                                                    View Loan #{loanId + 4000}
-                                                </Link>
-                                            );
-                                        }
-
-                                        if (ticket.sub_action === 'recharge' || ticket.sub_action === 'wallet_topup' || ticket.issue_type === 'wallet_topup') {
-                                            return (
-                                                <button
-                                                    onClick={() => {
-                                                        const el = document.getElementById(`user-${ticket.user_id}`);
-                                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                                    }}
-                                                    className="mt-3 w-full block text-center py-2 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100"
-                                                >
-                                                    View User Wallet
-                                                </button>
-                                            );
-                                        }
-
-                                        // Fallback to loan view if ID exists but action unknown
-                                        if (loanId) {
-                                            return (
-                                                <Link
-                                                    href={`/loans?openLoan=${loanId}`}
-                                                    className="mt-3 w-full block text-center py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors"
-                                                >
-                                                    View Loan #{loanId + 4000}
-                                                </Link>
-                                            );
-                                        }
-
-                                        return null;
-                                    })()}
                                 </div>
                             </div>
                         ))}
@@ -809,69 +631,221 @@ export default function UsersPage() {
             )}
 
             {/* Header Actions */}
-            <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-                <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                        value={search}
-                        onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                    />
-                </div>
-
-                <div className="flex gap-2">
-                    <button
-                        onClick={async () => {
-                            try {
-                                const blob = await apiFetch(`/admin/users/export?type=customer&search=${search}`, { responseType: 'blob' });
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
-                                document.body.appendChild(link);
-                                link.click();
-                                link.remove();
-                                window.URL.revokeObjectURL(url);
-                            } catch (e) {
-                                console.error('Export failed', e);
-                                alert('Export failed. Please try again.');
-                            }
-                        }}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
-                    >
-                        <Download className="w-5 h-5" />
-                        Bulk Data Download
-                    </button>
-
-                    <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
-                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
-                        >
-                            <option value={12}>12</option>
-                            <option value={24}>24</option>
-                            <option value={60}>60</option>
-                            <option value={100}>100</option>
-                        </select>
+            <div className="mb-6 flex flex-col gap-4">
+                <div className="flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search users..."
+                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                            value={search}
+                            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                        />
                     </div>
 
-                    {isAdmin && selectedIds.length > 0 && (
-                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
-                            <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                    <div className="flex flex-1 items-center gap-3 px-4">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all border",
+                                showFilters ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200" : "bg-white text-slate-600 border-slate-100 hover:bg-slate-50"
+                            )}
+                        >
+                            <Filter className="w-4 h-4" />
+                            Filters
+                        </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <div className="relative group">
                             <button
-                                onClick={() => setIsCashbackModalOpen(true)}
-                                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
                             >
-                                <ReceiptIndianRupee size={20} />
-                                Set Cashback
+                                <Download className="w-5 h-5" />
+                                Bulk Data Download
                             </button>
+                            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const blob = await apiFetch(`/admin/users/export?type=customer&search=${search}`, { responseType: 'blob' });
+                                            const url = window.URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.setAttribute('download', `customers_all_${new Date().toISOString().split('T')[0]}.csv`);
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            link.remove();
+                                            window.URL.revokeObjectURL(url);
+                                        } catch (e) {
+                                            console.error('Export failed', e);
+                                            alert('Export failed.');
+                                        }
+                                    }}
+                                    className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                >
+                                    Download All Matching
+                                </button>
+                                {selectedIds.length > 0 && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const blob = await apiFetch(`/admin/users/export?type=customer&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.setAttribute('download', `customers_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                link.remove();
+                                                window.URL.revokeObjectURL(url);
+                                            } catch (e) {
+                                                console.error('Export failed', e);
+                                                alert('Export failed.');
+                                            }
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-50"
+                                    >
+                                        Download Selected ({selectedIds.length})
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    )}
+
+                        <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value={12}>12</option>
+                                <option value={24}>24</option>
+                                <option value={60}>60</option>
+                                <option value={100}>100</option>
+                                <option value={500}>500</option>
+                                <option value={1000}>1000</option>
+                                <option value={5000}>5000</option>
+                                <option value={10000}>10000</option>
+                            </select>
+                        </div>
+
+                        {isAdmin && selectedIds.length > 0 && (
+                            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
+                                <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                                <button
+                                    onClick={() => setIsCashbackModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                                >
+                                    <ReceiptIndianRupee size={20} />
+                                    Set Cashback
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Advanced Filters Panel */}
+                {showFilters && (
+                    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 animate-in slide-in-from-top-4 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Joining Date Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.from_date}
+                                        onChange={(e) => {setFilters({ ...filters, from_date: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                    <span className="text-slate-300">-</span>
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.to_date}
+                                        onChange={(e) => {setFilters({ ...filters, to_date: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Wallet Balance Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_balance}
+                                        onChange={(e) => {setFilters({ ...filters, min_balance: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_balance}
+                                        onChange={(e) => {setFilters({ ...filters, max_balance: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup/Turnover Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_signup}
+                                        onChange={(e) => {setFilters({ ...filters, min_signup: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_signup}
+                                        onChange={(e) => {setFilters({ ...filters, max_signup: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter 6-digit PIN"
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={filters.pincode}
+                                    onChange={(e) => {setFilters({ ...filters, pincode: e.target.value }); setCurrentPage(1);}}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sort By</label>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_by}
+                                        onChange={(e) => {setFilters({ ...filters, sort_by: e.target.value }); setCurrentPage(1);}}
+                                    >
+                                        <option value="created_at">Join Date</option>
+                                        <option value="name">Name</option>
+                                        <option value="daily_turnover">Turnover</option>
+                                        <option value="pincode">Postal PIN</option>
+                                    </select>
+                                    <select
+                                        className="w-24 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_order}
+                                        onChange={(e) => {setFilters({ ...filters, sort_order: e.target.value }); setCurrentPage(1);}}
+                                    >
+                                        <option value="desc">Newest</option>
+                                        <option value="asc">Oldest</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -882,7 +856,7 @@ export default function UsersPage() {
                                 <th className="p-6 w-16 text-center">
                                     {isAdmin && (
                                         <button onClick={toggleSelectAll} className="opacity-50 hover:opacity-100">
-                                            {selectedIds.length > 0 && selectedIds.length === filteredUsers.length ?
+                                            {selectedIds.length > 0 && selectedIds.length === displayedUsers.length ?
                                                 <CheckSquare className="text-blue-600" /> : <Square className="text-slate-400" />
                                             }
                                         </button>
@@ -891,17 +865,18 @@ export default function UsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">User Details</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
+                                <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback Wallet</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback % (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Pin Code</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginatedUsers.map((user: any) => (
+                            {displayedUsers.map((user: any) => (
                                 <UserRow
                                     key={user.id}
                                     user={user}
@@ -920,22 +895,43 @@ export default function UsersPage() {
                 </div>
 
                 {/* Pagination Controls */}
-                {totalPages > 1 && (
+                {pagination.last_page > 1 && (
                     <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Page {currentPage} of {totalPages}
-                        </p>
+                        <div className="flex items-center gap-6">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Page {pagination.current_page} of {pagination.last_page} ({pagination.total} total)
+                            </p>
+                            <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-slate-100 shadow-sm">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Jump to:</span>
+                                <input
+                                    type="text"
+                                    value={jumpPage}
+                                    onChange={(e) => setJumpPage(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const page = parseInt(jumpPage);
+                                            if (page >= 1 && page <= pagination.last_page) {
+                                                setCurrentPage(page);
+                                                setJumpPage('');
+                                            }
+                                        }
+                                    }}
+                                    className="w-12 bg-transparent border-none text-xs font-black text-slate-900 outline-none text-center"
+                                    placeholder="..."
+                                />
+                            </div>
+                        </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
+                                disabled={pagination.current_page === 1}
                                 className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => Math.min(pagination.last_page, prev + 1))}
+                                disabled={pagination.current_page === pagination.last_page}
                                 className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <ChevronRight className="w-5 h-5" />
@@ -1102,6 +1098,16 @@ export default function UsersPage() {
                     </div>
                 </div>
             )}
+
+            {/* Footer */}
+            <footer className="mt-12 py-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p className="text-slate-400 text-sm font-medium">© 2026 Admin Panel • MSME Loan Systems</p>
+                <div className="flex gap-8">
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Privacy Policy</a>
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Terms of Service</a>
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Help Center</a>
+                </div>
+            </footer>
         </AdminLayout>
     );
 }

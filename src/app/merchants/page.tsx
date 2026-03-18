@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     const [isSaving, setIsSaving] = useState(false);
     const [transferEnabled, setTransferEnabled] = useState(user.transfer_enabled ?? false);
     const [isTogglingTransfer, setIsTogglingTransfer] = useState(false);
+    const [isTransferringCashback, setIsTransferringCashback] = useState(false);
 
     // Sync state if user prop changes (e.g. after reload)
     useEffect(() => {
@@ -32,22 +33,22 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
 
     const handleSenderPercentChange = (val: string) => {
         setCashbackPercent(val);
-        setCashbackFlat('');
+        if (parseFloat(val) > 0) setCashbackFlat('');
     };
 
     const handleSenderFlatChange = (val: string) => {
         setCashbackFlat(val);
-        setCashbackPercent('');
+        if (parseFloat(val) > 0) setCashbackPercent('');
     };
 
     const handleReceiverPercentChange = (val: string) => {
         setReceivePercent(val);
-        setReceiveFlat('');
+        if (parseFloat(val) > 0) setReceiveFlat('');
     };
 
     const handleReceiverFlatChange = (val: string) => {
         setReceiveFlat(val);
-        setReceivePercent('');
+        if (parseFloat(val) > 0) setReceivePercent('');
     };
 
     const handleSaveCashback = async () => {
@@ -103,6 +104,25 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
         }
     };
 
+    const handleTransferCashback = async () => {
+        const amount = user.cashback_balance || 0;
+        if (!confirm(`Are you sure you want to transfer ₹${amount.toLocaleString('en-IN')} from cashback to regular wallet for ${user.name}?`)) return;
+        
+        setIsTransferringCashback(true);
+        try {
+            await apiFetch(`/admin/users/${user.id}/cashback-to-wallet`, {
+                method: 'POST'
+            });
+            alert('Cashback transferred to regular wallet successfully!');
+            reloadUsers();
+        } catch (e: any) {
+            console.error(e);
+            alert(e.message || 'Error transferring cashback');
+        } finally {
+            setIsTransferringCashback(false);
+        }
+    };
+
     return (
         <tr className={cn("hover:bg-slate-50/80 transition-colors group", selectedIds.includes(user.id) && "bg-blue-50/30")}>
             <td className="p-6 text-center">
@@ -135,6 +155,9 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
             <td className="p-6">
                 <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
+            </td>
+            <td className="p-6">
+                <span className="font-mono font-bold text-yellow-600">₹{parseFloat(user.cashback_balance || '0').toLocaleString('en-IN')}</span>
             </td>
 
             <td className="p-6">
@@ -299,6 +322,24 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
 
                     {isAdmin && (
                         <button
+                            onClick={handleTransferCashback}
+                            disabled={isTransferringCashback || (user.cashback_balance < (currentUser?.cashback_threshold_amount || 0))}
+                            className={cn(
+                                "p-2 rounded-lg transition-colors",
+                                user.cashback_balance >= (currentUser?.cashback_threshold_amount || 0)
+                                    ? "bg-amber-50 text-amber-600 hover:bg-amber-100 ring-1 ring-amber-200"
+                                    : "bg-slate-50 text-slate-300 cursor-not-allowed"
+                            )}
+                            title={user.cashback_balance >= (currentUser?.cashback_threshold_amount || 0) 
+                                ? `Transfer Cashback to Wallet (₹${user.cashback_balance})` 
+                                : `Cashback too low (Min ₹${currentUser?.cashback_threshold_amount || 0})`}
+                        >
+                            <ReceiptIndianRupee className="w-5 h-5" />
+                        </button>
+                    )}
+
+                    {isAdmin && (
+                        <button
                             onClick={handleToggleTransfer}
                             disabled={isTogglingTransfer}
                             className={cn(
@@ -323,11 +364,29 @@ export default function MerchantsPage() {
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState({
+        from_date: '',
+        to_date: '',
+        min_balance: '',
+        max_balance: '',
+        min_signup: '',
+        max_signup: '',
+        pincode: '',
+        sort_by: 'created_at',
+        sort_order: 'desc'
+    });
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(12);
-    const [turnoverFilter, setTurnoverFilter] = useState('ALL');
+    const [pagination, setPagination] = useState({
+        total: 0,
+        current_page: 1,
+        last_page: 1,
+        per_page: 12
+    });
+    const [jumpPage, setJumpPage] = useState('');
 
     // Add Funds Modal State
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -345,9 +404,27 @@ export default function MerchantsPage() {
     const [receiveFlat, setReceiveFlat] = useState('');
 
     const loadUsers = async () => {
+        setLoading(true);
         try {
-            const data = await apiFetch('/admin/users?type=merchant');
-            setUsers(data);
+            const params = new URLSearchParams({
+                type: 'merchant',
+                page: currentPage.toString(),
+                per_page: itemsPerPage.toString(),
+                search: search,
+                ...filters
+            });
+            const data = await apiFetch(`/admin/users?${params.toString()}`);
+            if (data.data) {
+                setUsers(data.data);
+                setPagination({
+                    total: data.total,
+                    current_page: data.current_page,
+                    last_page: data.last_page,
+                    per_page: data.per_page
+                });
+            } else {
+                setUsers(data);
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -357,7 +434,7 @@ export default function MerchantsPage() {
 
     useEffect(() => {
         loadUsers();
-    }, []);
+    }, [currentPage, itemsPerPage, search, filters]);
 
     const handleAddFunds = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -447,114 +524,238 @@ export default function MerchantsPage() {
         }
     };
 
-    const filteredUsers = users.filter((u: any) => {
-        const matchesSearch = (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
-            (u.mobile_number || '').includes(search);
+    const isAdmin = currentUser?.role === 'ADMIN';
 
-        const matchesTurnover = turnoverFilter === 'ALL' || u.daily_turnover === turnoverFilter;
-
-        return matchesSearch && matchesTurnover;
-    });
-
-    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const displayedUsers = users;
 
     const toggleSelectAll = () => {
-        if (selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0) {
+        if (selectedIds.length === displayedUsers.length && displayedUsers.length > 0) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(paginatedUsers.map((u: any) => u.id));
+            setSelectedIds(displayedUsers.map((u: any) => u.id));
         }
     };
-
-    const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
         <AdminLayout title="Merchant Management">
             {/* Header Actions */}
-            <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-                <div className="flex flex-1 gap-2">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search merchants..."
-                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                            value={search}
-                            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                        />
-                    </div>
+            <div className="mb-6 flex flex-col gap-4">
+                <div className="flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="flex flex-1 gap-2">
+                        <div className="relative flex-1 max-w-sm">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search merchants..."
+                                className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                                value={search}
+                                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                            />
+                        </div>
 
-                    <div className="flex items-center bg-slate-50 border-none rounded-xl px-4 py-2">
-                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Turnover:</span>
-                        <select
-                            value={turnoverFilter}
-                            onChange={(e) => { setTurnoverFilter(e.target.value); setCurrentPage(1); }}
-                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
-                        >
-                            <option value="ALL">All Ranges</option>
-                            <option value="1k-5k">1k - 5k</option>
-                            <option value="5k-10k">5k - 10k</option>
-                            <option value="10k-20k">10k - 20k</option>
-                            <option value="20k-50k">20k - 50k</option>
-                            <option value="50k-1l">50k - 1l</option>
-                            <option value="1l-2l">1l - 2l</option>
-                            <option value="2l-5l">2l - 5l</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="flex gap-2">
-                    <button
-                        onClick={async () => {
-                            try {
-                                const blob = await apiFetch(`/admin/users/export?type=merchant&search=${search}`, { responseType: 'blob' });
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.setAttribute('download', `merchants_export_${new Date().toISOString().split('T')[0]}.csv`);
-                                document.body.appendChild(link);
-                                link.click();
-                                link.remove();
-                                window.URL.revokeObjectURL(url);
-                            } catch (e) {
-                                console.error('Export failed', e);
-                                alert('Export failed. Please try again.');
-                            }
-                        }}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
-                    >
-                        <Download className="w-5 h-5" />
-                        Download CSV
-                    </button>
-
-                    <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
-                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
-                        >
-                            <option value={12}>12</option>
-                            <option value={24}>24</option>
-                            <option value={60}>60</option>
-                            <option value={100}>100</option>
-                        </select>
-                    </div>
-
-                    {isAdmin && selectedIds.length > 0 && (
-                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
-                            <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                        <div className="flex items-center gap-3 px-4">
                             <button
-                                onClick={() => setIsCashbackModalOpen(true)}
-                                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all border",
+                                    showFilters ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200" : "bg-white text-slate-600 border-slate-100 hover:bg-slate-50"
+                                )}
                             >
-                                <ReceiptIndianRupee size={20} />
-                                Set Cashback
+                                <Filter className="w-4 h-4" />
+                                Filters
                             </button>
                         </div>
-                    )}
+                    </div>
+
+                    <div className="flex gap-2">
+                        <div className="relative group">
+                            <button
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                            >
+                                <Download className="w-5 h-5" />
+                                Bulk Data Download
+                            </button>
+                            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const blob = await apiFetch(`/admin/users/export?type=merchant&search=${search}`, { responseType: 'blob' });
+                                            const url = window.URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.setAttribute('download', `merchants_all_${new Date().toISOString().split('T')[0]}.csv`);
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            link.remove();
+                                            window.URL.revokeObjectURL(url);
+                                        } catch (e) {
+                                            console.error('Export failed', e);
+                                            alert('Export failed.');
+                                        }
+                                    }}
+                                    className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                >
+                                    Download All Matching
+                                </button>
+                                {selectedIds.length > 0 && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const blob = await apiFetch(`/admin/users/export?type=merchant&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.setAttribute('download', `merchants_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                link.remove();
+                                                window.URL.revokeObjectURL(url);
+                                            } catch (e) {
+                                                console.error('Export failed', e);
+                                                alert('Export failed.');
+                                            }
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-50"
+                                    >
+                                        Download Selected ({selectedIds.length})
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value={12}>12</option>
+                                <option value={24}>24</option>
+                                <option value={60}>60</option>
+                                <option value={100}>100</option>
+                                <option value={500}>500</option>
+                                <option value={1000}>1000</option>
+                                <option value={5000}>5000</option>
+                                <option value={10000}>10000</option>
+                            </select>
+                        </div>
+
+                        {isAdmin && selectedIds.length > 0 && (
+                            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
+                                <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                                <button
+                                    onClick={() => setIsCashbackModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                                >
+                                    <ReceiptIndianRupee size={20} />
+                                    Set Cashback
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Advanced Filters Panel */}
+                {showFilters && (
+                    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 animate-in slide-in-from-top-4 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Joining Date Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.from_date}
+                                        onChange={(e) => {setFilters({ ...filters, from_date: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                    <span className="text-slate-300">-</span>
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.to_date}
+                                        onChange={(e) => {setFilters({ ...filters, to_date: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Wallet Balance Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_balance}
+                                        onChange={(e) => {setFilters({ ...filters, min_balance: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_balance}
+                                        onChange={(e) => {setFilters({ ...filters, max_balance: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup/Turnover Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_signup}
+                                        onChange={(e) => {setFilters({ ...filters, min_signup: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_signup}
+                                        onChange={(e) => {setFilters({ ...filters, max_signup: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter 6-digit PIN"
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={filters.pincode}
+                                    onChange={(e) => {setFilters({ ...filters, pincode: e.target.value }); setCurrentPage(1);}}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sort By</label>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_by}
+                                        onChange={(e) => {setFilters({ ...filters, sort_by: e.target.value }); setCurrentPage(1);}}
+                                    >
+                                        <option value="created_at">Join Date</option>
+                                        <option value="name">Name</option>
+                                        <option value="daily_turnover">Turnover</option>
+                                        <option value="pincode">Postal PIN</option>
+                                    </select>
+                                    <select
+                                        className="w-24 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_order}
+                                        onChange={(e) => {setFilters({ ...filters, sort_order: e.target.value }); setCurrentPage(1);}}
+                                    >
+                                        <option value="desc">Newest</option>
+                                        <option value="asc">Oldest</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -565,7 +766,7 @@ export default function MerchantsPage() {
                                 <th className="p-6 w-16 text-center">
                                     {isAdmin && (
                                         <button onClick={toggleSelectAll} className="opacity-50 hover:opacity-100">
-                                            {selectedIds.length > 0 && selectedIds.length === filteredUsers.length ?
+                                            {selectedIds.length > 0 && selectedIds.length === displayedUsers.length ?
                                                 <CheckSquare className="text-blue-600" /> : <Square className="text-slate-400" />
                                             }
                                         </button>
@@ -574,10 +775,11 @@ export default function MerchantsPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Merchant Details</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
+                                <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback Wallet</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback % (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Pin Code</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Ref CODE</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status QR</th>
@@ -586,7 +788,7 @@ export default function MerchantsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginatedUsers.map((user: any) => (
+                            {displayedUsers.map((user: any) => (
                                 <UserRow
                                     key={user.id}
                                     user={user}
@@ -605,22 +807,43 @@ export default function MerchantsPage() {
                 </div>
 
                 {/* Pagination Controls */}
-                {totalPages > 1 && (
+                {pagination.last_page > 1 && (
                     <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Page {currentPage} of {totalPages}
-                        </p>
+                        <div className="flex items-center gap-6">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Page {pagination.current_page} of {pagination.last_page} ({pagination.total} total)
+                            </p>
+                            <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-slate-100 shadow-sm">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Jump to:</span>
+                                <input
+                                    type="text"
+                                    value={jumpPage}
+                                    onChange={(e) => setJumpPage(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const page = parseInt(jumpPage);
+                                            if (page >= 1 && page <= pagination.last_page) {
+                                                setCurrentPage(page);
+                                                setJumpPage('');
+                                            }
+                                        }
+                                    }}
+                                    className="w-12 bg-transparent border-none text-xs font-black text-slate-900 outline-none text-center"
+                                    placeholder="..."
+                                />
+                            </div>
+                        </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
+                                disabled={pagination.current_page === 1}
                                 className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => Math.min(pagination.last_page, prev + 1))}
+                                disabled={pagination.current_page === pagination.last_page}
                                 className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <ChevronRight className="w-5 h-5" />
@@ -787,6 +1010,15 @@ export default function MerchantsPage() {
                 </div>
             )}
 
+            {/* Footer */}
+            <footer className="mt-12 py-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p className="text-slate-400 text-sm font-medium">© 2026 Admin Panel • MSME Loan Systems</p>
+                <div className="flex gap-8">
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Privacy Policy</a>
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Terms of Service</a>
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Help Center</a>
+                </div>
+            </footer>
         </AdminLayout>
     );
 }

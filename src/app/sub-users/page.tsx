@@ -31,6 +31,7 @@ interface SubUser {
         status?: 'approved' | 'pending' | 'rejected';
     };
     visible_pin?: string;
+    pincode?: string;
 }
 
 const normalizeKycStatus = (status?: string): 'approved' | 'pending' | 'rejected' | undefined => {
@@ -59,6 +60,7 @@ export default function SubUsersPage() {
         max_balance: '',
         min_signup: '',
         max_signup: '',
+        pincode: '',
         sort_by: 'created_at',
         sort_order: 'desc'
     });
@@ -83,16 +85,34 @@ export default function SubUsersPage() {
         loan_bonus_milestone_count: '',
         loan_bonus_milestone_amount: '',
         can_create_vendors: false,
-        show_letter: false
+        show_letter: false,
+        pincode: ''
     } as any);
+
+    const [jumpPage, setJumpPage] = useState('');
 
     const [creditAmount, setCreditAmount] = useState('');
     const [globalReferralSettings, setGlobalReferralSettings] = useState<any>(null);
     const [savingGlobal, setSavingGlobal] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === subUsers.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(subUsers.map(u => u.id));
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
 
     useEffect(() => {
         fetchSubUsers();
-    }, [pagination.current_page, filters, search]);
+    }, [pagination.current_page, pagination.per_page, filters, search]);
 
     useEffect(() => {
         fetchGlobalSettings();
@@ -165,6 +185,7 @@ export default function SubUsersPage() {
             can_create_vendors: subUser.can_create_vendors ?? false,
             show_letter: subUser.show_letter ?? false,
             password: subUser.visible_pin || '', // Using password field for PIN in form
+            pincode: subUser.pincode || ''
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -190,7 +211,7 @@ export default function SubUsersPage() {
 
             toast.success(isEditMode ? 'Agent updated successfully' : 'Agent created successfully');
             setShowModal(false);
-            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: false, show_letter: false } as any);
+            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: false, show_letter: false, pincode: '' } as any);
             setIsEditMode(false);
             setEditingId(null);
             fetchSubUsers();
@@ -282,10 +303,86 @@ export default function SubUsersPage() {
                             <TreePine className="w-5 h-5" />
                             Vendor Tree
                         </button>
+                        <div className="relative group">
+                            <button
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                            >
+                                <Download className="w-5 h-5" />
+                                Bulk Download
+                            </button>
+                            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const params = new URLSearchParams({ search, ...filters });
+                                            const blob = await apiFetch(`/admin/sub-users/export?${params.toString()}`, { responseType: 'blob' });
+                                            const url = window.URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.setAttribute('download', `vendors_all_${new Date().toISOString().split('T')[0]}.csv`);
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            link.remove();
+                                            window.URL.revokeObjectURL(url);
+                                        } catch (e) {
+                                            console.error('Export failed', e);
+                                            alert('Export failed.');
+                                        }
+                                    }}
+                                    className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                >
+                                    Download All Matching
+                                </button>
+                                {selectedIds.length > 0 && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const blob = await apiFetch(`/admin/sub-users/export?user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.setAttribute('download', `vendors_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                link.remove();
+                                                window.URL.revokeObjectURL(url);
+                                            } catch (e) {
+                                                console.error('Export failed', e);
+                                                alert('Export failed.');
+                                            }
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-50"
+                                    >
+                                        Download Selected ({selectedIds.length})
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center bg-slate-50 border-none rounded-xl px-4 py-2">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={pagination.per_page}
+                                onChange={(e) => {
+                                    setPagination(prev => ({ ...prev, per_page: Number(e.target.value), current_page: 1 }));
+                                }}
+                                className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value={15}>15</option>
+                                <option value={30}>30</option>
+                                <option value={60}>60</option>
+                                <option value={100}>100</option>
+                                <option value={500}>500</option>
+                                <option value={1000}>1000</option>
+                                <option value={5000}>5000</option>
+                                <option value={10000}>10000</option>
+                            </select>
+                        </div>
+
                         <button
                             onClick={() => {
                                 setIsEditMode(false);
-                                setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: globalReferralSettings?.default_can_create_vendors ?? false, show_letter: false } as any);
+                                setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: globalReferralSettings?.default_can_create_vendors ?? false, show_letter: false, pincode: '' } as any);
                                 setShowModal(true);
                             }}
                             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
@@ -393,6 +490,17 @@ export default function SubUsersPage() {
                             </div>
 
                             <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter 6-digit PIN"
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={filters.pincode}
+                                    onChange={(e) => setFilters({ ...filters, pincode: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sort By</label>
                                 <div className="flex gap-2">
                                     <select
@@ -404,6 +512,7 @@ export default function SubUsersPage() {
                                         <option value="name">Name</option>
                                         <option value="credit_balance">Wallet Balance</option>
                                         <option value="default_signup_amount">Signup Amount</option>
+                                        <option value="pincode">Postal PIN</option>
                                     </select>
                                     <select
                                         className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
@@ -426,6 +535,7 @@ export default function SubUsersPage() {
                                         max_balance: '',
                                         min_signup: '',
                                         max_signup: '',
+                                        pincode: '',
                                         sort_by: 'created_at',
                                         sort_order: 'desc'
                                     });
@@ -449,10 +559,18 @@ export default function SubUsersPage() {
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50">
                                     <tr>
-                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-8">Vendor Details</th>
+                                        <th className="p-6 pl-8">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                checked={selectedIds.length === subUsers.length && subUsers.length > 0}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Vendor Details</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Status</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
-                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Auth PIN</th>
+                                        <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
                                         <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Dues</th>
@@ -473,147 +591,154 @@ export default function SubUsersPage() {
                                             return (
                                                 <tr key={subUser.id} className="hover:bg-slate-50/80 transition-colors group">
                                                     <td className="p-6 pl-8">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                            checked={selectedIds.includes(subUser.id)}
+                                                            onChange={() => toggleSelect(subUser.id)}
+                                                        />
+                                                    </td>
+                                                    <td className="p-6">
                                                         <div className="flex items-center gap-4">
-                                                    <div className="relative">
-                                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm border-2 border-indigo-100 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
-                                                            {subUser.name[0]}
-                                                        </div>
-                                                        {showPendingDot && (
-                                                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
-                                                        )}
-                                                    </div>
-                                                        <div>
-                                                            <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
-                                                            <div className="flex flex-col gap-1 mt-1">
-                                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                                                    <UsersIcon className="w-3 h-3 text-blue-500" />
-                                                                    Agent #{subUser.id} • {subUser.mobile_number}
+                                                            <div className="relative">
+                                                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm border-2 border-indigo-100 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                                                                    {subUser.name[0]}
                                                                 </div>
-                                                                {subUser.visible_pin && (
-                                                                    <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded-md">
-                                                                        <Shield className="w-3 h-3" />
-                                                                        PIN: {subUser.visible_pin}
-                                                                    </div>
+                                                                {showPendingDot && (
+                                                                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
                                                                 )}
                                                             </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    {normalizedKycStatus === 'approved' ? (
-                                                        <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Approved</span>
-                                                    ) : normalizedKycStatus === 'pending' ? (
-                                                        <div className="flex flex-col gap-2 items-start">
-                                                            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pending</span>
-                                                            <div className="flex gap-1">
-                                                                <button onClick={() => handleKycAction(subUser.id, 'approve')} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 font-bold">Approve</button>
-                                                                <button onClick={() => handleKycAction(subUser.id, 'reject')} className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded hover:bg-rose-600 font-bold">Reject</button>
+                                                            <div>
+                                                                <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
+                                                                <div className="flex flex-col gap-1 mt-1">
+                                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                                                        <UsersIcon className="w-3 h-3 text-blue-500" />
+                                                                        Agent #{subUser.id} • {subUser.mobile_number}
+                                                                    </div>
+                                                                    {subUser.pincode && (
+                                                                        <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded-md">
+                                                                            <Calendar className="w-3 h-3" />
+                                                                            Postal PIN: {subUser.pincode}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    ) : normalizedKycStatus === 'rejected' ? (
-                                                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Rejected / Wait</span>
-                                                    ) : (
-                                                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Not Submitted</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6">
-                                                    <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
-                                                        {subUser.referral_code}
-                                                    </span>
-                                                </td>
-                                                <td className="p-6">
-                                                    {subUser.visible_pin ? (
-                                                        <span className="font-mono text-xs bg-blue-50 px-3 py-1.5 rounded-lg text-blue-700 font-black border border-blue-100">
-                                                            {subUser.visible_pin}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-300">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-black text-slate-900">₹{(subUser.credit_balance ?? 0).toLocaleString()}</span>
-                                                        <span className="text-slate-300">/</span>
-                                                        <span className="text-xs font-bold text-slate-400">₹{(subUser.credit_limit ?? 0).toLocaleString()}</span>
-                                                    </div>
-                                                    {/* Inline Credit Add */}
-                                                    <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Add..."
-                                                            className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
-                                                            value={selectedSubUser?.id === subUser.id ? creditAmount : ''}
-                                                            onChange={(e) => {
-                                                                setSelectedSubUser(subUser);
-                                                                setCreditAmount(e.target.value);
-                                                            }}
-                                                        />
-                                                        <button
-                                                            onClick={() => handleAddCredit(subUser.id)}
-                                                            className="p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shadow-md"
-                                                            title="Add Credit"
-                                                        >
-                                                            <Plus size={14} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-black text-emerald-600 text-sm">₹{(subUser.admin_loan_commission ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase">(Disburse)</span></span>
-                                                        <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-black text-rose-600 text-base tabular-nums truncate max-w-[120px]" title={`₹${(subUser.earnings_balance ?? 0).toLocaleString()}`}>
-                                                            ₹{(subUser.earnings_balance ?? 0).toLocaleString()}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Pending Payout</span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 pr-8 text-right">
-                                                    <div className="flex justify-end gap-2 flex-wrap">
-                                                        {normalizedKycStatus === 'approved' && (
-                                                            <button
-                                                               onClick={() => handleKycAction(subUser.id, 're_kyc')}
-                                                                className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs hover:bg-amber-100 transition-colors border border-amber-200"
-                                                            >
-                                                                Ask for Re-KYC
-                                                            </button>
+                                                    </td>
+                                                    <td className="p-6">
+                                                        {normalizedKycStatus === 'approved' ? (
+                                                            <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Approved</span>
+                                                        ) : normalizedKycStatus === 'pending' ? (
+                                                            <div className="flex flex-col gap-2 items-start">
+                                                                <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pending</span>
+                                                                <div className="flex gap-1">
+                                                                    <button onClick={() => handleKycAction(subUser.id, 'approve')} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 font-bold">Approve</button>
+                                                                    <button onClick={() => handleKycAction(subUser.id, 'reject')} className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded hover:bg-rose-600 font-bold">Reject</button>
+                                                                </div>
+                                                            </div>
+                                                        ) : normalizedKycStatus === 'rejected' ? (
+                                                            <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Rejected / Wait</span>
+                                                        ) : (
+                                                            <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Not Submitted</span>
                                                         )}
-                                                        <button
-                                                            onClick={() => handleEditSubUser(subUser)}
-                                                            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (window.confirm(`Are you sure you want to delete ${subUser.name}?`)) {
-                                                                    try {
-                                                                        await apiFetch(`/admin/sub-users/${subUser.id}`, { method: 'DELETE' });
-                                                                        toast.success('Agent deleted successfully');
-                                                                        fetchSubUsers();
-                                                                    } catch (e: any) {
-                                                                        toast.error(e.message || 'Deletion failed');
+                                                    </td>
+                                                    <td className="p-6">
+                                                        <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
+                                                            {subUser.referral_code}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-6">
+                                                        {subUser.pincode ? (
+                                                            <span className="font-mono text-xs bg-blue-50 px-3 py-1.5 rounded-lg text-blue-700 font-black border border-blue-100">
+                                                                {subUser.pincode}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-300">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-slate-900">₹{(subUser.credit_balance ?? 0).toLocaleString()}</span>
+                                                            <span className="text-slate-300">/</span>
+                                                            <span className="text-xs font-bold text-slate-400">₹{(subUser.credit_limit ?? 0).toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Add..."
+                                                                className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                value={selectedSubUser?.id === subUser.id ? creditAmount : ''}
+                                                                onChange={(e) => {
+                                                                    setSelectedSubUser(subUser);
+                                                                    setCreditAmount(e.target.value);
+                                                                }}
+                                                            />
+                                                            <button
+                                                                onClick={() => handleAddCredit(subUser.id)}
+                                                                className="p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shadow-md"
+                                                                title="Add Credit"
+                                                            >
+                                                                <Plus size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-6">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-black text-emerald-600 text-sm">₹{(subUser.admin_loan_commission ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase">(Disburse)</span></span>
+                                                            <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-black text-rose-600 text-base tabular-nums truncate max-w-[120px]" title={`₹${(subUser.earnings_balance ?? 0).toLocaleString()}`}>
+                                                                ₹{(subUser.earnings_balance ?? 0).toLocaleString()}
+                                                            </span>
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Pending Payout</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-6 pr-8 text-right">
+                                                        <div className="flex justify-end gap-2 flex-wrap">
+                                                            {normalizedKycStatus === 'approved' && (
+                                                                <button
+                                                                    onClick={() => handleKycAction(subUser.id, 're_kyc')}
+                                                                    className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs hover:bg-amber-100 transition-colors border border-amber-200"
+                                                                >
+                                                                    Ask for Re-KYC
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => handleEditSubUser(subUser)}
+                                                                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (window.confirm(`Are you sure you want to delete ${subUser.name}?`)) {
+                                                                        try {
+                                                                            await apiFetch(`/admin/sub-users/${subUser.id}`, { method: 'DELETE' });
+                                                                            toast.success('Agent deleted successfully');
+                                                                            fetchSubUsers();
+                                                                        } catch (e: any) {
+                                                                            toast.error(e.message || 'Deletion failed');
+                                                                        }
                                                                     }
-                                                                }
-                                                            }}
-                                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs hover:bg-red-100 transition-colors"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                        <button
-                                                            onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors group/btn"
-                                                        >
-                                                            View <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
+                                                                }}
+                                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs hover:bg-red-100 transition-colors"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                            <button
+                                                                onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
+                                                                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors group/btn"
+                                                            >
+                                                                View <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                 )}
                                 </tbody>
                             </table>
@@ -622,24 +747,47 @@ export default function SubUsersPage() {
                         {/* Pagination Controls */}
                         {pagination.last_page > 1 && (
                             <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                     Page {pagination.current_page} of {pagination.last_page} ({pagination.total} total vendors)
                                 </p>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setPagination(prev => ({ ...prev, current_page: Math.max(1, prev.current_page - 1) }))}
-                                        disabled={pagination.current_page === 1}
-                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                                    >
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={() => setPagination(prev => ({ ...prev, current_page: Math.min(pagination.last_page, prev.current_page + 1) }))}
-                                        disabled={pagination.current_page === pagination.last_page}
-                                        className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                                    >
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Jump to</span>
+                                        <input 
+                                            type="number" 
+                                            min="1" 
+                                            max={pagination.last_page}
+                                            value={jumpPage}
+                                            onChange={(e) => setJumpPage(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const page = parseInt(jumpPage);
+                                                    if (page >= 1 && page <= pagination.last_page) {
+                                                        setPagination(prev => ({ ...prev, current_page: page }));
+                                                        setJumpPage('');
+                                                    }
+                                                }
+                                            }}
+                                            placeholder="..."
+                                            className="w-12 text-center bg-slate-50 border-none text-xs font-bold text-slate-900 focus:ring-0 rounded-lg p-1"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setPagination(prev => ({ ...prev, current_page: Math.max(1, prev.current_page - 1) }))}
+                                            disabled={pagination.current_page === 1}
+                                            className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                        >
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => setPagination(prev => ({ ...prev, current_page: Math.min(pagination.last_page, prev.current_page + 1) }))}
+                                            disabled={pagination.current_page === pagination.last_page}
+                                            className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                        >
+                                            <ChevronRight className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -686,6 +834,23 @@ export default function SubUsersPage() {
                                         setFormData({ ...formData, mobile_number: value });
                                     }}
                                     readOnly={isEditMode} // Cannot change mobile as it matches ID often
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN (6 digits)</label>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={6}
+                                    pattern="[0-9]{6}"
+                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                    value={formData.pincode}
+                                    placeholder="e.g. 110001"
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                        setFormData({ ...formData, pincode: value });
+                                    }}
                                 />
                             </div>
 
@@ -842,6 +1007,15 @@ export default function SubUsersPage() {
                     </div>
                 </div>
             )}
+            {/* Footer */}
+            <footer className="mt-12 py-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p className="text-slate-400 text-sm font-medium">© 2026 Admin Panel • MSME Loan Systems</p>
+                <div className="flex gap-8">
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Privacy Policy</a>
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Terms of Service</a>
+                    <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Help Center</a>
+                </div>
+            </footer>
         </AdminLayout>
     );
 }

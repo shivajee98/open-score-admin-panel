@@ -84,7 +84,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             <td className="p-6 text-center">
                 {isAdmin && (
                     <button onClick={() => toggleSelect(user.id)}>
-                        {selectedIds.includes(user.id) ?
+                        {selectedIds.includes(user.id) ? 
                             <CheckSquare className="text-blue-600" /> : <Square className="text-slate-300 group-hover:text-slate-400" />
                         }
                     </button>
@@ -113,7 +113,6 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
             </td>
 
-            {/* Inline Cashback Inputs - Only for Admin & Only for Agents */}
             <td className="p-6">
                 {isAdmin && user.role === 'SUPPORT_AGENT' ? (
                     <div className="flex flex-col gap-1">
@@ -127,7 +126,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             onChange={(e) => handleSenderPercentChange(e.target.value)}
                             disabled={parseFloat(cashbackFlat) > 0}
                         />
-                        <input
+                        <input 
                             type="number" min="0" max="100" step="0.01" placeholder="Rec %"
                             className={cn(
                                 "w-20 bg-blue-50 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200",
@@ -244,9 +243,27 @@ export default function InternalUsersPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
 
-    // Pagination
+    // Pagination & Filters
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(12);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        current_page: 1,
+        last_page: 1,
+        per_page: 20
+    });
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState({
+        from_date: '',
+        to_date: '',
+        min_balance: '',
+        max_balance: '',
+        min_signup: '',
+        max_signup: '',
+        pincode: '',
+        sort_by: 'created_at',
+        sort_order: 'desc'
+    });
 
     // Add Funds Modal State
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -263,30 +280,46 @@ export default function InternalUsersPage() {
     const [receivePercent, setReceivePercent] = useState('');
     const [receiveFlat, setReceiveFlat] = useState('');
 
-    const handleModalSenderPercentChange = (val: string) => {
-        setCashbackPercent(val);
-        if (parseFloat(val) > 0) setCashbackFlat('');
-    };
-
+    // Modal Input Handlers (Bulk Cashback)
     const handleModalSenderFlatChange = (val: string) => {
         setCashbackFlat(val);
         if (parseFloat(val) > 0) setCashbackPercent('');
     };
-
+    const handleModalSenderPercentChange = (val: string) => {
+        setCashbackPercent(val);
+        if (parseFloat(val) > 0) setCashbackFlat('');
+    };
+    const handleModalReceiverFlatChange = (val: string) => {
+        setReceiveFlat(val);
+        if (parseFloat(val) > 0) setReceivePercent('');
+    };
     const handleModalReceiverPercentChange = (val: string) => {
         setReceivePercent(val);
         if (parseFloat(val) > 0) setReceiveFlat('');
     };
 
-    const handleModalReceiverFlatChange = (val: string) => {
-        setReceiveFlat(val);
-        if (parseFloat(val) > 0) setReceivePercent('');
-    };
-
     const loadUsers = async () => {
+        setLoading(true);
         try {
-            const data = await apiFetch('/admin/users?type=internal');
-            setUsers(data);
+            const params = new URLSearchParams({
+                type: 'internal',
+                page: currentPage.toString(),
+                per_page: itemsPerPage.toString(),
+                search: search,
+                ...filters
+            });
+            const data = await apiFetch(`/admin/users?${params.toString()}`);
+            if (data.data) {
+                setUsers(data.data);
+                setPagination({
+                    total: data.total,
+                    current_page: data.current_page,
+                    last_page: data.last_page,
+                    per_page: data.per_page
+                });
+            } else {
+                setUsers(data);
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -316,6 +349,9 @@ export default function InternalUsersPage() {
 
     useEffect(() => {
         loadUsers();
+    }, [currentPage, itemsPerPage, search, filters]);
+
+    useEffect(() => {
         if (currentUser?.role === 'ADMIN') {
             loadPendingTransactions();
             loadPendingServiceFees();
@@ -335,10 +371,10 @@ export default function InternalUsersPage() {
                 })
             });
 
-            const msg = currentUser?.role === 'ADMIN'
-                ? 'Success! Funds added successfully.'
+            const msg = currentUser?.role === 'ADMIN' 
+                ? 'Success! Funds added successfully.' 
                 : 'Request Submitted! Pending Admin Approval.';
-
+            
             alert(msg);
             setIsCreditsModalOpen(false);
             setAmount('');
@@ -437,7 +473,7 @@ export default function InternalUsersPage() {
     const toggleStatus = async (user: any) => {
         const newStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
         if (!confirm(`Are you sure you want to ${newStatus === 'ACTIVE' ? 'activate' : 'suspend'} this user?`)) return;
-
+        
         try {
             await apiFetch(`/admin/users/${user.id}/status`, {
                 method: 'POST',
@@ -458,19 +494,11 @@ export default function InternalUsersPage() {
         }
     };
 
-    const filteredUsers = users.filter((u: any) =>
-        (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (u.mobile_number || '').includes(search)
-    );
-
-    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
     const toggleSelectAll = () => {
-        if (selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0) {
+        if (selectedIds.length === users.length && users.length > 0) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(paginatedUsers.map((u: any) => u.id));
+            setSelectedIds(users.map((u: any) => u.id));
         }
     };
 
@@ -478,6 +506,7 @@ export default function InternalUsersPage() {
 
     return (
         <AdminLayout title="Internal Team & Funds">
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
             {/* Pending Approvals Section (Admin Only) */}
             {isAdmin && pendingTransactions.length > 0 && (
@@ -617,48 +646,163 @@ export default function InternalUsersPage() {
                 </div>
             )}
 
-            {/* Header Actions */}
-            <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-                <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                        value={search}
-                        onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                    />
-                </div>
-
-                <div className="flex gap-2">
-                    {/* Bulk Download Disabled for Internal Users per requirements */}
-                    <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
-                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                            className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
-                        >
-                            <option value={12}>12</option>
-                            <option value={24}>24</option>
-                            <option value={60}>60</option>
-                            <option value={100}>100</option>
-                        </select>
+            {/* Filter Toggle & Search Bar */}
+            <div className="mb-6 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="relative w-full max-w-xl">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by Name, Mobile, Email or PIN..."
+                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-xl font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                            value={search}
+                            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                        />
                     </div>
 
-                    {isAdmin && selectedIds.length > 0 && (
-                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
-                            <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={cn(
+                                "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all",
+                                showFilters ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white border border-slate-100 text-slate-600 hover:bg-slate-50"
+                            )}
+                        >
+                            <MoreVertical size={20} className={showFilters ? "rotate-90 transition-transform" : ""} />
+                            {showFilters ? 'Hide Filters' : 'Show Filters'}
+                        </button>
+
+                        <div className="flex items-center bg-slate-50 border-none rounded-xl px-4 py-2">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-transparent border-none text-xs font-black text-slate-900 outline-none cursor-pointer"
+                            >
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                                <option value={10000}>10000</option>
+                            </select>
+                        </div>
+
+                        {isAdmin && selectedIds.length > 0 && (
                             <button
                                 onClick={() => setIsCashbackModalOpen(true)}
-                                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 animate-in zoom-in-95"
                             >
                                 <ReceiptIndianRupee size={20} />
-                                Set Cashback
+                                Set Cashback ({selectedIds.length})
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Advanced Filters */}
+                {showFilters && (
+                    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 animate-in slide-in-from-top-4 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Joining Date Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.from_date}
+                                        onChange={(e) => { setFilters({ ...filters, from_date: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                    <span className="text-slate-300">-</span>
+                                    <input
+                                        type="date"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.to_date}
+                                        onChange={(e) => { setFilters({ ...filters, to_date: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Wallet Balance Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_balance}
+                                        onChange={(e) => { setFilters({ ...filters, min_balance: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_balance}
+                                        onChange={(e) => { setFilters({ ...filters, max_balance: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Turnover Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_signup}
+                                        onChange={(e) => { setFilters({ ...filters, min_signup: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_signup}
+                                        onChange={(e) => { setFilters({ ...filters, max_signup: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN / Sort</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="PIN"
+                                        className="w-24 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.pincode}
+                                        onChange={(e) => { setFilters({ ...filters, pincode: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                    <select
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.sort_by}
+                                        onChange={(e) => { setFilters({ ...filters, sort_by: e.target.value }); setCurrentPage(1); }}
+                                    >
+                                        <option value="created_at">Joined</option>
+                                        <option value="name">Name</option>
+                                        <option value="daily_turnover">Turnover</option>
+                                        <option value="pincode">Pincode</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end mt-4">
+                            <button
+                                onClick={() => {
+                                    setFilters({
+                                        from_date: '', to_date: '', min_balance: '', max_balance: '',
+                                        min_signup: '', max_signup: '', pincode: '',
+                                        sort_by: 'created_at', sort_order: 'desc'
+                                    });
+                                    setSearch('');
+                                    setCurrentPage(1);
+                                }}
+                                className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:text-rose-700 transition-colors"
+                            >
+                                Reset All Filters
                             </button>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -669,7 +813,7 @@ export default function InternalUsersPage() {
                                 <th className="p-6 w-16 text-center">
                                     {isAdmin && (
                                         <button onClick={toggleSelectAll} className="opacity-50 hover:opacity-100">
-                                            {selectedIds.length > 0 && selectedIds.length === filteredUsers.length ?
+                                            {selectedIds.length > 0 && selectedIds.length === users.length ? 
                                                 <CheckSquare className="text-blue-600" /> : <Square className="text-slate-400" />
                                             }
                                         </button>
@@ -685,49 +829,120 @@ export default function InternalUsersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginatedUsers.map((user: any) => (
-                                <UserRow
-                                    key={user.id}
-                                    user={user}
-                                    selectedIds={selectedIds}
-                                    toggleSelect={toggleSelect}
-                                    toggleStatus={toggleStatus}
-                                    handleDelete={handleDelete}
-                                    setSelectedUser={setSelectedUser}
-                                    setIsCreditsModalOpen={setIsCreditsModalOpen}
-                                    reloadUsers={loadUsers}
-                                    currentUser={currentUser}
-                                />
-                            ))}
+                            {users.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
+                                        No matching internal users found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                users.map((user: any) => (
+                                    <UserRow
+                                        key={user.id}
+                                        user={user}
+                                        selectedIds={selectedIds}
+                                        toggleSelect={toggleSelect}
+                                        toggleStatus={toggleStatus}
+                                        handleDelete={handleDelete}
+                                        setSelectedUser={setSelectedUser}
+                                        setIsCreditsModalOpen={setIsCreditsModalOpen}
+                                        reloadUsers={loadUsers}
+                                        currentUser={currentUser}
+                                    />
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                    <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Page {currentPage} of {totalPages}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                            >
-                                <ChevronLeft className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                                className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
-                            >
-                                <ChevronRight className="w-5 h-5" />
-                            </button>
+                {/* Pagination & Export Controls */}
+                <div className="p-8 bg-slate-50/30 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Users</span>
+                            <span className="text-lg font-black text-slate-900">{pagination.total}</span>
+                        </div>
+                        <div className="w-px h-8 bg-slate-200" />
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Page</span>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={pagination.last_page}
+                                    value={currentPage}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (val >= 1 && val <= pagination.last_page) setCurrentPage(val);
+                                    }}
+                                    className="w-12 bg-white border border-slate-200 rounded-lg text-center font-bold text-sm py-1 shadow-sm"
+                                />
+                                <span className="text-sm font-bold text-slate-500">of {pagination.last_page}</span>
+                            </div>
                         </div>
                     </div>
-                )}
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm group"
+                        >
+                            <ChevronLeft className="w-5 h-5 group-active:-translate-x-1 transition-transform" />
+                        </button>
+
+                        <div className="flex gap-1">
+                            {[...Array(Math.min(5, pagination.last_page))].map((_, i) => {
+                                let pageNum;
+                                if (pagination.last_page <= 5) pageNum = i + 1;
+                                else if (currentPage <= 3) pageNum = i + 1;
+                                else if (currentPage >= pagination.last_page - 2) pageNum = pagination.last_page - 4 + i;
+                                else pageNum = currentPage - 2 + i;
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={cn(
+                                            "w-10 h-10 rounded-xl font-black text-xs transition-all",
+                                            currentPage === pageNum ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white border border-slate-100 text-slate-600 hover:bg-slate-50"
+                                        )}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(pagination.last_page, prev + 1))}
+                            disabled={currentPage === pagination.last_page}
+                            className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm group"
+                        >
+                            <ChevronRight className="w-5 h-5 group-active:translate-x-1 transition-transform" />
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={async () => {
+                                const params = new URLSearchParams({ type: 'internal', search: search, ...filters });
+                                const blob = await apiFetch(`/admin/users/export?${params.toString()}`, { responseType: 'blob' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `internal-users-${new Date().toISOString().split('T')[0]}.csv`;
+                                a.click();
+                            }}
+                            className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-colors border border-emerald-100"
+                        >
+                            <Download size={18} />
+                            Export CSV
+                        </button>
+                    </div>
+                </div>
             </div>
+        </div>
 
             {/* Add Funds Modal */}
             {isCreditsModalOpen && (
