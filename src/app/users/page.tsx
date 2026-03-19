@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert } from 'lucide-react';
+import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -295,7 +296,8 @@ export default function UsersPage() {
         max_signup: '',
         pincode: '',
         sort_by: 'created_at',
-        sort_order: 'desc'
+        sort_order: 'desc',
+        user_type: 'customer,agent'
     });
 
     // Pagination
@@ -319,6 +321,7 @@ export default function UsersPage() {
     // Bulk Cashback States
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
+    const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
     const [cashbackPercent, setCashbackPercent] = useState('');
     const [cashbackFlat, setCashbackFlat] = useState('');
     const [receivePercent, setReceivePercent] = useState('');
@@ -347,12 +350,13 @@ export default function UsersPage() {
     const loadUsers = async () => {
         setLoading(true);
         try {
+            const { user_type, ...otherFilters } = filters;
             const params = new URLSearchParams({
-                type: 'customer',
+                type: user_type,
                 page: currentPage.toString(),
                 per_page: itemsPerPage.toString(),
                 search: search,
-                ...filters
+                ...otherFilters
             });
             const data = await apiFetch(`/admin/users?${params.toString()}`);
             if (data.data) {
@@ -669,11 +673,11 @@ export default function UsersPage() {
                                 <button
                                     onClick={async () => {
                                         try {
-                                            const blob = await apiFetch(`/admin/users/export?type=customer&search=${search}`, { responseType: 'blob' });
+                                            const blob = await apiFetch(`/admin/users/export?type=${filters.user_type}&search=${search}`, { responseType: 'blob' });
                                             const url = window.URL.createObjectURL(blob);
                                             const link = document.createElement('a');
                                             link.href = url;
-                                            link.setAttribute('download', `customers_all_${new Date().toISOString().split('T')[0]}.csv`);
+                                            link.setAttribute('download', `${filters.user_type}s_all_${new Date().toISOString().split('T')[0]}.csv`);
                                             document.body.appendChild(link);
                                             link.click();
                                             link.remove();
@@ -691,11 +695,11 @@ export default function UsersPage() {
                                     <button
                                         onClick={async () => {
                                             try {
-                                                const blob = await apiFetch(`/admin/users/export?type=customer&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                const blob = await apiFetch(`/admin/users/export?type=${filters.user_type}&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
                                                 const url = window.URL.createObjectURL(blob);
                                                 const link = document.createElement('a');
                                                 link.href = url;
-                                                link.setAttribute('download', `customers_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
+                                                link.setAttribute('download', `${filters.user_type}s_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
                                                 document.body.appendChild(link);
                                                 link.click();
                                                 link.remove();
@@ -733,7 +737,14 @@ export default function UsersPage() {
 
                         {isAdmin && selectedIds.length > 0 && (
                             <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
-                                <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                                {selectedIds.length} Selected
+                                <button
+                                    onClick={() => setIsMaintenanceModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+                                >
+                                    <ShieldAlert size={20} />
+                                    Maintenance Charge
+                                </button>
                                 <button
                                     onClick={() => setIsCashbackModalOpen(true)}
                                     className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
@@ -1097,6 +1108,19 @@ export default function UsersPage() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Maintenance Charge Modal (Admin Only) */}
+            {isAdmin && (
+                <MaintenanceChargeModal
+                    isOpen={isMaintenanceModalOpen}
+                    onClose={() => setIsMaintenanceModalOpen(false)}
+                    selectedUserIds={selectedIds}
+                    onSuccess={() => {
+                        loadUsers();
+                        setSelectedIds([]);
+                    }}
+                />
             )}
 
             {/* Footer */}

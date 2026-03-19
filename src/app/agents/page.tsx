@@ -1,15 +1,175 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Filter, Wallet, ArrowUpRight, ArrowDownLeft, MoreVertical, Eye, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, PieChart, Users, DollarSign, Activity, Download, Ban, ShieldCheck, X, ReceiptIndianRupee, Square, CheckSquare } from 'lucide-react';
+import { Search, Plus, Filter, Eye, Trash2, CheckCircle, Ban, ChevronLeft, ChevronRight, Download, CheckSquare, X, Users, TrendingUp, Store, FileText, CreditCard, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/Toast';
+
+const TeamEarningsCell = ({ agent, apiFetch, onUpdate }: any) => {
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const [coords, setCoords] = useState({ top: 0, left: 0 });
+    
+    // Form state for percentages
+    const [pPercent, setPPercent] = useState(agent.cashback_percentage || 0);
+    const [rPercent, setRPercent] = useState(agent.receive_cashback_percentage || 0);
+
+    const loadStats = async () => {
+        if (stats || loading) return;
+        setLoading(true);
+        try {
+            const data = await apiFetch(`/admin/users/${agent.id}/agent-stats`);
+            setStats(data);
+        } catch (e) {
+            console.error('Stats load fail', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateCoords = () => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setCoords({
+                top: rect.top,
+                left: rect.left + rect.width / 2
+            });
+        }
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsSaving(true);
+        try {
+            await apiFetch(`/admin/users/${agent.id}/cashback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cashback_percentage: parseFloat(pPercent) || 0,
+                    receive_cashback_percentage: parseFloat(rPercent) || 0,
+                    cashback_flat_amount: 0,
+                    receive_cashback_flat_amount: 0
+                })
+            });
+            toast.success("Agent rates updated!");
+            if (onUpdate) onUpdate();
+        } catch (e) {
+            toast.error("Failed to update rates");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div 
+            ref={triggerRef}
+            className="relative group inline-block"
+            onMouseEnter={() => { 
+                loadStats(); 
+                updateCoords();
+                setIsOpen(true); 
+            }}
+            onMouseLeave={() => setIsOpen(false)}
+        >
+            <div className="flex flex-col cursor-help">
+                <span className="text-sm font-black text-violet-600 font-mono">
+                    ₹{(stats?.earnings?.total || 0).toLocaleString()}
+                </span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-violet-400" /> Stats
+                </span>
+            </div>
+
+            {/* The "Ball" Dialog Box rendered via Portal */}
+            {isOpen && typeof document !== 'undefined' && createPortal(
+                <div 
+                    className="fixed z-[99999] pointer-events-none animate-in zoom-in-50 fade-in duration-300"
+                    style={{ 
+                        top: coords.top, 
+                        left: coords.left,
+                        transform: 'translate(-50%, -100%) translateY(-16px)'
+                    }}
+                >
+                    <div className="w-72 h-72 bg-slate-900 border-4 border-violet-500/30 rounded-full shadow-[0_0_50px_-12px_rgba(139,92,246,0.3)] shadow-2xl flex flex-col items-center justify-center p-8 text-white relative overflow-hidden pointer-events-auto">
+                        {/* Ball Shine Effect */}
+                        <div className="absolute top-4 left-10 w-16 h-8 bg-white/5 rounded-full blur-xl -rotate-45" />
+                        
+                        {loading ? (
+                            <div className="animate-spin w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full" />
+                        ) : (
+                            <div className="w-full flex flex-col items-center text-center">
+                                <div className="mb-2">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.3em] text-violet-400">Total Earnings</p>
+                                    <h4 className="text-2xl font-black font-mono">₹{(stats?.earnings?.total || 0).toLocaleString()}</h4>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 w-full mb-4 px-4 border-y border-white/5 py-3">
+                                    <div>
+                                        <p className="text-[7px] font-black text-slate-400 uppercase">QR</p>
+                                        <p className="text-xs font-bold text-emerald-400">₹{stats?.earnings?.breakdown?.find((b:any)=>b.type?.includes('QR'))?.amount?.toLocaleString() || 0}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[7px] font-black text-slate-400 uppercase">Loans</p>
+                                        <p className="text-xs font-bold text-blue-400">₹{stats?.earnings?.breakdown?.find((b:any)=>b.type?.includes('LOAN'))?.amount?.toLocaleString() || 0}</p>
+                                    </div>
+                                </div>
+
+                                {/* Mini Form */}
+                                <form onSubmit={handleUpdate} className="w-full space-y-2 pointer-events-auto">
+                                    <div className="flex gap-2">
+                                        <div className="flex-1">
+                                            <p className="text-[7px] font-black text-violet-300/50 uppercase mb-1">Pay %</p>
+                                            <input 
+                                                type="number"
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-1 text-center text-xs font-black outline-none focus:border-violet-500"
+                                                value={pPercent}
+                                                onChange={(e) => setPPercent(parseFloat(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-[7px] font-black text-blue-300/50 uppercase mb-1">Recv %</p>
+                                            <input 
+                                                type="number"
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg p-1 text-center text-xs font-black outline-none focus:border-blue-500"
+                                                value={rPercent}
+                                                onChange={(e) => setRPercent(parseFloat(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button 
+                                        type="submit"
+                                        disabled={isSaving}
+                                        className="w-full bg-violet-600 hover:bg-violet-500 text-[8px] font-black uppercase tracking-widest py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        {isSaving ? 'Saving...' : 'Update Rates'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+                        
+                        {/* Tail */}
+                        <div className="absolute top-[98%] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-slate-900" />
+                    </div>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
+
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onViewStats }: any) => {
     const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
@@ -23,7 +183,7 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     <button onClick={() => toggleSelect(user.id)}>
                         <div className={cn(
                             "w-5 h-5 rounded border-2 transition-all flex items-center justify-center",
-                             selectedIds.includes(user.id) ? "bg-blue-600 border-blue-600" : "border-slate-300 group-hover:border-slate-400"
+                            selectedIds.includes(user.id) ? "bg-blue-600 border-blue-600" : "border-slate-300 group-hover:border-slate-400"
                         )}>
                             {selectedIds.includes(user.id) && <CheckSquare className="w-5 h-5 text-white" />}
                         </div>
@@ -44,9 +204,24 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 </div>
             </td>
             <td className="p-6">
-                <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700">
-                    {user.role}
-                </span>
+                {user.my_referral_code ? (
+                    <span className="inline-flex px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 font-mono">
+                        {user.my_referral_code}
+                    </span>
+                ) : (
+                    <span className="text-xs text-slate-300 italic">None</span>
+                )}
+            </td>
+            <td className="p-6">
+                {user.parent_vendor ? (
+                    <div className="flex flex-col">
+                        <p className="text-xs font-black text-teal-700">{user.parent_vendor.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{user.parent_vendor.mobile}</p>
+                        <p className="text-[10px] text-teal-500 font-mono font-bold">{user.parent_vendor.referral_code}</p>
+                    </div>
+                ) : (
+                    <span className="text-xs text-slate-300 font-medium italic">No Parent</span>
+                )}
             </td>
             <td className="p-6">
                 <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
@@ -54,7 +229,6 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             <td className="p-6">
                 <span className="font-mono font-bold text-yellow-600">₹{parseFloat(user.cashback_balance || '0').toLocaleString('en-IN')}</span>
             </td>
-
             <td className="p-6">
                 <div className="flex flex-col text-[10px] font-mono">
                     <span className="text-purple-600">P: {user.cashback_percentage || 0}%</span>
@@ -62,30 +236,13 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 </div>
             </td>
             <td className="p-6">
-                <div className="flex flex-col text-[10px] font-mono">
-                    <span className="text-emerald-600">P: ₹{user.cashback_flat_amount || 0}</span>
-                    <span className="text-indigo-600">R: ₹{user.receive_cashback_flat_amount || 0}</span>
-                </div>
+                <TeamEarningsCell agent={user} apiFetch={apiFetch} onUpdate={reloadUsers} />
             </td>
-
             <td className="p-6">
                 <div className="flex flex-col">
                     <p className="text-xs font-bold text-slate-700">{new Date(user.date_of_join).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                     <p className="text-[10px] text-slate-400 font-mono italic">{new Date(user.date_of_join).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
-            </td>
-            <td className="p-6">
-                <p className="text-xs font-bold text-slate-700">{user.pincode || 'N/A'}</p>
-            </td>
-            <td className="p-6">
-                {user.referred_by ? (
-                    <div className="flex flex-col">
-                        <p className="text-xs font-black text-blue-600">{user.referred_by.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{user.referred_by.mobile}</p>
-                    </div>
-                ) : (
-                    <span className="text-xs text-slate-300 font-medium italic">Direct Join</span>
-                )}
             </td>
             <td className="p-6">
                 <div className="flex items-center gap-2">
@@ -95,6 +252,14 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
             <td className="p-6 pr-8 text-right">
                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={() => onViewStats(user)}
+                        className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                        title="View Referral Stats"
+                    >
+                        <TrendingUp className="w-5 h-5" />
+                    </button>
+
                     <Link
                         href={`/users/detail?id=${user.id}`}
                         className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
@@ -133,6 +298,25 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 </div>
             </td>
         </tr>
+    );
+};
+
+// Loan status badge
+const LoanStatusBadge = ({ status }: { status: string }) => {
+    const colors: Record<string, string> = {
+        'DISBURSED': 'bg-emerald-100 text-emerald-700',
+        'CLOSED': 'bg-slate-100 text-slate-600',
+        'APPROVED': 'bg-blue-100 text-blue-700',
+        'APPLIED': 'bg-amber-100 text-amber-700',
+        'VETTING': 'bg-orange-100 text-orange-700',
+        'CANCELLED': 'bg-rose-100 text-rose-600',
+        'REJECTED': 'bg-red-100 text-red-700',
+        'PREVIEW': 'bg-violet-100 text-violet-700',
+    };
+    return (
+        <span className={cn("inline-flex px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider", colors[status] || 'bg-slate-100 text-slate-500')}>
+            {status}
+        </span>
     );
 };
 
@@ -175,6 +359,13 @@ export default function AgentsPage() {
     // Bulk Select
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+    // Agent Stats Panel
+    const [statsAgent, setStatsAgent] = useState<any>(null);
+    const [statsData, setStatsData] = useState<any>(null);
+    const [statsLoading, setStatsLoading] = useState(false);
+    const [statsTab, setStatsTab] = useState<'merchants' | 'loans'>('merchants');
+    const [loanPage, setLoanPage] = useState(1);
+
     const loadAgents = async () => {
         setLoading(true);
         try {
@@ -207,6 +398,30 @@ export default function AgentsPage() {
     useEffect(() => {
         loadAgents();
     }, [currentPage, itemsPerPage, search, filters]);
+
+    const loadAgentStats = async (agentId: number, page: number = 1) => {
+        setStatsLoading(true);
+        try {
+            const data = await apiFetch(`/admin/users/${agentId}/agent-stats?page=${page}&per_page=10`);
+            setStatsData(data);
+        } catch (e) {
+            console.error('Failed to load agent stats', e);
+        } finally {
+            setStatsLoading(false);
+        }
+    };
+
+    const onViewStats = (user: any) => {
+        setStatsAgent(user);
+        setStatsTab('merchants');
+        setLoanPage(1);
+        loadAgentStats(user.id, 1);
+    };
+
+    const handleLoanPageChange = (page: number) => {
+        setLoanPage(page);
+        if (statsAgent) loadAgentStats(statsAgent.id, page);
+    };
 
     const handleAddFunds = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -374,18 +589,8 @@ export default function AgentsPage() {
                                 <option value={100}>100</option>
                                 <option value={500}>500</option>
                                 <option value={1000}>1000</option>
-                                <option value={5000}>5000</option>
-                                <option value={10000}>10000</option>
                             </select>
                         </div>
-
-                        <button
-                            onClick={() => alert("Agents are created by registering regular users with the 'AGENT' role or updating existing ones.")}
-                            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 ml-4"
-                        >
-                            <Plus className="w-5 h-5" />
-                            New Agent
-                        </button>
                     </div>
                 </div>
 
@@ -400,14 +605,14 @@ export default function AgentsPage() {
                                         type="date"
                                         className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                         value={filters.from_date}
-                                        onChange={(e) => {setFilters({ ...filters, from_date: e.target.value }); setCurrentPage(1);}}
+                                        onChange={(e) => { setFilters({ ...filters, from_date: e.target.value }); setCurrentPage(1); }}
                                     />
                                     <span className="text-slate-300">-</span>
                                     <input
                                         type="date"
                                         className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                         value={filters.to_date}
-                                        onChange={(e) => {setFilters({ ...filters, to_date: e.target.value }); setCurrentPage(1);}}
+                                        onChange={(e) => { setFilters({ ...filters, to_date: e.target.value }); setCurrentPage(1); }}
                                     />
                                 </div>
                             </div>
@@ -420,34 +625,14 @@ export default function AgentsPage() {
                                         placeholder="Min"
                                         className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                         value={filters.min_balance}
-                                        onChange={(e) => {setFilters({ ...filters, min_balance: e.target.value }); setCurrentPage(1);}}
+                                        onChange={(e) => { setFilters({ ...filters, min_balance: e.target.value }); setCurrentPage(1); }}
                                     />
                                     <input
                                         type="number"
                                         placeholder="Max"
                                         className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                         value={filters.max_balance}
-                                        onChange={(e) => {setFilters({ ...filters, max_balance: e.target.value }); setCurrentPage(1);}}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Signup/Turnover Range</label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="number"
-                                        placeholder="Min"
-                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={filters.min_signup}
-                                        onChange={(e) => {setFilters({ ...filters, min_signup: e.target.value }); setCurrentPage(1);}}
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder="Max"
-                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={filters.max_signup}
-                                        onChange={(e) => {setFilters({ ...filters, max_signup: e.target.value }); setCurrentPage(1);}}
+                                        onChange={(e) => { setFilters({ ...filters, max_balance: e.target.value }); setCurrentPage(1); }}
                                     />
                                 </div>
                             </div>
@@ -459,7 +644,7 @@ export default function AgentsPage() {
                                     placeholder="Enter 6-digit PIN"
                                     className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                     value={filters.pincode}
-                                    onChange={(e) => {setFilters({ ...filters, pincode: e.target.value }); setCurrentPage(1);}}
+                                    onChange={(e) => { setFilters({ ...filters, pincode: e.target.value }); setCurrentPage(1); }}
                                 />
                             </div>
 
@@ -469,7 +654,7 @@ export default function AgentsPage() {
                                     <select
                                         className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                         value={filters.sort_by}
-                                        onChange={(e) => {setFilters({ ...filters, sort_by: e.target.value }); setCurrentPage(1);}}
+                                        onChange={(e) => { setFilters({ ...filters, sort_by: e.target.value }); setCurrentPage(1); }}
                                     >
                                         <option value="created_at">Join Date</option>
                                         <option value="name">Name</option>
@@ -479,7 +664,7 @@ export default function AgentsPage() {
                                     <select
                                         className="w-24 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                         value={filters.sort_order}
-                                        onChange={(e) => {setFilters({ ...filters, sort_order: e.target.value }); setCurrentPage(1);}}
+                                        onChange={(e) => { setFilters({ ...filters, sort_order: e.target.value }); setCurrentPage(1); }}
                                     >
                                         <option value="desc">Newest</option>
                                         <option value="asc">Oldest</option>
@@ -502,21 +687,20 @@ export default function AgentsPage() {
                                             {selectedIds.length > 0 && selectedIds.length === displayedUsers.length ?
                                                 <div className="w-5 h-5 rounded border-2 bg-blue-600 border-blue-600 flex items-center justify-center mx-auto">
                                                     <CheckCircle className="w-3 h-3 text-white" />
-                                                </div> : 
+                                                </div> :
                                                 <div className="w-5 h-5 rounded border-2 border-slate-300 mx-auto" />
                                             }
                                         </button>
                                     )}
                                 </th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Agent Details</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
+                                <th className="p-6 text-xs font-bold text-indigo-500 uppercase tracking-widest">Refer Code</th>
+                                <th className="p-6 text-xs font-bold text-teal-500 uppercase tracking-widest">Parent Vendor</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Wallet</th>
-                                <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback Wallet</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback % (P|R)</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Flat Bonus (P|R)</th>
+                                <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback %</th>
+                                <th className="p-6 text-xs font-bold text-violet-500 uppercase tracking-widest">Team Earnings</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
@@ -524,7 +708,7 @@ export default function AgentsPage() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={12} className="p-20 text-center">
+                                    <td colSpan={11} className="p-20 text-center">
                                         <div className="flex justify-center">
                                             <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
                                         </div>
@@ -532,8 +716,8 @@ export default function AgentsPage() {
                                 </tr>
                             ) : displayedUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={12} className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
-                                        No agents found Matching your criteria.
+                                    <td colSpan={11} className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
+                                        No agents found matching your criteria.
                                     </td>
                                 </tr>
                             ) : (
@@ -549,6 +733,7 @@ export default function AgentsPage() {
                                         setIsCreditsModalOpen={setIsCreditsModalOpen}
                                         reloadUsers={loadAgents}
                                         currentUser={currentUser}
+                                        onViewStats={onViewStats}
                                     />
                                 ))
                             )}
@@ -602,6 +787,200 @@ export default function AgentsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Agent Referral Stats Panel */}
+            {statsAgent && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl max-h-[85vh] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
+                        {/* Header */}
+                        <div className="p-8 pb-0 flex-shrink-0">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center font-black text-xl text-indigo-600">
+                                        {(statsAgent.name || 'A')[0]}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">{statsAgent.name}</h2>
+                                        <p className="text-sm text-slate-500 font-medium">{statsAgent.mobile_number}</p>
+                                        {statsAgent.my_referral_code && (
+                                            <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 font-mono mt-1">
+                                                {statsAgent.my_referral_code}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button onClick={() => { setStatsAgent(null); setStatsData(null); }} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors">
+                                    <X className="w-6 h-6 text-slate-400" />
+                                </button>
+                            </div>
+
+                            {/* Parent Vendor Info */}
+                            {statsData?.agent?.parent_vendor && (
+                                <div className="bg-teal-50 px-5 py-3 rounded-2xl mb-4 flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-teal-200 rounded-lg flex items-center justify-center text-teal-700 font-bold text-sm">
+                                        {statsData.agent.parent_vendor.name[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-black text-teal-800">Parent Vendor: {statsData.agent.parent_vendor.name}</p>
+                                        <p className="text-[10px] text-teal-600 font-mono">{statsData.agent.parent_vendor.mobile} · {statsData.agent.parent_vendor.referral_code}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Earnings Summary */}
+                            {statsData && !statsLoading && (
+                                <div className="grid grid-cols-3 gap-3 mb-6">
+                                    <div className="bg-emerald-50 rounded-2xl p-4">
+                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Total Earnings</p>
+                                        <p className="text-lg font-black text-emerald-700 font-mono">₹{(statsData.earnings?.total || 0).toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <div className="bg-blue-50 rounded-2xl p-4">
+                                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">QR Merchants</p>
+                                        <p className="text-lg font-black text-blue-700">{statsData.qr_mapped_count || 0}</p>
+                                    </div>
+                                    <div className="bg-violet-50 rounded-2xl p-4">
+                                        <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest">Loan Referrals</p>
+                                        <p className="text-lg font-black text-violet-700">{statsData.loan_referrals?.total || 0}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Earnings Breakdown */}
+                            {statsData?.earnings?.breakdown?.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-5">
+                                    {statsData.earnings.breakdown.map((item: any) => (
+                                        <div key={item.type} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg">
+                                            <span className="text-[10px] font-bold text-slate-500">{item.label}</span>
+                                            <span className="text-[10px] font-black text-slate-700 font-mono">₹{item.amount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Tab Switcher */}
+                            <div className="flex border-b border-slate-100">
+                                <button
+                                    onClick={() => setStatsTab('merchants')}
+                                    className={cn(
+                                        "flex items-center gap-2 px-5 py-3 text-sm font-bold transition-colors border-b-2",
+                                        statsTab === 'merchants' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    <Store className="w-4 h-4" />
+                                    QR Merchants ({statsData?.qr_mapped_count || 0})
+                                </button>
+                                <button
+                                    onClick={() => setStatsTab('loans')}
+                                    className={cn(
+                                        "flex items-center gap-2 px-5 py-3 text-sm font-bold transition-colors border-b-2",
+                                        statsTab === 'loans' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Loan Referrals ({statsData?.loan_referrals?.total || 0})
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-8 pt-4">
+                            {statsLoading ? (
+                                <div className="flex justify-center py-16">
+                                    <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
+                                </div>
+                            ) : statsTab === 'merchants' ? (
+                                /* QR Mapped Merchants Tab */
+                                <div className="space-y-2">
+                                    {(statsData?.qr_mapped_merchants || []).length === 0 ? (
+                                        <p className="text-center text-slate-400 text-sm font-bold py-12 italic">No merchants have used this agent&apos;s referral code for QR mapping yet.</p>
+                                    ) : (
+                                        (statsData?.qr_mapped_merchants || []).map((merchant: any, i: number) => (
+                                            <div key={i} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
+                                                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center font-bold text-blue-600">
+                                                    {(merchant.name || 'M')[0]}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-slate-900 truncate">{merchant.name || 'Unknown'}</p>
+                                                    <p className="text-xs text-slate-500 font-mono">{merchant.mobile}</p>
+                                                    {merchant.business_name && <p className="text-[10px] text-slate-400 truncate">{merchant.business_name}</p>}
+                                                </div>
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="text-xs font-black text-emerald-600 font-mono">+₹{merchant.bonus_amount?.toLocaleString('en-IN')}</p>
+                                                    <p className="text-[10px] text-slate-400">{new Date(merchant.mapped_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}</p>
+                                                </div>
+                                                <Link href={`/users/detail?id=${merchant.id}`} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0">
+                                                    <ArrowRight className="w-4 h-4" />
+                                                </Link>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            ) : (
+                                /* Loan Referrals Tab */
+                                <div className="space-y-2">
+                                    {(statsData?.loan_referrals?.data || []).length === 0 ? (
+                                        <p className="text-center text-slate-400 text-sm font-bold py-12 italic">No users have used this agent&apos;s referral code for loans yet.</p>
+                                    ) : (
+                                        <>
+                                            {(statsData?.loan_referrals?.data || []).map((loan: any) => (
+                                                <div key={loan.loan_id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
+                                                    <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center font-bold text-violet-600">
+                                                        {(loan.user?.name || 'U')[0]}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-slate-900 truncate">{loan.user?.name || 'Unknown'}</p>
+                                                        <p className="text-xs text-slate-500 font-mono">{loan.user?.mobile}</p>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="text-sm font-black text-slate-700 font-mono">₹{loan.amount?.toLocaleString('en-IN')}</p>
+                                                        <p className="text-[10px] text-slate-400">{loan.plan_name}</p>
+                                                    </div>
+                                                    <div className="flex-shrink-0">
+                                                        <LoanStatusBadge status={loan.status} />
+                                                    </div>
+                                                    <div className="flex-shrink-0 text-right">
+                                                        <p className="text-[10px] text-slate-400">{new Date(loan.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}</p>
+                                                    </div>
+                                                    {loan.user && (
+                                                        <Link href={`/users/detail?id=${loan.user.id}`} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0">
+                                                            <ArrowRight className="w-4 h-4" />
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            ))}
+
+                                            {/* Loan Referrals Pagination */}
+                                            {statsData?.loan_referrals?.last_page > 1 && (
+                                                <div className="flex items-center justify-between pt-4">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                        Page {statsData.loan_referrals.current_page} / {statsData.loan_referrals.last_page} ({statsData.loan_referrals.total} total)
+                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleLoanPageChange(loanPage - 1)}
+                                                            disabled={loanPage <= 1}
+                                                            className="p-2 bg-white border border-slate-100 rounded-xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all"
+                                                        >
+                                                            <ChevronLeft className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleLoanPageChange(loanPage + 1)}
+                                                            disabled={loanPage >= statsData.loan_referrals.last_page}
+                                                            className="p-2 bg-white border border-slate-100 rounded-xl text-slate-900 disabled:opacity-30 hover:bg-slate-50 transition-all"
+                                                        >
+                                                            <ChevronRight className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Add Funds Modal */}
             {isCreditsModalOpen && selectedUser && (
@@ -659,6 +1038,7 @@ export default function AgentsPage() {
                     </div>
                 </div>
             )}
+
             {/* Footer */}
             <footer className="mt-12 py-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p className="text-slate-400 text-sm font-medium">© 2026 Admin Panel • MSME Loan Systems</p>

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert } from 'lucide-react';
+import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -398,6 +399,7 @@ export default function MerchantsPage() {
     // Bulk Cashback States
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
+    const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
     const [cashbackPercent, setCashbackPercent] = useState('');
     const [cashbackFlat, setCashbackFlat] = useState('');
     const [receivePercent, setReceivePercent] = useState('');
@@ -643,7 +645,14 @@ export default function MerchantsPage() {
 
                         {isAdmin && selectedIds.length > 0 && (
                             <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
-                                <span className="font-bold text-slate-500">{selectedIds.length} Selected</span>
+                                {selectedIds.length} Selected
+                                <button
+                                    onClick={() => setIsMaintenanceModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+                                >
+                                    <ShieldAlert size={20} />
+                                    Maintenance Charge
+                                </button>
                                 <button
                                     onClick={() => setIsCashbackModalOpen(true)}
                                     className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
@@ -1008,6 +1017,19 @@ export default function MerchantsPage() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Maintenance Charge Modal (Admin Only) */}
+            {isAdmin && (
+                <MaintenanceChargeModal
+                    isOpen={isMaintenanceModalOpen}
+                    onClose={() => setIsMaintenanceModalOpen(false)}
+                    selectedUserIds={selectedIds}
+                    onSuccess={() => {
+                        loadUsers();
+                        setSelectedIds([]);
+                    }}
+                />
             )}
 
             {/* Footer */}

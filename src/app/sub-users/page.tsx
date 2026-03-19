@@ -32,6 +32,8 @@ interface SubUser {
     };
     visible_pin?: string;
     pincode?: string;
+    support_number?: string;
+    show_support?: boolean;
 }
 
 const normalizeKycStatus = (status?: string): 'approved' | 'pending' | 'rejected' | undefined => {
@@ -86,7 +88,9 @@ export default function SubUsersPage() {
         loan_bonus_milestone_amount: '',
         can_create_vendors: false,
         show_letter: false,
-        pincode: ''
+        pincode: '',
+        support_number: '',
+        show_support: false,
     } as any);
 
     const [jumpPage, setJumpPage] = useState('');
@@ -185,7 +189,9 @@ export default function SubUsersPage() {
             can_create_vendors: subUser.can_create_vendors ?? false,
             show_letter: subUser.show_letter ?? false,
             password: subUser.visible_pin || '', // Using password field for PIN in form
-            pincode: subUser.pincode || ''
+            pincode: subUser.pincode || '',
+            support_number: subUser.support_number || '',
+            show_support: subUser.show_support || false,
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -423,6 +429,72 @@ export default function SubUsersPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Bulk Support Update Bar */}
+            {selectedIds.length > 0 && (
+                <div className="bg-blue-600 text-white p-6 rounded-[2rem] shadow-xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-300 border-4 border-blue-400/30">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                            <Shield className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-lg leading-tight">{selectedIds.length} Agents Selected</h3>
+                            <p className="text-blue-100 text-xs font-bold uppercase tracking-widest">Update Support Information Default</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 flex-1 justify-end w-full md:w-auto">
+                        <div className="flex items-center gap-3 bg-white/10 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10 group cursor-pointer"
+                             onClick={() => setFormData((f: any) => ({ ...f, bulk_show_support: !f.bulk_show_support }))}>
+                            <span className="text-xs font-black uppercase tracking-widest">Show Support?</span>
+                            <button
+                                className={`relative w-10 h-5 rounded-full transition-colors border border-white/20 ${formData.bulk_show_support ? 'bg-white' : 'bg-white/20'}`}
+                            >
+                                <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full transition-transform ${formData.bulk_show_support ? 'bg-blue-600 translate-x-5' : 'bg-white translate-x-0'}`} />
+                            </button>
+                        </div>
+
+                        <div className="relative flex-1 max-w-[200px]">
+                            <input
+                                type="text"
+                                maxLength={10}
+                                placeholder="10 Digit Support Number"
+                                className="w-full pl-6 pr-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-sm font-black text-white placeholder:text-white/40 outline-none focus:bg-white/20 focus:scale-[1.02] transition-all"
+                                value={formData.bulk_support_number || ''}
+                                onChange={(e) => setFormData((f: any) => ({ ...f, bulk_support_number: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                            />
+                        </div>
+
+                        <button
+                            onClick={async () => {
+                                if (!formData.bulk_support_number || formData.bulk_support_number.length !== 10) {
+                                    toast.error('Please enter a valid 10-digit support number');
+                                    return;
+                                }
+                                try {
+                                    await apiFetch('/admin/sub-users/bulk-support', {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                            target_ids: selectedIds,
+                                            target_type: 'sub_users',
+                                            support_number: formData.bulk_support_number,
+                                            show_support: formData.bulk_show_support
+                                        })
+                                    });
+                                    toast.success('Support details updated for selected agents');
+                                    fetchSubUsers();
+                                    setSelectedIds([]);
+                                } catch (e: any) {
+                                    toast.error(e.message || 'Bulk update failed');
+                                }
+                            }}
+                            className="px-8 py-3 bg-white text-blue-600 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-lg shadow-black/10 active:scale-95 whitespace-nowrap"
+                        >
+                            Apply to All
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Advanced Filters */}
             {showFilters && (
@@ -982,6 +1054,43 @@ export default function SubUsersPage() {
                                         }`} />
                                 </button>
                             </div>
+
+                            <div className="space-y-4 p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100/50">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-black text-blue-900 leading-tight">Share Support Number</p>
+                                        <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Help Visibility</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, show_support: !formData.show_support })}
+                                        className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${formData.show_support ? 'bg-blue-600' : 'bg-slate-300'
+                                            }`}
+                                    >
+                                        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${formData.show_support ? 'translate-x-7' : 'translate-x-0'
+                                            }`} />
+                                    </button>
+                                </div>
+
+                                {formData.show_support && (
+                                    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                                        <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Support Contact Number</label>
+                                        <input
+                                            type="text"
+                                            maxLength={10}
+                                            pattern="[0-9]{10}"
+                                            className="w-full px-5 py-4 bg-white border border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-black text-slate-900 transition-all placeholder:text-blue-200"
+                                            value={formData.support_number}
+                                            placeholder="10-digit support number"
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                                setFormData({ ...formData, support_number: value });
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex gap-4 pt-4">
                                 <button
                                     type="button"

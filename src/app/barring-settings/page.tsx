@@ -104,9 +104,26 @@ export default function BarringSettings() {
         search: '',
     });
 
+    // Profile Filtering State (for Receiver Target Selection)
+    const [selectedProfile, setSelectedProfile] = useState<string>('MERCHANT');
+
+    // Mapped Senders State (for Receiver Rules)
+    const [mappedSenderIds, setMappedSenderIds] = useState<number[]>([]);
+    const [senderSearch, setSenderSearch] = useState('');
+
+    // Total Cap State
+    const [isTotalCapEnabled, setIsTotalCapEnabled] = useState(false);
+    const [totalCapValue, setTotalCapValue] = useState<string>('');
+
     // Rule Definition State
     const [ruleForms, setRuleForms] = useState<any>({});
     const [expandedCats, setExpandedCats] = useState<string[]>([]);
+    
+    // NEW: Per-Receiver-Sender Rules State
+    // Format: { 'USER_123': { globalLimit: '1000', senderLimits: [{ senderId: 456, amount: '500' }] } }
+    const [receiverSenderRules, setReceiverSenderRules] = useState<any>({});
+    const [isSenderSelectionOpen, setIsSenderSelectionOpen] = useState(false);
+    const [activeReceiverForSender, setActiveReceiverForSender] = useState<string | null>(null);
 
     const toggleCat = (name: string) => {
         setExpandedCats(prev => 
@@ -290,7 +307,22 @@ export default function BarringSettings() {
             user.mobile_number?.includes(userFilters.search) ||
             user.business_name?.toLowerCase().includes(userFilters.search.toLowerCase());
         
-        return matchesSearch;
+        // Force profile filtering for RECEIVER rules as requested
+        const matchesProfile = ruleSide === 'SENDER' || selectedProfile === 'ALL' || user.role === selectedProfile;
+        
+        return matchesSearch && matchesProfile;
+    });
+
+    // Separate search for Mapped Senders (Payers)
+    const filteredSendersList = targetableUsers.filter(user => {
+        const matchesSearch = !senderSearch || 
+            user.name?.toLowerCase().includes(senderSearch.toLowerCase()) ||
+            user.mobile_number?.includes(senderSearch) ||
+            user.business_name?.toLowerCase().includes(senderSearch.toLowerCase());
+        
+        const matchesProfile = selectedProfile === 'ALL' || user.role === selectedProfile;
+        
+        return matchesSearch && matchesProfile;
     });
 
     const toggleUser = (userId: number) => {
@@ -320,6 +352,10 @@ export default function BarringSettings() {
         setSelectedLoanPlanId(null);
         setMinBalance('0');
         setMaxReceivePerUser('');
+        setSelectedProfile('MERCHANT');
+        setMappedSenderIds([]);
+        setIsTotalCapEnabled(false);
+        setTotalCapValue('');
         initEmptyRules();
         setWizardStep(1);
         setSaveSuccess(false);
@@ -340,10 +376,40 @@ export default function BarringSettings() {
         initEmptyRules();
         const firstRule = targetData.rules[0];
         if (firstRule) {
-            setRuleSide(firstRule.rule_side || 'SENDER');
+            const side = firstRule.rule_side || 'SENDER';
+            setRuleSide(side);
             setSelectedLoanPlanId(firstRule.loan_plan_id);
             setMinBalance(String(firstRule.min_balance || '0'));
             setMaxReceivePerUser(String(firstRule.max_receive_per_user || ''));
+            
+            if (side === 'RECEIVER') {
+                const initialRSR: any = {};
+                const targetKey = targetData.target_type === 'ALL_USERS' 
+                    ? `ALL_${targetData.user_category}` 
+                    : `USER_${targetData.target_user_id}`;
+                
+                const globalRule = targetData.rules.find((r: any) => !r.allowed_merchants || r.allowed_merchants.length === 0);
+                const senderRules = targetData.rules.filter((r: any) => r.allowed_merchants && r.allowed_merchants.length > 0);
+                
+                initialRSR[targetKey] = {
+                    globalLimit: globalRule ? String(globalRule.max_receive_per_user || '') : '',
+                    senderLimits: senderRules.map((r: any) => ({
+                        senderId: r.allowed_merchants[0],
+                        amount: String(r.max_receive_per_user || '')
+                    }))
+                };
+                setReceiverSenderRules(initialRSR);
+            } else {
+                // Find if there's a total cap rule
+                const totalCapRule = targetData.rules.find((r: any) => r.is_total_cap);
+                if (totalCapRule) {
+                    setIsTotalCapEnabled(true);
+                    setTotalCapValue(String(totalCapRule.limit_value || ''));
+                } else {
+                    setIsTotalCapEnabled(false);
+                    setTotalCapValue('');
+                }
+            }
         }
 
         const newForms = { ...ruleForms };
@@ -398,69 +464,133 @@ export default function BarringSettings() {
             toast.error("Please select at least one user");
             return;
         }
-        if (Object.keys(ruleForms).length === 0) {
+        
+        if (ruleSide === 'RECEIVER') {
+            const initial: any = { ...receiverSenderRules };
+            if (targetType === 'SPECIFIC_USER') {
+                assignedUserIds.forEach(id => {
+                    const key = `USER_${id}`;
+                    if (!initial[key]) {
+                        initial[key] = { globalLimit: '', senderLimits: [] };
+                    }
+                });
+            } else {
+                const key = `ALL_${userCategory}`;
+                if (!initial[key]) {
+                    initial[key] = { globalLimit: '', senderLimits: [] };
+                }
+            }
+            setReceiverSenderRules(initial);
+        } else if (Object.keys(ruleForms).length === 0) {
             initEmptyRules();
         }
         setWizardStep(2);
     };
 
     const handleSaveRules = async () => {
-        const rulesToSave = Object.keys(ruleForms)
-            .filter(key => ruleForms[key].enabled)
-            .map(key => {
-                const [nature, segment] = key.split(':');
-                return {
-                    rule_side: ruleSide,
-                    loan_plan_id: ruleSide === 'SENDER' ? selectedLoanPlanId : null,
-                    min_balance: ruleSide === 'SENDER' ? parseFloat(minBalance || '0') : 0,
-                    max_receive_per_user: ruleSide === 'RECEIVER' ? parseFloat(maxReceivePerUser || '0') : null,
-                    business_nature: nature === 'null' ? null : nature,
-                    business_segment: segment === 'null' ? null : segment,
-                    limit_type: ruleForms[key].limit_type,
-                    limit_value: parseFloat(ruleForms[key].limit_value || '0'),
-                    is_active: true
-                };
-            });
-
-        if (rulesToSave.length === 0) {
-            toast.error("Please enable and configure at least one rule");
-            return;
-        }
-
-        for (const r of rulesToSave) {
-            if (ruleSide === 'SENDER' && (isNaN(r.limit_value) || r.limit_value <= 0)) {
-                toast.error("Please enter valid limits for enabled categories");
-                return;
-            }
-            if (ruleSide === 'RECEIVER' && (isNaN(r.max_receive_per_user!) || r.max_receive_per_user! <= 0)) {
-                toast.error("Please enter a valid receive capacity");
-                return;
-            }
-        }
-
         setIsSaving(true);
-        const payload = {
-            target_type: targetType,
-            target_user_id: targetType === 'SPECIFIC_USER' && assignedUserIds.length === 1 ? assignedUserIds[0] : null,
-            target_user_ids: targetType === 'SPECIFIC_USER' ? assignedUserIds : null,
-            user_category: targetType === 'ALL_USERS' ? userCategory : null,
-            rules: rulesToSave
-        };
-
         try {
-            await apiFetch('/admin/barring-rules', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-            
+            if (ruleSide === 'SENDER') {
+                const rulesToSave: any[] = [];
+                Object.entries(ruleForms).forEach(([key, rule]: [string, any]) => {
+                    if (rule.enabled) {
+                        const [nature, segment] = key.split(':');
+                        rulesToSave.push({
+                            rule_side: 'SENDER',
+                            loan_plan_id: selectedLoanPlanId,
+                            min_balance: parseFloat(minBalance || '0'),
+                            business_nature: nature === 'null' ? null : nature,
+                            business_segment: segment === 'null' ? null : segment,
+                            limit_type: rule.limit_type,
+                            limit_value: parseFloat(rule.limit_value || '0'),
+                            is_total_cap: false,
+                            is_active: true
+                        });
+                    }
+                });
+
+                if (isTotalCapEnabled && totalCapValue) {
+                    rulesToSave.push({
+                        rule_side: 'SENDER',
+                        loan_plan_id: selectedLoanPlanId,
+                        min_balance: parseFloat(minBalance || '0'),
+                        limit_type: 'FLAT_AMOUNT',
+                        limit_value: parseFloat(totalCapValue),
+                        is_total_cap: true,
+                        is_active: true
+                    });
+                }
+
+                if (rulesToSave.length === 0) {
+                    toast.error("Please enable at least one rule");
+                    setIsSaving(false);
+                    return;
+                }
+
+                const payload = {
+                    target_type: targetType,
+                    target_user_ids: assignedUserIds,
+                    user_category: userCategory,
+                    rules: rulesToSave
+                };
+
+                await apiFetch('/admin/barring-rules', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                // RECEIVER RULES - Granular processing per target
+                const targets = Object.keys(receiverSenderRules);
+                
+                for (const targetKey of targets) {
+                    const ruleSet = receiverSenderRules[targetKey];
+                    const targetRules: any[] = [];
+                    
+                    if (ruleSet.globalLimit) {
+                        targetRules.push({
+                            rule_side: 'RECEIVER',
+                            max_receive_per_user: parseFloat(ruleSet.globalLimit),
+                            allowed_merchants: null,
+                            is_active: true
+                        });
+                    }
+                    
+                    ruleSet.senderLimits.forEach((sl: any) => {
+                        if (sl.amount) {
+                            targetRules.push({
+                                rule_side: 'RECEIVER',
+                                max_receive_per_user: parseFloat(sl.amount),
+                                allowed_merchants: [sl.senderId],
+                                is_active: true
+                            });
+                        }
+                    });
+
+                    if (targetRules.length === 0) continue;
+
+                    const individualPayload = {
+                        target_type: targetKey.startsWith('USER_') ? 'SPECIFIC_USER' : 'ALL_USERS',
+                        target_user_id: targetKey.startsWith('USER_') ? targetKey.replace('USER_', '') : null,
+                        user_category: targetKey.startsWith('ALL_') ? targetKey.replace('ALL_', '') : null,
+                        rules: targetRules
+                    };
+
+                    await apiFetch('/admin/barring-rules', {
+                        method: 'POST',
+                        body: JSON.stringify(individualPayload)
+                    });
+                }
+            }
+
+            toast.success("Barring rules saved successfully!");
             setSaveSuccess(true);
             setTimeout(() => {
                 setIsWizardOpen(false);
                 fetchRules();
-            }, 1500); // Wait to show animation
-            
+            }, 1000);
         } catch (error: any) {
-            toast.error(error.message || 'Failed to save rules');
+            console.error("Save error:", error);
+            toast.error(error.message || "Failed to save rules");
         } finally {
             setIsSaving(false);
         }
@@ -532,6 +662,9 @@ export default function BarringSettings() {
                                         {group.rules[0]?.rule_side === 'RECEIVER' && group.rules[0]?.max_receive_per_user && (
                                             <p className="text-[10px] text-emerald-600 font-bold">Capacity: ₹{group.rules[0].max_receive_per_user}/user</p>
                                         )}
+                                        {group.rules.some((r: any) => r.is_total_cap) && (
+                                            <p className="text-[10px] text-blue-600 font-black uppercase tracking-tighter">Total Cap: ₹{group.rules.find((r: any) => r.is_total_cap).limit_value}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -540,38 +673,38 @@ export default function BarringSettings() {
                                 <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Active Rules ({group.rules.length})</h4>
                                 <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
                                     {group.rules.map((r: any) => (
-                                        <div key={r.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-2">
+                                        <div key={r.id} className={`p-3 rounded-lg border space-y-2 ${r.is_total_cap ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
                                             <div className="flex justify-between items-center">
                                                 <div className="flex flex-col truncate pr-2">
-                                                    <span className="text-sm font-bold text-slate-700 truncate">
-                                                        {r.business_segment 
+                                                    <span className={`text-sm font-bold truncate ${r.is_total_cap ? 'text-white' : 'text-slate-700'}`}>
+                                                        {r.is_total_cap ? 'DAILY TOTAL VOLUME CAP' : (r.business_segment 
                                                             ? `${r.business_nature} > ${r.business_segment}` 
-                                                            : (r.business_nature || 'Generic / Global')
+                                                            : (r.business_nature || 'Generic / Global'))
                                                         }
                                                     </span>
                                                 </div>
                                                 <div className="text-right flex-shrink-0">
-                                                    <span className="text-xs font-black text-blue-600">
+                                                    <span className={`text-xs font-black ${r.is_total_cap ? 'text-blue-100' : 'text-blue-600'}`}>
                                                         {r.limit_type === 'PERCENTAGE_OF_WALLET' ? `${r.limit_value}%` : `₹${r.limit_value}`}
                                                     </span>
                                                 </div>
                                             </div>
                                             
                                             {(r.loan_plan_id || r.min_balance > 0 || r.allowed_merchants?.length > 0) && (
-                                                <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-200/50 mt-1">
+                                                <div className={`flex flex-wrap gap-2 pt-1 border-t mt-1 ${r.is_total_cap ? 'border-white/20' : 'border-slate-200/50'}`}>
                                                     {r.loanPlan && (
-                                                        <span className="text-[9px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100">
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${r.is_total_cap ? 'bg-white/10 text-white border-white/20' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                             Plan: {r.loanPlan.name}
                                                         </span>
                                                     )}
                                                     {r.min_balance > 0 && (
-                                                        <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100">
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${r.is_total_cap ? 'bg-white/10 text-white border-white/20' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                                             Min Bal: ₹{r.min_balance}
                                                         </span>
                                                     )}
                                                     {r.allowed_merchants?.length > 0 && (
-                                                        <span className="text-[9px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100">
-                                                            {r.allowed_merchants.length} Merch.
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${r.is_total_cap ? 'bg-white/10 text-white border-white/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                                            {r.allowed_merchants.length} Mapped Senders
                                                         </span>
                                                     )}
                                                 </div>
@@ -674,20 +807,15 @@ export default function BarringSettings() {
                                         )}
 
                                         {ruleSide === 'RECEIVER' && (
-                                            <div className="bg-emerald-50/50 p-6 rounded-xl border border-emerald-100 space-y-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-black text-emerald-600 uppercase mb-2">Max receiving limit per User:</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                                        <input 
-                                                            type="number"
-                                                            className="w-full p-3 pl-7 bg-white border border-emerald-200 rounded-lg outline-none font-bold text-lg text-slate-800 focus:ring-2 focus:ring-emerald-500"
-                                                            placeholder="e.g. 1000"
-                                                            value={maxReceivePerUser}
-                                                            onChange={(e) => setMaxReceivePerUser(e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <p className="text-[10px] text-slate-500 mt-2 font-medium">Any single sender will not be able to transfer more than this amount to this target.</p>
+                                            <div className="bg-emerald-50/50 p-6 rounded-xl border border-emerald-100 flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                                                    <Info className="w-6 h-6" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="font-bold text-emerald-800 text-sm">Receiver Specific Limits</h4>
+                                                    <p className="text-[10px] text-emerald-600 font-medium leading-relaxed">
+                                                        You will be able to set specific limits for different senders for each selected receiver in the next step.
+                                                    </p>
                                                 </div>
                                             </div>
                                         )}
@@ -728,6 +856,20 @@ export default function BarringSettings() {
 
                                         {targetType === 'SPECIFIC_USER' && (
                                             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                                                {ruleSide === 'RECEIVER' && (
+                                                    <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                                                        {['MERCHANT', 'CUSTOMER', 'STUDENT'].map(profile => (
+                                                            <button
+                                                                key={profile}
+                                                                type="button"
+                                                                onClick={() => setSelectedProfile(profile)}
+                                                                className={`flex-1 py-2 px-3 text-[10px] font-black uppercase tracking-wider rounded-md transition-all ${selectedProfile === profile ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                            >
+                                                                {profile}S
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 <div className="relative">
                                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                                                     <input 
@@ -817,171 +959,325 @@ export default function BarringSettings() {
                                             </p>
                                         </div>
 
-                                        <div className="space-y-4 max-w-4xl mx-auto mb-10">
-                                            {/* Top Level Item: All Other / Generic */}
-                                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                                <div className="p-4 flex items-center justify-between bg-white">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
-                                                            <LayoutGrid className="w-5 h-5" />
+                                        {ruleSide === 'SENDER' ? (
+                                            <div className="space-y-4 max-w-4xl mx-auto mb-10">
+                                                {/* Total Volume Cap Rule */}
+                                                <div className="bg-blue-600 rounded-2xl shadow-lg p-5 text-white flex items-center justify-between border border-blue-400">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                                            <Banknote className="w-6 h-6 text-white" />
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-slate-800">All Other / Generic</div>
-                                                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                                                {ruleSide === 'SENDER' ? 'Default Transfer Limit' : 'Global Receiving Limit'}
-                                                            </div>
+                                                            <h3 className="font-bold text-lg leading-tight uppercase tracking-tight">Daily Total Volume Cap</h3>
+                                                            <p className="text-xs text-blue-100 font-medium">Overwrites all category limits once reached.</p>
                                                         </div>
                                                     </div>
-                                                    
-                                                    <div className="flex items-center gap-6">
+                                                    <div className="flex items-center gap-4">
                                                         <label className="relative inline-flex items-center cursor-pointer">
                                                             <input 
                                                                 type="checkbox" 
                                                                 className="sr-only peer" 
-                                                                checked={ruleForms['null:null']?.enabled || false}
-                                                                onChange={(e) => {
-                                                                    setRuleForms({
-                                                                        ...ruleForms,
-                                                                        ['null:null']: { ...ruleForms['null:null'], enabled: e.target.checked }
-                                                                    });
-                                                                }}
+                                                                checked={isTotalCapEnabled}
+                                                                onChange={(e) => setIsTotalCapEnabled(e.target.checked)}
                                                             />
-                                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                            <div className="w-12 h-6 bg-blue-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white/30 border border-white/20"></div>
                                                         </label>
-
-                                                        {ruleForms['null:null']?.enabled && (
-                                                            <div className="flex gap-2 animate-in zoom-in-95 duration-200">
-                                                                <select 
-                                                                    className="p-2.5 border border-blue-200 bg-white rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                                                                    value={ruleForms['null:null'].limit_type}
-                                                                    onChange={(e) => setRuleForms({ ...ruleForms, ['null:null']: { ...ruleForms['null:null'], limit_type: e.target.value } })}
-                                                                >
-                                                                    <option value="FLAT_AMOUNT">Flat ₹</option>
-                                                                    <option value="PERCENTAGE_OF_WALLET">% Wallet</option>
-                                                                </select>
+                                                        {isTotalCapEnabled && (
+                                                            <div className="relative animate-in zoom-in-95 duration-200">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-bold">₹</span>
                                                                 <input 
                                                                     type="number"
-                                                                    className="p-2.5 border border-blue-200 bg-white rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 w-24"
-                                                                    placeholder="Amount"
-                                                                    value={ruleForms['null:null'].limit_value}
-                                                                    onChange={(e) => setRuleForms({ ...ruleForms, ['null:null']: { ...ruleForms['null:null'], limit_value: e.target.value } })}
+                                                                    className="w-32 p-2.5 pl-7 bg-white/10 border border-white/20 rounded-xl outline-none font-black text-sm text-white focus:bg-white/20 transition-all placeholder:text-white/40"
+                                                                    placeholder="Limit"
+                                                                    value={totalCapValue}
+                                                                    onChange={(e) => setTotalCapValue(e.target.value)}
                                                                 />
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Business Structure Categories */}
-                                            {BUSINESS_STRUCTURE.map((cat) => {
-                                                const parentKey = `${cat.name}:null`;
-                                                const isParentEnabled = ruleForms[parentKey]?.enabled || false;
-                                                const isExpanded = expandedCats.includes(cat.name);
-                                                const activeSubCount = cat.subcategories.filter(sub => ruleForms[`${cat.name}:${sub}`]?.enabled).length;
-
-                                                return (
-                                                    <div key={cat.name} className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 ${isExpanded ? 'border-blue-200 ring-4 ring-blue-50' : 'border-slate-200'}`}>
-                                                        {/* Parent Row */}
-                                                        <div className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-slate-50/50' : 'bg-white'}`} onClick={() => toggleCat(cat.name)}>
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}>
-                                                                    <Layers className="w-5 h-5" />
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-bold text-slate-800 text-lg leading-tight">{cat.name}</div>
-                                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                                        <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{cat.subcategories.length} Segments</div>
-                                                                        {activeSubCount > 0 && (
-                                                                            <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black rounded-full uppercase">
-                                                                                {activeSubCount} Limits Active
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
+                                                {/* Top Level Item: All Other / Generic */}
+                                                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                                    <div className="p-4 flex items-center justify-between bg-white">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
+                                                                <LayoutGrid className="w-5 h-5" />
                                                             </div>
-                                                            
-                                                            <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                                {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                                                            <div>
+                                                                <div className="font-bold text-slate-800">All Other / Generic</div>
+                                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                                                    Default Transfer Limit
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                        
+                                                        <div className="flex items-center gap-6">
+                                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    className="sr-only peer" 
+                                                                    checked={ruleForms['null:null']?.enabled || false}
+                                                                    onChange={(e) => {
+                                                                        setRuleForms({
+                                                                            ...ruleForms,
+                                                                            ['null:null']: { ...ruleForms['null:null'], enabled: e.target.checked }
+                                                                        });
+                                                                    }}
+                                                                />
+                                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                            </label>
 
-                                                        {/* Subcategories (Accordion Content) */}
-                                                        {isExpanded && (
-                                                            <div className="border-t border-slate-100 divide-y divide-slate-100 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
-                                                                {/* Optional: Limit for entire category */}
-                                                                <div className="p-4 flex items-center justify-between pl-16 bg-blue-50/20">
-                                                                    <div>
-                                                                        <div className="font-bold text-slate-700 text-sm italic underline decoration-blue-200 underline-offset-4">Catch-all limit for {cat.name}</div>
-                                                                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Applied if no specific segment match</p>
+                                                            {ruleForms['null:null']?.enabled && (
+                                                                <div className="flex gap-2 animate-in zoom-in-95 duration-200">
+                                                                    <select 
+                                                                        className="p-2.5 border border-blue-200 bg-white rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                                                        value={ruleForms['null:null'].limit_type}
+                                                                        onChange={(e) => setRuleForms({ ...ruleForms, ['null:null']: { ...ruleForms['null:null'], limit_type: e.target.value } })}
+                                                                    >
+                                                                        <option value="FLAT_AMOUNT">Flat ₹</option>
+                                                                        <option value="PERCENTAGE_OF_WALLET">% Wallet</option>
+                                                                    </select>
+                                                                    <input 
+                                                                        type="number"
+                                                                        className="p-2.5 border border-blue-200 bg-white rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 w-24"
+                                                                        placeholder="Amount"
+                                                                        value={ruleForms['null:null'].limit_value}
+                                                                        onChange={(e) => setRuleForms({ ...ruleForms, ['null:null']: { ...ruleForms['null:null'], limit_value: e.target.value } })}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {BUSINESS_STRUCTURE.map((cat) => {
+                                                    const parentKey = `${cat.name}:null`;
+                                                    const isParentEnabled = ruleForms[parentKey]?.enabled || false;
+                                                    const isExpanded = expandedCats.includes(cat.name);
+                                                    const activeSubCount = cat.subcategories.filter(sub => ruleForms[`${cat.name}:${sub}`]?.enabled).length;
+
+                                                    return (
+                                                        <div key={cat.name} className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 ${isExpanded ? 'border-blue-200 ring-4 ring-blue-50' : 'border-slate-200'}`}>
+                                                            {/* Parent Row */}
+                                                            <div className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-slate-50/50' : 'bg-white'}`} onClick={() => toggleCat(cat.name)}>
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}>
+                                                                        <Layers className="w-5 h-5" />
                                                                     </div>
-                                                                    <div className="flex items-center gap-4">
-                                                                        <label className="relative inline-flex items-center cursor-pointer">
-                                                                            <input 
-                                                                                type="checkbox" 
-                                                                                className="sr-only peer" 
-                                                                                checked={isParentEnabled}
-                                                                                onChange={(e) => {
-                                                                                    setRuleForms({
-                                                                                        ...ruleForms,
-                                                                                        [parentKey]: { ...ruleForms[parentKey], enabled: e.target.checked }
-                                                                                    });
-                                                                                }}
-                                                                            />
-                                                                            <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                                                        </label>
-                                                                        {isParentEnabled && (
-                                                                            <div className="flex gap-2">
-                                                                                <select className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[parentKey].limit_type} onChange={(e) => setRuleForms({...ruleForms, [parentKey]: {...ruleForms[parentKey], limit_type: e.target.value}})}>
-                                                                                    <option value="FLAT_AMOUNT">₹</option>
-                                                                                    <option value="PERCENTAGE_OF_WALLET">%</option>
-                                                                                </select>
-                                                                                <input type="number" className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[parentKey].limit_value} onChange={(e) => setRuleForms({...ruleForms, [parentKey]: {...ruleForms[parentKey], limit_value: e.target.value}})} />
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-800 text-lg leading-tight">{cat.name}</div>
+                                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                                            <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{cat.subcategories.length} Segments</div>
+                                                                            {activeSubCount > 0 && (
+                                                                                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black rounded-full uppercase">
+                                                                                    {activeSubCount} Limits Active
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                                                                    {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Subcategories (Accordion Content) */}
+                                                            {isExpanded && (
+                                                                <div className="border-t border-slate-100 divide-y divide-slate-100 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
+                                                                    {/* Optional: Limit for entire category */}
+                                                                    <div className="p-4 flex items-center justify-between pl-16 bg-blue-50/20">
+                                                                        <div>
+                                                                            <div className="font-bold text-slate-700 text-sm italic underline decoration-blue-200 underline-offset-4">Catch-all limit for {cat.name}</div>
+                                                                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Applied if no specific segment match</p>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-4">
+                                                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                                                <input 
+                                                                                    type="checkbox" 
+                                                                                    className="sr-only peer" 
+                                                                                    checked={isParentEnabled}
+                                                                                    onChange={(e) => {
+                                                                                        setRuleForms({
+                                                                                            ...ruleForms,
+                                                                                            [parentKey]: { ...ruleForms[parentKey], enabled: e.target.checked }
+                                                                                        });
+                                                                                    }}
+                                                                                />
+                                                                                <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                                                            </label>
+                                                                            {isParentEnabled && (
+                                                                                <div className="flex gap-2">
+                                                                                    <select className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[parentKey].limit_type} onChange={(e) => setRuleForms({...ruleForms, [parentKey]: {...ruleForms[parentKey], limit_type: e.target.value}})}>
+                                                                                        <option value="FLAT_AMOUNT">₹</option>
+                                                                                        <option value="PERCENTAGE_OF_WALLET">%</option>
+                                                                                    </select>
+                                                                                    <input type="number" className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[parentKey].limit_value} onChange={(e) => setRuleForms({...ruleForms, [parentKey]: {...ruleForms[parentKey], limit_value: e.target.value}})} />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {cat.subcategories.map(sub => {
+                                                                        const subKey = `${cat.name}:${sub}`;
+                                                                        const isSubEnabled = ruleForms[subKey]?.enabled || false;
+                                                                        
+                                                                        return (
+                                                                            <div key={sub} className={`p-4 flex items-center justify-between pl-16 hover:bg-white transition-colors ${isSubEnabled ? 'bg-emerald-50/10' : ''}`}>
+                                                                                <div className="font-medium text-slate-700 text-sm">{sub}</div>
+                                                                                <div className="flex items-center gap-4">
+                                                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                                                        <input 
+                                                                                            type="checkbox" 
+                                                                                            className="sr-only peer" 
+                                                                                            checked={isSubEnabled}
+                                                                                            onChange={(e) => {
+                                                                                                setRuleForms({
+                                                                                                    ...ruleForms,
+                                                                                                    [subKey]: { ...ruleForms[subKey], enabled: e.target.checked }
+                                                                                                });
+                                                                                            }}
+                                                                                        />
+                                                                                        <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                                                    </label>
+                                                                                    {isSubEnabled && (
+                                                                                        <div className="flex gap-2 animate-in zoom-in-95 duration-200">
+                                                                                            <select className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[subKey].limit_type} onChange={(e) => setRuleForms({...ruleForms, [subKey]: {...ruleForms[subKey], limit_type: e.target.value}})}>
+                                                                                                <option value="FLAT_AMOUNT">₹</option>
+                                                                                                <option value="PERCENTAGE_OF_WALLET">%</option>
+                                                                                            </select>
+                                                                                            <input type="number" className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[subKey].limit_value} onChange={(e) => setRuleForms({...ruleForms, [subKey]: {...ruleForms[subKey], limit_value: e.target.value}})} />
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
-                                                                        )}
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-6 max-w-4xl mx-auto mb-10">
+                                                {/* Receiver Target Cards */}
+                                                <div className="grid grid-cols-1 gap-6">
+                                                    {(targetType === 'SPECIFIC_USER' ? assignedUserIds : [null]).map((targetId) => {
+                                                        const key = targetId ? `USER_${targetId}` : `ALL_${userCategory}`;
+                                                        const targetUser = targetableUsers.find(u => u.id === targetId);
+                                                        const ruleSet = receiverSenderRules[key] || { globalLimit: '', senderLimits: [] };
+
+                                                        return (
+                                                            <div key={key} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                                                <div className="p-6 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center text-slate-600">
+                                                                            <User className="w-6 h-6" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">
+                                                                                {targetId ? (targetUser?.name || 'Loading...') : `ALL ${userCategory}S`}
+                                                                            </h3>
+                                                                            <div className="flex gap-3 text-[10px] font-bold text-slate-500 mt-0.5">
+                                                                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200">{targetId ? targetUser?.mobile_number : 'Global Target'}</span>
+                                                                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200 uppercase">{targetId ? targetUser?.role : userCategory}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="text-right">
+                                                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Default Receiving Limit (from all)</p>
+                                                                            <div className="relative">
+                                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                                                                <input 
+                                                                                    type="number"
+                                                                                    className="p-2.5 pl-7 bg-white border border-slate-200 rounded-xl text-sm font-black outline-none focus:ring-2 focus:ring-emerald-500 w-32"
+                                                                                    placeholder="Limit"
+                                                                                    value={ruleSet.globalLimit}
+                                                                                    onChange={(e) => {
+                                                                                        const updated = { ...receiverSenderRules };
+                                                                                        updated[key].globalLimit = e.target.value;
+                                                                                        setReceiverSenderRules(updated);
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
 
-                                                                {cat.subcategories.map(sub => {
-                                                                    const subKey = `${cat.name}:${sub}`;
-                                                                    const isSubEnabled = ruleForms[subKey]?.enabled || false;
-                                                                    
-                                                                    return (
-                                                                        <div key={sub} className={`p-4 flex items-center justify-between pl-16 hover:bg-white transition-colors ${isSubEnabled ? 'bg-emerald-50/10' : ''}`}>
-                                                                            <div className="font-medium text-slate-700 text-sm">{sub}</div>
-                                                                            <div className="flex items-center gap-4">
-                                                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                                                    <input 
-                                                                                        type="checkbox" 
-                                                                                        className="sr-only peer" 
-                                                                                        checked={isSubEnabled}
-                                                                                        onChange={(e) => {
-                                                                                            setRuleForms({
-                                                                                                ...ruleForms,
-                                                                                                [subKey]: { ...ruleForms[subKey], enabled: e.target.checked }
-                                                                                            });
-                                                                                        }}
-                                                                                    />
-                                                                                    <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-                                                                                </label>
-                                                                                {isSubEnabled && (
-                                                                                    <div className="flex gap-2 animate-in zoom-in-95 duration-200">
-                                                                                        <select className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[subKey].limit_type} onChange={(e) => setRuleForms({...ruleForms, [subKey]: {...ruleForms[subKey], limit_type: e.target.value}})}>
-                                                                                            <option value="FLAT_AMOUNT">₹</option>
-                                                                                            <option value="PERCENTAGE_OF_WALLET">%</option>
-                                                                                        </select>
-                                                                                        <input type="number" className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[subKey].limit_value} onChange={(e) => setRuleForms({...ruleForms, [subKey]: {...ruleForms[subKey], limit_value: e.target.value}})} />
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
+                                                                <div className="p-6 space-y-4">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Sender-Specific Exceptions ({ruleSet.senderLimits.length})</h4>
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                setActiveReceiverForSender(key);
+                                                                                setIsSenderSelectionOpen(true);
+                                                                            }}
+                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-blue-700 transition shadow-sm"
+                                                                        >
+                                                                            <Plus className="w-3 h-3" /> Add Sender Rule
+                                                                        </button>
+                                                                    </div>
+
+                                                                    {ruleSet.senderLimits.length === 0 ? (
+                                                                        <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                                                            <p className="text-xs text-slate-400 font-medium">No specific sender rules set. Default limit will apply to everyone.</p>
                                                                         </div>
-                                                                    );
-                                                                })}
+                                                                    ) : (
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                            {ruleSet.senderLimits.map((sr: any, idx: number) => {
+                                                                                const senderUser = targetableUsers.find(u => u.id === sr.senderId);
+                                                                                return (
+                                                                                    <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-blue-200 transition-all group">
+                                                                                        <div className="flex items-center gap-3 truncate">
+                                                                                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">
+                                                                                                {senderUser?.name?.[0] || 'S'}
+                                                                                            </div>
+                                                                                            <div className="truncate">
+                                                                                                <p className="text-xs font-bold text-slate-800 truncate">{senderUser?.name || 'Unknown Sender'}</p>
+                                                                                                <p className="text-[10px] text-slate-500 font-medium">{senderUser?.mobile_number}</p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div className="flex items-center gap-3">
+                                                                                            <div className="relative">
+                                                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">₹</span>
+                                                                                                <input 
+                                                                                                    type="number"
+                                                                                                    className="p-1.5 pl-5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                                                                                                    value={sr.amount}
+                                                                                                    onChange={(e) => {
+                                                                                                        const updated = { ...receiverSenderRules };
+                                                                                                        updated[key].senderLimits[idx].amount = e.target.value;
+                                                                                                        setReceiverSenderRules(updated);
+                                                                                                    }}
+                                                                                                />
+                                                                                            </div>
+                                                                                            <button 
+                                                                                                onClick={() => {
+                                                                                                    const updated = { ...receiverSenderRules };
+                                                                                                    updated[key].senderLimits.splice(idx, 1);
+                                                                                                    setReceiverSenderRules(updated);
+                                                                                                }}
+                                                                                                className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                                            >
+                                                                                                <X className="w-4 h-4" />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1212,6 +1508,143 @@ export default function BarringSettings() {
                                     {isSaving ? 'Processing...' : 'SAVE TIERED RULES'}
                                 </button>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Sender Selection Overlay (for Receiver Mapping) */}
+            {isSenderSelectionOpen && activeReceiverForSender && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col h-[70vh] max-h-[600px] overflow-hidden animate-in zoom-in-95">
+                        {/* Header */}
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800">Select Senders</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Map specific users to this receiver</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsSenderSelectionOpen(false)}
+                                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Search Bar & Filters */}
+                        <div className="p-4 bg-white border-b border-slate-100 space-y-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                <input 
+                                    type="text" 
+                                    className="w-full p-2.5 pl-9 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm focus:border-blue-500 focus:bg-white transition-all"
+                                    placeholder="Search by name, mobile, or business..."
+                                    value={senderSearch}
+                                    onChange={(e) => setSenderSearch(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex gap-2">
+                                    {['ALL', 'MERCHANT', 'CUSTOMER', 'STUDENT'].map(role => (
+                                        <button
+                                            key={role}
+                                            onClick={() => setSelectedProfile(role)}
+                                            className={`px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all ${selectedProfile === role ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                        >
+                                            {role}S
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => {
+                                            const updated = { ...receiverSenderRules };
+                                            const currentLimits = [...updated[activeReceiverForSender].senderLimits];
+                                            filteredSendersList.forEach(u => {
+                                                if (!currentLimits.find(sl => sl.senderId === u.id)) {
+                                                    currentLimits.push({ senderId: u.id, amount: '' });
+                                                }
+                                            });
+                                            updated[activeReceiverForSender].senderLimits = currentLimits;
+                                            setReceiverSenderRules(updated);
+                                        }}
+                                        className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                                    >
+                                        Select All
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            const updated = { ...receiverSenderRules };
+                                            const filteredIds = filteredSendersList.map(u => u.id);
+                                            updated[activeReceiverForSender].senderLimits = updated[activeReceiverForSender].senderLimits.filter(
+                                                (sl: any) => !filteredIds.includes(sl.senderId)
+                                            );
+                                            setReceiverSenderRules(updated);
+                                        }}
+                                        className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:underline"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* User List */}
+                        <div className="flex-1 overflow-y-auto p-2 bg-slate-50/30 space-y-1">
+                            {filteredSendersList.length > 0 ? (
+                                filteredSendersList.map(user => {
+                                    const isSelected = receiverSenderRules[activeReceiverForSender]?.senderLimits.some((sl: any) => sl.senderId === user.id);
+                                    
+                                    return (
+                                        <div 
+                                            key={user.id} 
+                                            onClick={() => {
+                                                const updated = { ...receiverSenderRules };
+                                                const currentLimits = updated[activeReceiverForSender].senderLimits;
+                                                const exists = currentLimits.find((sl: any) => sl.senderId === user.id);
+                                                
+                                                if (exists) {
+                                                    updated[activeReceiverForSender].senderLimits = currentLimits.filter((sl: any) => sl.senderId !== user.id);
+                                                } else {
+                                                    updated[activeReceiverForSender].senderLimits = [...currentLimits, { senderId: user.id, amount: '' }];
+                                                }
+                                                setReceiverSenderRules(updated);
+                                            }}
+                                            className={`p-3 flex items-center justify-between cursor-pointer rounded-xl transition-all border ${isSelected ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100/50' : 'hover:bg-white bg-transparent border-transparent'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                                    {user.name?.[0] || 'U'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-800">{user.name}</p>
+                                                    <p className="text-[10px] text-slate-500 font-medium">{user.mobile_number} • {user.role}</p>
+                                                </div>
+                                            </div>
+                                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                                {isSelected && <CheckCircle size={12} className="text-white" />}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="p-10 text-center text-slate-400 text-sm italic">
+                                    No users found matching "{senderSearch}"
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                {receiverSenderRules[activeReceiverForSender]?.senderLimits.length || 0} Selected
+                            </span>
+                            <button 
+                                onClick={() => setIsSenderSelectionOpen(false)}
+                                className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition"
+                            >
+                                Done
+                            </button>
                         </div>
                     </div>
                 </div>

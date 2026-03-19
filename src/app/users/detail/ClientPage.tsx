@@ -375,6 +375,39 @@ export default function UserDetailsPage() {
                             </div>
                         ) : null}
 
+                        {user.maintenance_rule && (
+                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                <h3 className="text-xs font-black text-red-600 uppercase tracking-widest mb-6 px-1 flex items-center gap-2">
+                                    <ShieldAlert size={14} />
+                                    Maintenance Charge
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <p className="text-sm font-black text-slate-900">{user.maintenance_rule.name}</p>
+                                            <span className="text-sm font-black text-red-600">
+                                                {user.maintenance_rule.type === 'FLAT' ? `₹${user.maintenance_rule.amount}` : `${user.maintenance_rule.amount}%`}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest",
+                                                user.maintenance_rule.frequency === 'DAILY' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                                            )}>
+                                                {user.maintenance_rule.frequency}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-slate-500 leading-relaxed italic">
+                                            {user.maintenance_rule.description}
+                                        </p>
+                                    </div>
+                                    <p className="text-[9px] font-medium text-slate-400 px-1 leading-relaxed">
+                                        Note: Users can only have one active maintenance rule. Recurring rules are processed nightly at 12:00 AM.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Internal Notes</h3>
                             <p className="text-xs font-medium text-slate-400 px-1 leading-relaxed">
