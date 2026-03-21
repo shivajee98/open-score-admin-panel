@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import QRCode from 'react-qr-code';
 import { apiFetch } from '@/lib/api';
 import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap, ChevronLeft, ChevronRight, Filter, Settings, Copy, Plus, FolderPlus, CheckSquare, Square } from 'lucide-react';
@@ -214,23 +215,35 @@ export default function QrGenerator() {
                         background: white !important;
                         margin: 0 !important;
                         padding: 0 !important;
+                        height: auto !important;
+                        overflow: visible !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
-                    .no-print, header, aside, .sidebar {
+                    /* Hide EVERYTHING by default */
+                    body > * {
                         display: none !important;
+                    }
+                    /* Then show only our sandbox */
+                    .print-sandbox-root {
+                        display: block !important;
+                        position: static !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        background: white !important;
                     }
                     .print-page {
                         width: 297mm !important;
                         height: 210mm !important;
                         display: flex !important;
                         align-items: center !important;
-                        justify-content: center !important;
                         gap: 3mm !important;
                         padding: 3mm !important;
                         box-sizing: border-box !important;
                         page-break-after: always !important;
                         background: white !important;
+                        justify-content: flex-start !important;
                     }
                     .print-page:last-child {
                         page-break-after: avoid !important;
@@ -239,7 +252,7 @@ export default function QrGenerator() {
                         width: 95mm !important;
                         height: 200mm !important;
                         background: linear-gradient(165deg, #0a3d4f 0%, #0d5a6e 40%, #0f6b7a 70%, #1a8090 100%) !important;
-                        border-radius: 6mm !important;
+                        border-radius: 0 !important;
                         padding: 8mm !important;
                         display: flex !important;
                         flex-direction: column !important;
@@ -304,7 +317,7 @@ export default function QrGenerator() {
                     .qr-box {
                         background: white !important;
                         padding: 6mm !important;
-                        border-radius: 5mm !important;
+                        border-radius: 0 !important;
                         position: relative !important;
                         z-index: 2 !important;
                     }
@@ -753,52 +766,9 @@ export default function QrGenerator() {
                     )}
                 </div>
 
-                {/* Print View - Renders ALL QRs regardless of displayLimit to ensure complete printing */}
+                {/* Print View Sandbox */}
                 {isPreparingPrint && filteredCodes.length > 0 && (
-                    <div className="fixed inset-0 z-[-1] bg-white print:static print:z-auto">
-                        {Array.from({ length: Math.ceil(filteredCodes.length / 3) }).map((_, pageIndex) => (
-                            <div key={pageIndex} className="print-page flex items-center justify-center gap-4 p-4">
-                                {filteredCodes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
-                                    <div key={code.id} className="qr-card-branded flex-1">
-                                        {/* Top Branding */}
-                                        <div className="qr-brand-top">
-                                            <div className="msme">MSME SHAKTI</div>
-                                            <div className="openscore">OPEN SCORE</div>
-                                            <div className="tagline">Unlock Cashback Rewards!</div>
-                                        </div>
-
-                                        {/* QR with Glow Ring */}
-                                        <div className="qr-ring-container">
-                                            <div className="qr-ring"></div>
-                                            <div className="qr-box">
-                                                <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={220} level="H" />
-                                                <div className="check-badge">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                                        <path d="M20 6L9 17l-5-5" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Bottom Text */}
-                                        <div className="qr-bottom">
-                                            <div className="scan-pay">SCAN & PAY</div>
-                                            <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
-                                            <div className="for-text">For Businesses & Customers</div>
-                                        </div>
-
-                                        {/* Footer */}
-                                        <div className="qr-footer">
-                                            <div className="powered">
-                                                <div className="icon"></div>
-                                                <span>Powered by MSME Shakti</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
+                    <QrPrintSandbox codes={filteredCodes} />
                 )}
 
                 {/* Code Details Modal */}
@@ -931,3 +901,51 @@ export default function QrGenerator() {
         </AdminLayout>
     );
 }
+
+// Separate Sandbox for Printing — renders via portal directly into <body>
+const QrPrintSandbox = ({ codes }: { codes: any[] }) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
+    if (!mounted) return null;
+
+    return createPortal(
+        <div className="print-sandbox-root" style={{ position: 'fixed', inset: 0, zIndex: -1, background: 'white' }}>
+            {Array.from({ length: Math.ceil(codes.length / 3) }).map((_, pageIndex) => (
+                <div key={pageIndex} className="print-page" style={{ display: 'flex', alignItems: 'center', gap: '3mm', padding: '3mm' }}>
+                    {codes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
+                        <div key={code.id} className="qr-card-branded">
+                            <div className="qr-brand-top">
+                                <div className="msme">MSME SHAKTI</div>
+                                <div className="openscore">OPEN SCORE</div>
+                                <div className="tagline">Unlock Cashback Rewards!</div>
+                            </div>
+                            <div className="qr-ring-container">
+                                <div className="qr-ring"></div>
+                                <div className="qr-box">
+                                    <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={220} level="H" />
+                                    <div className="check-badge">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                            <path d="M20 6L9 17l-5-5" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="qr-bottom">
+                                <div className="scan-pay">SCAN & PAY</div>
+                                <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
+                                <div className="for-text">For Businesses & Customers</div>
+                            </div>
+                            <div className="qr-footer">
+                                <div className="powered">
+                                    <div className="icon"></div>
+                                    <span>Powered by MSME Shakti</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>,
+        document.body
+    );
+};

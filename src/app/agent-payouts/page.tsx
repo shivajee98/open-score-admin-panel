@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Banknote, Users, CheckCircle, XCircle, Search, Upload, Clock, FileText, ChevronRight, AlertCircle, Copy } from 'lucide-react';
+import { Banknote, Users, CheckCircle, XCircle, Search, Upload, Clock, FileText, ChevronRight, AlertCircle, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PayoutRequest {
@@ -12,6 +12,12 @@ interface PayoutRequest {
     amount: string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     bank_details: string;
+    account_number?: string;
+    ifsc_code?: string;
+    bank_name?: string;
+    account_holder_name?: string;
+    bank_address?: string;
+    upi_id?: string;
     created_at: string;
     processed_at?: string;
     sub_user: {
@@ -29,6 +35,7 @@ export default function AgentPayoutsPage() {
     const [loading, setLoading] = useState(true);
     const [selectedPayout, setSelectedPayout] = useState<PayoutRequest | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [search, setSearch] = useState('');
 
     // Action Form
     const [adminMessage, setAdminMessage] = useState('');
@@ -116,6 +123,41 @@ export default function AgentPayoutsPage() {
         }
     };
 
+    const filteredPayouts = payouts.filter((p) => 
+        p.sub_user.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.sub_user.mobile_number.includes(search) ||
+        p.account_number?.includes(search) ||
+        p.upi_id?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const handleExport = () => {
+        const headers = ["ID", "Agent Name", "Mobile", "Amount", "Status", "Bank Name", "Holder Name", "Account Number", "IFSC", "UPI ID", "Date", "Admin Message"];
+        const rows = filteredPayouts.map((p) => [
+            p.id,
+            p.sub_user.name,
+            `'${p.sub_user.mobile_number}`, // Prefix with ' to prevent excel Scientific notation
+            p.amount,
+            p.status,
+            p.bank_name || 'N/A',
+            p.account_holder_name || 'N/A',
+            `'${p.account_number || 'N/A'}`,
+            p.ifsc_code || 'N/A',
+            p.upi_id || 'N/A',
+            new Date(p.created_at).toLocaleString(),
+            p.admin_message || ''
+        ]);
+
+        const csvContent = [headers, ...rows].map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `agent_payouts_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const StatusBadge = ({ status }: { status: string }) => {
         const styles = {
             PENDING: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -132,6 +174,27 @@ export default function AgentPayoutsPage() {
     return (
         <AdminLayout title="Agent Cashouts">
             <div className="space-y-6">
+                <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 gap-6">
+                    <div className="relative flex-1 w-full max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search by agent, mobile, or account..."
+                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
+                    >
+                        <Download className="w-5 h-5" />
+                        Export to CSV
+                    </button>
+                </div>
+
                 {loading ? (
                     <div className="flex justify-center p-12">
                         <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
@@ -150,7 +213,7 @@ export default function AgentPayoutsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {payouts.map((p) => (
+                                    {filteredPayouts.map((p) => (
                                         <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
                                             <td className="p-6 pl-8">
                                                 <div className="flex items-center gap-3">
@@ -190,7 +253,7 @@ export default function AgentPayoutsPage() {
                                             </td>
                                         </tr>
                                     ))}
-                                    {payouts.length === 0 && (
+                                    {filteredPayouts.length === 0 && (
                                         <tr>
                                             <td colSpan={5} className="p-12 text-center text-slate-400 font-medium">
                                                 No cashout requests found
@@ -250,14 +313,59 @@ export default function AgentPayoutsPage() {
                                 </div>
                             </div>
 
-                            {/* Bank Details */}
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                    <Banknote size={14} /> Bank / UPI Details
+                             {/* Settlement Details */}
+                             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Banknote size={14} /> Settlement Information
                                 </p>
-                                <div className="font-mono text-sm bg-white p-3 rounded-xl border border-slate-200 text-slate-700 whitespace-pre-wrap">
-                                    {selectedPayout.bank_details}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group/copy">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Bank Name</p>
+                                        <p className="font-black text-slate-900">{selectedPayout.bank_name || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group/copy">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Account Holder</p>
+                                        <p className="font-black text-slate-900">{selectedPayout.account_holder_name || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group/copy">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Account Number</p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-black text-blue-600 font-mono text-lg tracking-tight">{selectedPayout.account_number || 'N/A'}</p>
+                                            {selectedPayout.account_number && (
+                                                <button onClick={() => { navigator.clipboard.writeText(selectedPayout.account_number!); toast.success("Copied Account Number") }} className="text-slate-300 hover:text-blue-600 transition-colors">
+                                                    <Copy size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group/copy">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">IFSC Code</p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-black text-slate-900 font-mono text-lg uppercase">{selectedPayout.ifsc_code || 'N/A'}</p>
+                                            {selectedPayout.ifsc_code && (
+                                                <button onClick={() => { navigator.clipboard.writeText(selectedPayout.ifsc_code!); toast.success("Copied IFSC") }} className="text-slate-300 hover:text-blue-600 transition-colors">
+                                                    <Copy size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">UPI ID</p>
+                                        <p className="font-black text-teal-600 font-mono">{selectedPayout.upi_id || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Bank Address</p>
+                                        <p className="text-xs font-medium text-slate-600 leading-tight">{selectedPayout.bank_address || 'N/A'}</p>
+                                    </div>
                                 </div>
+
+                                {selectedPayout.bank_details && (
+                                    <div className="bg-white/50 p-4 rounded-2xl border border-slate-100 italic">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Additional Note</p>
+                                        <p className="text-sm text-slate-500 font-medium">"{selectedPayout.bank_details}"</p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Admin Action Section */}

@@ -22,8 +22,8 @@ interface SubUser {
     admin_loan_commission: number;
     bonus_milestone_count?: number;
     bonus_milestone_amount?: number;
-    loan_bonus_milestone_count?: number;
-    loan_bonus_milestone_amount?: number;
+    vendors_count?: number;
+    agents_count?: number;
     can_create_vendors?: boolean;
     show_letter?: boolean;
     is_active: boolean;
@@ -63,6 +63,7 @@ export default function SubUsersPage() {
         min_signup: '',
         max_signup: '',
         pincode: '',
+        kyc_status: '',
         sort_by: 'created_at',
         sort_order: 'desc'
     });
@@ -84,8 +85,6 @@ export default function SubUsersPage() {
         admin_loan_commission: '',
         bonus_milestone_count: '',
         bonus_milestone_amount: '',
-        loan_bonus_milestone_count: '',
-        loan_bonus_milestone_amount: '',
         can_create_vendors: false,
         show_letter: false,
         pincode: '',
@@ -184,8 +183,6 @@ export default function SubUsersPage() {
             admin_loan_commission: (subUser.admin_loan_commission ?? 0).toString(),
             bonus_milestone_count: (subUser.bonus_milestone_count ?? 0).toString(),
             bonus_milestone_amount: (subUser.bonus_milestone_amount ?? 0).toString(),
-            loan_bonus_milestone_count: (subUser.loan_bonus_milestone_count ?? 0).toString(),
-            loan_bonus_milestone_amount: (subUser.loan_bonus_milestone_amount ?? 0).toString(),
             can_create_vendors: subUser.can_create_vendors ?? false,
             show_letter: subUser.show_letter ?? false,
             password: subUser.visible_pin || '', // Using password field for PIN in form
@@ -217,7 +214,7 @@ export default function SubUsersPage() {
 
             toast.success(isEditMode ? 'Agent updated successfully' : 'Agent created successfully');
             setShowModal(false);
-            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: false, show_letter: false, pincode: '' } as any);
+            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', can_create_vendors: false, show_letter: false, pincode: '' } as any);
             setIsEditMode(false);
             setEditingId(null);
             fetchSubUsers();
@@ -388,7 +385,7 @@ export default function SubUsersPage() {
                     <button
                         onClick={() => {
                             setIsEditMode(false);
-                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', loan_bonus_milestone_count: '', loan_bonus_milestone_amount: '', can_create_vendors: globalReferralSettings?.default_can_create_vendors ?? false, show_letter: false, pincode: '' } as any);
+                            setFormData({ name: '', mobile_number: '', password: '', credit_limit: '', default_signup_amount: '', admin_loan_commission: '', bonus_milestone_count: '', bonus_milestone_amount: '', can_create_vendors: globalReferralSettings?.default_can_create_vendors ?? false, show_letter: false, pincode: '' } as any);
                             setShowModal(true);
                         }}
                         className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
@@ -571,6 +568,20 @@ export default function SubUsersPage() {
                         </div>
 
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">KYC Status</label>
+                            <select
+                                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                value={filters.kyc_status}
+                                onChange={(e) => setFilters({ ...filters, kyc_status: e.target.value })}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="pending">Pending Approval</option>
+                                <option value="approved">KYC Approved</option>
+                                <option value="not_submitted">Not Submitted</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sort By</label>
                             <div className="flex gap-2">
                                 <select
@@ -606,6 +617,7 @@ export default function SubUsersPage() {
                                     min_signup: '',
                                     max_signup: '',
                                     pincode: '',
+                                    kyc_status: '',
                                     sort_by: 'created_at',
                                     sort_order: 'desc'
                                 });
@@ -640,7 +652,7 @@ export default function SubUsersPage() {
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Vendor Details</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Status</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
+                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Child Accounts</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Dues</th>
@@ -718,13 +730,16 @@ export default function SubUsersPage() {
                                                     </span>
                                                 </td>
                                                 <td className="p-6">
-                                                    {subUser.pincode ? (
-                                                        <span className="font-mono text-xs bg-blue-50 px-3 py-1.5 rounded-lg text-blue-700 font-black border border-blue-100">
-                                                            {subUser.pincode}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-300">-</span>
-                                                    )}
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Vendors:</span>
+                                                            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{subUser.vendors_count || 0}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Agents:</span>
+                                                            <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">{subUser.agents_count || 0}</span>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-2">
@@ -911,7 +926,6 @@ export default function SubUsersPage() {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN (6 digits)</label>
                                 <input
                                     type="text"
-                                    required
                                     maxLength={6}
                                     pattern="[0-9]{6}"
                                     className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
@@ -996,28 +1010,6 @@ export default function SubUsersPage() {
                                         value={formData.bonus_milestone_amount}
                                         placeholder="200"
                                         onChange={(e) => setFormData({ ...formData, bonus_milestone_amount: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Milestone Count</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
-                                        value={formData.loan_bonus_milestone_count}
-                                        placeholder="10"
-                                        onChange={(e) => setFormData({ ...formData, loan_bonus_milestone_count: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Milestone Amount</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
-                                        value={formData.loan_bonus_milestone_amount}
-                                        placeholder="200"
-                                        onChange={(e) => setFormData({ ...formData, loan_bonus_milestone_amount: e.target.value })}
                                     />
                                 </div>
                             </div>

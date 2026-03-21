@@ -612,8 +612,12 @@ export default function UserDetailsPage() {
                                                             {tx.type === 'CREDIT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-slate-900 text-sm">{tx.source_type.replace(/_/g, ' ')}</p>
-                                                            <p className="text-[10px] font-medium text-slate-500">{tx.description}</p>
+                                                            <p className="font-bold text-slate-900 text-sm">
+                                                                {(tx.source_type === 'MAINTENANCE_CHARGE' && tx.description?.match(/^\[(.*?)\]/)) 
+                                                                    ? tx.description.match(/^\[(.*?)\]/)[1] 
+                                                                    : tx.source_type.replace(/_/g, ' ')}
+                                                            </p>
+                                                            <p className="text-[10px] font-medium text-slate-500">{tx.description?.replace(/^\[.*?\]\s*/, '')}</p>
                                                         </div>
                                                     </div>
                                                 </td>

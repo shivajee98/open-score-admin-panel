@@ -74,6 +74,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         // Nested Vendors inside User & Team
         { label: 'Vendor List', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
         { label: 'Agents', href: '/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
+        { label: 'Unlinked History', href: '/agents/history', icon: <Archive className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
 
         // Promotions & Tools
         { label: 'QR Generator', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
@@ -98,6 +99,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Maintenance Mode', href: '/maintenance-settings', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Monitoring Alerts', href: '/monitoring', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'Dynamic Buttons', href: '/dynamic-buttons', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'My Profile', href: '/profile', icon: <User className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
     ];
 

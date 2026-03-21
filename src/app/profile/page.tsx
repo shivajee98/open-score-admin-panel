@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/AdminLayout';
 import { toast, Toaster } from 'sonner';
-import { User, Mail, KeyRound, ShieldCheck, CheckCircle } from 'lucide-react';
+import { User, Mail, KeyRound, ShieldCheck, CheckCircle, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminProfile() {
@@ -24,6 +24,11 @@ export default function AdminProfile() {
     const [maskedOldEmail, setMaskedOldEmail] = useState('');
     const [maskedNewEmail, setMaskedNewEmail] = useState('');
     const [emailLoading, setEmailLoading] = useState(false);
+
+    // PIN Change
+    const [oldPin, setOldPin] = useState('');
+    const [confirmNewPin, setConfirmNewPin] = useState('');
+    const [pinLoading, setPinLoading] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -89,6 +94,27 @@ export default function AdminProfile() {
         }
     };
 
+    const handleUpdatePin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPinLoading(true);
+        try {
+            const res = await apiFetch('/admin/profile/update-pin', {
+                method: 'POST',
+                body: JSON.stringify({
+                    old_pin: oldPin,
+                    new_pin: confirmNewPin,
+                }),
+            });
+            toast.success(res.message || 'PIN updated successfully!');
+            setOldPin('');
+            setConfirmNewPin('');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update PIN');
+        } finally {
+            setPinLoading(false);
+        }
+    };
+
     if (!user) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>;
 
     if (user.role !== 'ADMIN') {
@@ -144,6 +170,57 @@ export default function AdminProfile() {
                     </form>
                 </div>
 
+                {/* Security PIN Section */}
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                        <Lock className="w-5 h-5 text-slate-400" />
+                        <h2 className="text-lg font-bold text-slate-800">Security PIN</h2>
+                    </div>
+                    <form onSubmit={handleUpdatePin} className="p-6 space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Current 6-Digit PIN</label>
+                                <div className="relative">
+                                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <input
+                                        type="password"
+                                        required
+                                        maxLength={6}
+                                        value={oldPin}
+                                        onChange={(e) => setOldPin(e.target.value.replace(/\D/g, ''))}
+                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all font-bold tracking-[0.5em] text-slate-700"
+                                        placeholder="••••••"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">New 6-Digit PIN</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <input
+                                        type="password"
+                                        required
+                                        maxLength={6}
+                                        value={confirmNewPin}
+                                        onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ''))}
+                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all font-bold tracking-[0.5em] text-slate-700"
+                                        placeholder="••••••"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end">
+                            <button
+                                type="submit"
+                                disabled={pinLoading || oldPin.length !== 6 || confirmNewPin.length !== 6 || oldPin === confirmNewPin}
+                                className="px-8 py-4 bg-slate-900 text-white font-bold rounded-xl shadow hover:-translate-y-0.5 transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
+                            >
+                                {pinLoading ? 'Updating...' : 'Update PIN'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
                 {/* Email Change Section */}
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex items-center gap-3">
@@ -156,7 +233,7 @@ export default function AdminProfile() {
                         {emailStep === 0 && (
                             <div className="space-y-4">
                                 <p className="text-sm text-slate-500">
-                                    Your login OTPs are sent to this email. To change it, you must verify both your current and new email addresses.
+                                    Your login OTPs are sent to this email for recovery. To change it, you must verify both your current and new email addresses.
                                 </p>
                                 <button
                                     onClick={() => setEmailStep(1)}

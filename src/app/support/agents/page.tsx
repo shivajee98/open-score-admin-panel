@@ -23,6 +23,7 @@ interface Category {
     name: string;
     slug: string;
     permissions: string[];
+    visibility: string[];
     agents_count?: number;
 }
 
@@ -34,6 +35,14 @@ const AVAILABLE_PERMISSIONS = [
     { id: 'manage_agents', label: 'Manage Agent Support' },
     { id: 'manage_vendors', label: 'Manage Vendor Support' },
     { id: 'update_kyc', label: 'Update KYC' },
+];
+
+const VISIBILITY_GROUPS = [
+    { id: 'customer', label: 'Customers' },
+    { id: 'merchant', label: 'Merchants' },
+    { id: 'student', label: 'Students' },
+    { id: 'agent', label: 'Agents' },
+    { id: 'vendor', label: 'Vendors' },
 ];
 
 export default function SupportAgentsPage() {
@@ -70,7 +79,8 @@ export default function SupportAgentsPage() {
     const [categoryFormData, setCategoryFormData] = useState({
         name: '',
         slug: '',
-        permissions: [] as string[]
+        permissions: [] as string[],
+        visibility: [] as string[]
     });
     useEffect(() => {
         fetchData();
@@ -221,11 +231,12 @@ export default function SupportAgentsPage() {
             setCategoryFormData({
                 name: category.name,
                 slug: category.slug,
-                permissions: category.permissions || []
+                permissions: category.permissions || [],
+                visibility: category.visibility || ['agent', 'vendor', 'merchant', 'customer', 'student']
             });
         } else {
             setEditingCategory(null);
-            setCategoryFormData({ name: '', slug: '', permissions: [] });
+            setCategoryFormData({ name: '', slug: '', permissions: [], visibility: ['agent', 'vendor', 'merchant', 'customer', 'student'] });
         }
         setIsCategoryModalOpen(true);
     };
@@ -241,6 +252,15 @@ export default function SupportAgentsPage() {
             if (perms.has(permId)) perms.delete(permId);
             else perms.add(permId);
             return { ...prev, permissions: Array.from(perms) };
+        });
+    };
+
+    const toggleVisibility = (roleId: string) => {
+        setCategoryFormData(prev => {
+            const visibility = new Set(prev.visibility);
+            if (visibility.has(roleId)) visibility.delete(roleId);
+            else visibility.add(roleId);
+            return { ...prev, visibility: Array.from(visibility) };
         });
     };
 
@@ -472,12 +492,23 @@ export default function SupportAgentsPage() {
                                     <input type="text" value={categoryFormData.slug} onChange={e => setCategoryFormData({ ...categoryFormData, slug: e.target.value })} className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium font-mono text-sm" placeholder="e.g. cashback_issue" required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Permissions</label>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto p-2 border border-slate-100 rounded-xl bg-slate-50">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Permissions (Admin Panel Only)</label>
+                                    <div className="space-y-2 max-h-32 overflow-y-auto p-2 border border-slate-100 rounded-xl bg-slate-50">
                                         {AVAILABLE_PERMISSIONS.map(perm => (
                                             <label key={perm.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer">
                                                 <input type="checkbox" checked={categoryFormData.permissions.includes(perm.id)} onChange={() => togglePermission(perm.id)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
                                                 <span className="text-sm font-bold text-slate-700">{perm.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Visibility (Who can see this?)</label>
+                                    <div className="grid grid-cols-2 gap-2 p-2 border border-slate-100 rounded-xl bg-slate-50">
+                                        {VISIBILITY_GROUPS.map(role => (
+                                            <label key={role.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer">
+                                                <input type="checkbox" checked={categoryFormData.visibility.includes(role.id)} onChange={() => toggleVisibility(role.id)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                                                <span className="text-xs font-bold text-slate-700">{role.label}</span>
                                             </label>
                                         ))}
                                     </div>

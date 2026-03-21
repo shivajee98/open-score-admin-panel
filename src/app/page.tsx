@@ -5,10 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy } from 'lucide-react';
 import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
+import { toast } from 'sonner';
 
 export default function AdminDashboard() {
     const { user: session, status } = useAuth();
@@ -227,6 +228,22 @@ export default function AdminDashboard() {
                         <p className="text-xl font-black text-slate-900">₹{(stats as any).totalQrDeposits?.toLocaleString('en-IN') || 0}</p>
                     </div>
                 </Link>
+                
+                <div 
+                    onClick={() => {
+                        navigator.clipboard.writeText('https://openscore.msmeloan.sbs/public-qr/');
+                        toast.success('Public QR Link copied to clipboard');
+                    }} 
+                    className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 hover:border-indigo-200 transition-all group cursor-pointer"
+                >
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                        <Copy className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Public QR Link (Click to Copy)</p>
+                        <p className="text-sm font-black text-slate-900 group-hover:text-indigo-600 transition-colors">https://openscore.msmeloan.sbs/public-qr/</p>
+                    </div>
+                </div>
             </div>
 
             {/* Recent Repayments & Health Grid */}

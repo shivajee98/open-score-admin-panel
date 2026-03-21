@@ -169,7 +169,7 @@ const TeamEarningsCell = ({ agent, apiFetch, onUpdate }: any) => {
 
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onViewStats }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onViewStats }: any) => {
     const isAdmin = currentUser?.role === 'ADMIN';
 
     return (
@@ -288,9 +288,9 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
 
                     {isAdmin && user.role !== 'SYSTEM' && user.role !== 'ADMIN' && (
                         <button
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleUnlink(user.id)}
                             className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                            title="Delete Agent"
+                            title="Unlink & Archive Agent"
                         >
                             <Trash2 className="w-5 h-5" />
                         </button>
@@ -447,10 +447,15 @@ export default function AgentsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Are you sure you want to delete this agent?')) return;
-        await apiFetch(`/admin/users/${id}`, { method: 'DELETE' });
-        loadAgents();
+    const handleUnlink = async (id: number) => {
+        if (!confirm('Are you sure you want to unlink this agent? They will be reverted to a CUSTOMER role and their work history will be archived.')) return;
+        try {
+            await apiFetch(`/admin/users/${id}/unlink`, { method: 'POST' });
+            loadAgents();
+            toast.success("Agent unlinked and reverted to customer.");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to unlink agent");
+        }
     };
 
     const toggleStatus = async (user: any) => {
@@ -728,7 +733,7 @@ export default function AgentsPage() {
                                         selectedIds={selectedIds}
                                         toggleSelect={toggleSelect}
                                         toggleStatus={toggleStatus}
-                                        handleDelete={handleDelete}
+                                        handleUnlink={handleUnlink}
                                         setSelectedUser={setSelectedUser}
                                         setIsCreditsModalOpen={setIsCreditsModalOpen}
                                         reloadUsers={loadAgents}

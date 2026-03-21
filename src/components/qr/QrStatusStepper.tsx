@@ -12,13 +12,13 @@ export default function QrStatusStepper({ status, trackingUrl }: QrStatusStepper
     const steps = [
         {
             id: 'agent_approved',
-            label: 'QR BOOKED',
+            label: 'PAYMENT RECEIVED',
             icon: Clock,
-            description: 'Order confirmed. Under Printing'
+            description: 'Order confirmed.'
         },
         {
             id: 'payment_confirmed',
-            label: 'PRINTED',
+            label: 'QR BOOKED',
             icon: CreditCard,
             description: 'Ready To Dispatch'
         },

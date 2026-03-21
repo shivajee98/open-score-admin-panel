@@ -120,13 +120,13 @@ export default function AdminQrReview() {
         const altPhone = item.alternate_mobile || '—';
         const address = item.address || 'Address not provided';
         const landmark = item.landmark || 'Landmark not set';
-        const cityPin = [item.city, item.pin_code].filter(Boolean).join(' • ') || 'City / PIN not set';
+        const cityStatePin = [item.city, item.state, item.pin_code].filter(Boolean).join(' • ') || 'City / State / PIN not set';
         const bookingDate = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Date pending';
         const slipFields = [
             { label: 'Receiver', value: receiver },
             { label: 'Phone', value: primaryPhone },
             { label: 'Alternate', value: altPhone },
-            { label: 'City / PIN', value: cityPin },
+            { label: 'City State PIN', value: cityStatePin },
             { label: 'Landmark', value: landmark },
             { label: 'Address', value: address }
         ];
@@ -211,14 +211,14 @@ export default function AdminQrReview() {
                     const receiverName = item.full_name || item.user?.name || 'Not provided';
                     const contactPhone = item.mobile_number || item.user?.mobile_number || 'Not provided';
                     const altPhone = item.alternate_mobile || 'Not provided';
-                    const cityPin = [item.city, item.pin_code].filter(Boolean).join(' • ') || 'Not provided';
+                    const cityStatePin = [item.city, item.state, item.pin_code].filter(Boolean).join(' • ') || 'Not provided';
                     const address = item.address || 'Not provided';
                     const landmarkValue = item.landmark || 'Not provided';
                     const detailRows = [
                         { label: 'Receiver', value: receiverName },
                         { label: 'Phone', value: contactPhone },
                         { label: 'Alternate', value: altPhone },
-                        { label: 'City / PIN', value: cityPin },
+                        { label: 'City State PIN', value: cityStatePin },
                         { label: 'Landmark', value: landmarkValue },
                         { label: 'Address', value: address, fullWidth: true }
                     ];
