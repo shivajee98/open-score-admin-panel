@@ -196,7 +196,7 @@ const IssueReporter: React.FC<IssueReporterProps> = ({ appName }) => {
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 transition-colors">
                         <MessageSquare className="w-1 h-1 text-white" />
                     </div>
-                    <span className="font-bold pr-1">Support & Feedback</span>
+                    <span className="font-bold pr-1">&</span>
                     
                     <span className="absolute -top-1 -right-1 flex h-1 w-1">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>

@@ -782,7 +782,7 @@ export default function QRControlClient() {
                         </div>
 
                         {activeTab === 'history' ? (
-                            <AdminQrReview />
+                            <AdminQrReview searchTerm={searchTerm} />
                         ) : (
                             <>
                                 {/* Breadcrumbs Control */}
