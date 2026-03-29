@@ -143,7 +143,8 @@ export default function AdminQrReview({ searchTerm = '' }: AdminQrReviewProps) {
     const printDeliverySlip = (item: any) => {
         if (typeof window === 'undefined') return;
         const receiver = item.full_name || item.user?.name || 'N/A';
-        const primaryPhone = item.mobile_number || item.user?.mobile_number || 'N/A';
+        const primaryPhone = (item.mobile_number || item.user?.mobile_number || 'N/A').toString().replace(/^0+/, '');
+        const alternatePhone = (item.alternate_mobile || '').toString().replace(/^0+/, '');
         const address = item.address || 'N/A';
         const city = item.city || '';
         const state = item.state || '';
@@ -157,21 +158,23 @@ export default function AdminQrReview({ searchTerm = '' }: AdminQrReviewProps) {
             <style>
                 @page { size: 100mm 50mm; margin: 0; }
                 body { margin: 0; padding: 0; background: #fff; font-family: 'Arial', sans-serif; }
-                .label { width: 100mm; height: 50mm; padding: 3mm 4mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 1.5mm; }
-                .row { font-size: 9pt; font-weight: 600; color: #111; line-height: 1.3; }
-                .row b { font-weight: 900; color: #000; }
-                @media print { body { background: #fff; } }
+                .label { width: 100mm; height: 50mm; padding: 5mm 6mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 2mm; border: 1px dashed #ccc; }
+                .row { font-size: 10pt; font-weight: 600; color: #111; line-height: 1.4; display: flex; flex-wrap: wrap; gap: 4px; }
+                .row b { font-weight: 950; color: #000; text-transform: uppercase; font-size: 8pt; opacity: 0.6; width: 60px; display: inline-block; }
+                .val { flex: 1; }
+                @media print { body { background: #fff; } .label { border: none; } }
             </style>
         </head>
         <body>
             <div class="label">
-                <div class="row"><b>TO:</b> ${escapeHtml(receiver)} | <b>Contact:</b> ${escapeHtml(primaryPhone)}</div>
-                <div class="row"><b>Address:</b> ${escapeHtml(address)}</div>
-                <div class="row"><b>City:</b> ${escapeHtml(city)}${state ? ` | <b>State:</b> ${escapeHtml(state)}` : ''}</div>
-                <div class="row"><b>PIN Code:</b> ${escapeHtml(pinCode)}${landmark ? ` | <b>Landmark:</b> ${escapeHtml(landmark)}` : ''}</div>
+                <div class="row"><b>TO:</b> <span class="val">${escapeHtml(receiver)}</span></div>
+                <div class="row"><b>Contact:</b> <span class="val">${escapeHtml(primaryPhone)}${alternatePhone ? ` &bull; ${escapeHtml(alternatePhone)}` : ''}</span></div>
+                <div class="row"><b>Address:</b> <span class="val">${escapeHtml(address)}</span></div>
+                <div class="row"><b>Location:</b> <span class="val">${escapeHtml(city)}${state ? `, ${escapeHtml(state)}` : ''} - ${escapeHtml(pinCode)}</span></div>
+                ${landmark ? `<div class="row"><b>Landmark:</b> <span class="val">${escapeHtml(landmark)}</span></div>` : ''}
             </div>
             <script>
-                window.onload = () => { setTimeout(() => window.print(), 120); };
+                window.onload = () => { setTimeout(() => window.print(), 200); };
             </script>
         </body>
         </html>`;
@@ -351,6 +354,13 @@ export default function AdminQrReview({ searchTerm = '' }: AdminQrReviewProps) {
                                                     <span className="text-slate-300 mx-1">|</span>
                                                     <span className="text-slate-400 text-[9px] font-black">Landmark:</span> 
                                                     <span className="text-slate-800 ml-1">{item.landmark}</span>
+                                                </>
+                                            )}
+                                            {item.alternate_mobile && (
+                                                <>
+                                                    <span className="text-slate-300 mx-1">|</span>
+                                                    <span className="text-slate-400 text-[9px] font-black">Alt Phone:</span> 
+                                                    <span className="text-emerald-700 ml-1">{item.alternate_mobile}</span>
                                                 </>
                                             )}
                                         </p>

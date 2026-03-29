@@ -138,7 +138,8 @@ export default function UserDetailsPage() {
             account_number: user.account_number || '',
             account_holder_name: user.account_holder_name || '',
             status: user.status || 'ACTIVE',
-            role: user.role || 'CUSTOMER'
+            role: user.role || 'CUSTOMER',
+            app_pin: user.visible_pin || ''
         });
         setIsEditModalOpen(true);
     };
@@ -214,6 +215,20 @@ export default function UserDetailsPage() {
                                         </span>
                                     )}
                                     <span className="flex items-center gap-1.5"><Shield className="w-4 h-4" /> Role: {user.role}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                if (user.visible_pin) {
+                                                    toast.success(`App PIN: ${user.visible_pin}`);
+                                                } else {
+                                                    toast.info("PIN is Securely Hashed (Reset in Edit to View)");
+                                                }
+                                            }}
+                                            className="text-[10px] bg-slate-100 text-slate-600 px-3 py-1 rounded-lg hover:bg-slate-200 transition-all font-black uppercase tracking-widest active:scale-95 flex items-center gap-1.5"
+                                        >
+                                            <ShieldAlert className="w-3 h-3" /> Show App PIN
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -817,6 +832,17 @@ export default function UserDetailsPage() {
                                             <option value="SUPPORT_AGENT">SUPPORT_AGENT</option>
                                             <option value="ADMIN">ADMIN</option>
                                         </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">App PIN (4 Digits)</label>
+                                        <input
+                                            type="text"
+                                            maxLength={4}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            placeholder="Enter 4-digit PIN"
+                                            value={editFormData.app_pin}
+                                            onChange={e => setEditFormData({ ...editFormData, app_pin: e.target.value.replace(/[^0-9]/g, '') })}
+                                        />
                                     </div>
                                 </form>
                             </div>
