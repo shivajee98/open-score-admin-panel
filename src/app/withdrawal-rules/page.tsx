@@ -14,20 +14,22 @@ import {
     CheckCircle2,
     XCircle,
     Search,
-    AlertCircle
+    AlertCircle,
+    Pencil
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
 export default function WithdrawalRulesPage() {
     const [rules, setRules] = useState<any[]>([]);
-    const [loanPlans, setLoanPlans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
         user_type: 'CUSTOMER',
-        loan_plan_id: '',
+        min_withdrawal_amount: '',
+        max_withdrawal_amount: '',
         min_spend_amount: '',
         min_txn_count: '',
         daily_limit: '',
@@ -37,19 +39,19 @@ export default function WithdrawalRulesPage() {
     });
 
     const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [userLoading, setUserLoading] = useState(false);
 
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [rulesData, plansData, usersData] = await Promise.all([
+            const [rulesRes, usersRes] = await Promise.all([
                 apiFetch('/admin/withdrawal-rules'),
-                apiFetch('/admin/loan-plans'),
                 apiFetch('/admin/users')
             ]);
-            setRules(rulesData);
-            setLoanPlans(plansData);
-            setAllUsers(usersData);
+            setRules(Array.isArray(rulesRes) ? rulesRes : (rulesRes?.data || []));
+            // Users are now fetched dynamically via useEffect below
         } catch (err) {
             console.error(err);
             // Fail silently or toast, plans might be empty
@@ -61,6 +63,34 @@ export default function WithdrawalRulesPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Dynamic User Fetching
+    const fetchUsers = async (role: string, search: string) => {
+        setUserLoading(true);
+        try {
+            const params = new URLSearchParams({
+                type: role.toLowerCase(),
+                search: search,
+                per_page: '50' // Fetch more for selection
+            });
+            const res = await apiFetch(`/admin/users?${params.toString()}`);
+            setAllUsers(Array.isArray(res) ? res : (res?.data || []));
+        } catch (err) {
+            console.error("Failed to fetch users", err);
+        } finally {
+            setUserLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!isModalOpen || formData.target_mode !== 'SPECIFIC') return;
+        
+        const timer = setTimeout(() => {
+            fetchUsers(formData.user_type, userSearch);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.user_type, userSearch, isModalOpen, formData.target_mode]);
 
     // Helper to toggle user selection
     const toggleUser = (userId: number) => {
@@ -87,7 +117,8 @@ export default function WithdrawalRulesPage() {
         try {
             const payload = {
                 user_type: formData.user_type,
-                loan_plan_id: formData.loan_plan_id || null,
+                min_withdrawal_amount: parseFloat(formData.min_withdrawal_amount || '0'),
+                max_withdrawal_amount: parseFloat(formData.max_withdrawal_amount || '0'),
                 min_spend_amount: parseFloat(formData.min_spend_amount || '0'),
                 min_txn_count: parseInt(formData.min_txn_count || '0'),
                 daily_limit: formData.daily_limit ? parseFloat(formData.daily_limit) : null,
@@ -95,18 +126,23 @@ export default function WithdrawalRulesPage() {
                 is_active: formData.is_active
             };
 
-            await apiFetch('/admin/withdrawal-rules', {
-                method: 'POST',
+            const url = editingId ? `/admin/withdrawal-rules/${editingId}` : '/admin/withdrawal-rules';
+            const method = editingId ? 'PUT' : 'POST';
+
+            await apiFetch(url, {
+                method,
                 body: JSON.stringify(payload)
             });
 
-            toast.success("Rule created successfully");
+            toast.success(editingId ? "Rule updated successfully" : "Rule created successfully");
             setIsModalOpen(false);
+            setEditingId(null);
             fetchData();
             // Reset form
             setFormData({
                 user_type: 'CUSTOMER',
-                loan_plan_id: '',
+                min_withdrawal_amount: '',
+                max_withdrawal_amount: '',
                 min_spend_amount: '',
                 min_txn_count: '',
                 daily_limit: '',
@@ -117,6 +153,22 @@ export default function WithdrawalRulesPage() {
         } catch (err: any) {
             toast.error(err.message || "Failed to create rule");
         }
+    };
+
+    const handleEdit = (rule: any) => {
+        setEditingId(rule.id);
+        setFormData({
+            user_type: rule.user_type,
+            min_withdrawal_amount: rule.min_withdrawal_amount?.toString() || '',
+            max_withdrawal_amount: rule.max_withdrawal_amount?.toString() || '',
+            min_spend_amount: rule.min_spend_amount?.toString() || '',
+            min_txn_count: rule.min_txn_count?.toString() || '',
+            daily_limit: rule.daily_limit?.toString() || '',
+            target_mode: rule.target_users?.includes('*') ? 'ALL' : 'SPECIFIC',
+            target_users_input: rule.target_users?.includes('*') ? '' : rule.target_users.join(','),
+            is_active: !!rule.is_active
+        });
+        setIsModalOpen(true);
     };
 
     const handleDelete = async (id: number) => {
@@ -148,9 +200,12 @@ export default function WithdrawalRulesPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-6">
-                        {rules.map((rule) => (
+                        {Array.isArray(rules) && rules.map((rule) => (
                             <div key={rule.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-all relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                    <button onClick={() => handleEdit(rule)} className="p-2 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-100 transition-colors">
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
                                     <button onClick={() => handleDelete(rule.id)} className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-colors">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
@@ -163,11 +218,7 @@ export default function WithdrawalRulesPage() {
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{rule.user_type}</span>
-                                            {rule.loan_plan ? (
-                                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">{rule.loan_plan.name}</span>
-                                            ) : (
-                                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Global Rule</span>
-                                            )}
+                                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Withdrawal Range: ₹{rule.min_withdrawal_amount} - ₹{rule.max_withdrawal_amount}</span>
                                         </div>
                                         <h3 className="text-lg font-black text-slate-900">
                                             {rule.daily_limit ? `Daily Limit: ₹${rule.daily_limit}` : 'No Daily Limit'}
@@ -213,19 +264,19 @@ export default function WithdrawalRulesPage() {
                 {/* Create Modal */}
                 {isModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsModalOpen(false); setEditingId(null); }}></div>
                         <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
-                            <h2 className="text-2xl font-black text-slate-900 mb-6">New Withdrawal Process</h2>
+                            <h2 className="text-2xl font-black text-slate-900 mb-6">{editingId ? 'Edit Withdrawal Process' : 'New Withdrawal Process'}</h2>
 
                             <div className="space-y-6">
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">User Type</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {['CUSTOMER', 'MERCHANT'].map(type => (
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(type => (
                                             <button
                                                 key={type}
                                                 onClick={() => setFormData({ ...formData, user_type: type })}
-                                                className={`py-3 rounded-xl text-xs font-black transition-all ${formData.user_type === type ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                                                className={`py-3 rounded-xl text-[10px] font-black transition-all ${formData.user_type === type ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
                                             >
                                                 {type}
                                             </button>
@@ -233,18 +284,34 @@ export default function WithdrawalRulesPage() {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Loan Plan (Optional)</label>
-                                    <select
-                                        value={formData.loan_plan_id}
-                                        onChange={(e) => setFormData({ ...formData, loan_plan_id: e.target.value })}
-                                        className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
-                                    >
-                                        <option value="">Apply Globally (No specific plan)</option>
-                                        {loanPlans.map(plan => (
-                                            <option key={plan.id} value={plan.id}>{plan.name}</option>
-                                        ))}
-                                    </select>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Min Single Withdrawal</label>
+                                        <input
+                                            type="number"
+                                            value={formData.min_withdrawal_amount}
+                                            onChange={(e) => setFormData({ ...formData, min_withdrawal_amount: e.target.value })}
+                                            placeholder="e.g. 5000"
+                                            className="w-full p-4 bg-emerald-50 text-emerald-900 rounded-2xl text-sm font-bold focus:outline-none placeholder:text-emerald-200"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Max Single Withdrawal</label>
+                                        <input
+                                            type="number"
+                                            value={formData.max_withdrawal_amount}
+                                            onChange={(e) => setFormData({ ...formData, max_withdrawal_amount: e.target.value })}
+                                            placeholder="e.g. 10000"
+                                            className={`w-full p-4 rounded-2xl text-sm font-bold focus:outline-none transition-all ${
+                                                formData.max_withdrawal_amount && parseFloat(formData.max_withdrawal_amount) < parseFloat(formData.min_withdrawal_amount || '0')
+                                                ? 'bg-rose-50 text-rose-900 ring-1 ring-rose-200'
+                                                : 'bg-emerald-50 text-emerald-900 placeholder:text-emerald-200'
+                                            }`}
+                                        />
+                                        {formData.max_withdrawal_amount && parseFloat(formData.max_withdrawal_amount) < parseFloat(formData.min_withdrawal_amount || '0') && (
+                                            <p className="text-[9px] font-bold text-rose-500 mt-1 ml-1 animate-pulse">Max must be ≥ Min</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -293,8 +360,25 @@ export default function WithdrawalRulesPage() {
                                     </select>
 
                                     {formData.target_mode === 'SPECIFIC' && (
-                                        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 max-h-60 overflow-y-auto space-y-2">
-                                            {allUsers
+                                        <div className="space-y-3">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder={`Search ${formData.user_type.toLowerCase()}s...`}
+                                                    value={userSearch}
+                                                    onChange={(e) => setUserSearch(e.target.value)}
+                                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                                                />
+                                            </div>
+
+                                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 max-h-60 overflow-y-auto space-y-2 relative">
+                                                {userLoading && (
+                                                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
+                                                        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    </div>
+                                                )}
+                                                {Array.isArray(allUsers) && allUsers
                                                 .filter(u => u.role === formData.user_type)
                                                 .map(user => {
                                                     const isSelected = formData.target_users_input
@@ -321,18 +405,19 @@ export default function WithdrawalRulesPage() {
                                                     );
                                                 })
                                             }
-                                            {allUsers.filter(u => u.role === formData.user_type).length === 0 && (
+                                            {allUsers.filter(u => u.role === formData.user_type).length === 0 && !userLoading && (
                                                 <p className="text-center text-xs text-slate-400 font-bold py-4">No {formData.user_type.toLowerCase()}s found.</p>
                                             )}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
+                            </div>
 
                                 <button
                                     onClick={handleSubmit}
                                     className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-base hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 active:scale-95"
                                 >
-                                    Activate Process
+                                    {editingId ? 'Update Process' : 'Activate Process'}
                                 </button>
                             </div>
                         </div>

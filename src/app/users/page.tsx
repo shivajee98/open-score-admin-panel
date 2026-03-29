@@ -110,7 +110,12 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     </div>
                     <div>
                         <p className="font-bold text-slate-900 flex items-center gap-2">
-                            {user.name || 'Unknown User'}
+                            {user.name || user.mobile_number}
+                            {!user.is_onboarded && (
+                                <span className="px-1.5 py-0.5 bg-rose-100 text-rose-700 text-[9px] font-black rounded uppercase tracking-tighter">
+                                    Pending Onboarding
+                                </span>
+                            )}
                             {user.is_payment_pending && (
                                 <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded uppercase tracking-tighter animate-pulse">
                                     Action Required

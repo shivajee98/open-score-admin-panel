@@ -4,7 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'react-qr-code';
 import { apiFetch } from '@/lib/api';
-import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap, ChevronLeft, ChevronRight, Filter, Settings, Copy, Plus, FolderPlus, CheckSquare, Square } from 'lucide-react';
+import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap, ChevronLeft, ChevronRight, Filter, Settings, Copy, Plus, FolderPlus, CheckSquare, Square, DownloadCloud } from 'lucide-react';
+import JSZip from 'jszip';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import AdminLayout from '@/components/AdminLayout';
@@ -32,6 +35,12 @@ export default function QrGenerator() {
     const [newGroupName, setNewGroupName] = useState('');
     const [isBatchDropdownOpen, setIsBatchDropdownOpen] = useState(false);
     const [batchSearchText, setBatchSearchText] = useState('');
+
+    // Zip Export States
+    const [isExportingZip, setIsExportingZip] = useState(false);
+    const [exportFormat, setExportFormat] = useState<'zip' | 'pdf' | 'sample'>('zip');
+    const [exportProgress, setExportProgress] = useState(0);
+    const zipSandboxRef = useRef<HTMLDivElement>(null);
 
     // Initial Fetch
     useEffect(() => {
@@ -134,15 +143,6 @@ export default function QrGenerator() {
         }
     };
 
-    const handlePrint = () => {
-        setIsPreparingPrint(true);
-        // Give the browser time to render 500+ QRs before opening the print dialog
-        setTimeout(() => {
-            window.print();
-            setIsPreparingPrint(false);
-        }, 1500);
-    };
-
     const filteredCodes = codes.filter(c => {
         const matchesSearch = c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (c.merchant_name && c.merchant_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -152,6 +152,136 @@ export default function QrGenerator() {
 
         return matchesSearch && matchesFilter;
     });
+
+    const handlePrint = () => {
+        setIsPreparingPrint(true);
+        // Give the browser time to render 500+ QRs before opening the print dialog
+        setTimeout(() => {
+            window.print();
+            setIsPreparingPrint(false);
+        }, 1500);
+    };
+
+    const [batchToExport, setBatchToExport] = useState<any[] | null>(null);
+    const [zipInstance, setZipInstance] = useState<JSZip | null>(null);
+    const [pdfInstance, setPdfInstance] = useState<jsPDF | null>(null);
+    const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
+
+    const handleZipExport = async () => {
+        if (filteredCodes.length === 0) return;
+        setExportFormat('zip');
+        setIsExportingZip(true);
+        setExportProgress(0);
+        setCurrentBatchIndex(0);
+
+        const zip = new JSZip();
+        setZipInstance(zip);
+
+        const firstBatch = filteredCodes.slice(0, 10);
+        setBatchToExport(firstBatch);
+    };
+
+    const handlePdfExport = async () => {
+        if (filteredCodes.length === 0) return;
+        setExportFormat('pdf');
+        setIsExportingZip(true);
+        setExportProgress(0);
+        setCurrentBatchIndex(0);
+
+        // 13x19 inches (Landscape)
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: [482.6, 330.2]
+        });
+        setPdfInstance(pdf);
+
+        const firstBatch = filteredCodes.slice(0, 10);
+        setBatchToExport(firstBatch);
+    };
+
+    const handleSampleExport = async () => {
+        if (filteredCodes.length === 0) return;
+        setExportFormat('sample');
+        setIsExportingZip(true);
+        setBatchToExport(filteredCodes.slice(0, 10));
+    };
+
+    // Effect to handle export batch by batch (ZIP or PDF)
+    useEffect(() => {
+        if (!batchToExport || !isExportingZip) return;
+
+        const captureAndNext = async () => {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                const element = document.getElementById('zip-export-sandbox');
+                if (element) {
+                    const dataUrl = await toPng(element, {
+                        pixelRatio: exportFormat === 'sample' ? 1 : 1.5,
+                        backgroundColor: 'white'
+                    });
+
+                    if (exportFormat === 'sample') {
+                        const link = document.createElement('a');
+                        link.href = dataUrl;
+                        link.download = `QR_Sample_13x19_${new Date().getTime()}.png`;
+                        link.click();
+                        setIsExportingZip(false);
+                        setBatchToExport(null);
+                        return;
+                    }
+
+                    if (exportFormat === 'zip' && zipInstance) {
+                        const base64Data = dataUrl.split(',')[1];
+                        zipInstance.file(`QR_Batch_${currentBatchIndex + 1}_13x19.png`, base64Data, { base64: true });
+                    } else if (exportFormat === 'pdf' && pdfInstance) {
+                        if (currentBatchIndex > 0) pdfInstance.addPage([482.6, 330.2], 'landscape');
+                        pdfInstance.addImage(dataUrl, 'PNG', 0, 0, 482.6, 330.2);
+                    }
+
+                    const nextIndex = currentBatchIndex + 1;
+                    const batchSize = 10;
+                    const totalBatches = Math.ceil(filteredCodes.length / batchSize);
+
+                    if (nextIndex < totalBatches) {
+                        setExportProgress(Math.round((nextIndex / totalBatches) * 100));
+                        setCurrentBatchIndex(nextIndex);
+                        setBatchToExport(filteredCodes.slice(nextIndex * batchSize, nextIndex * batchSize + batchSize));
+                    } else {
+                        setExportProgress(100);
+                        if (exportFormat === 'zip' && zipInstance) {
+                            const content = await zipInstance.generateAsync({ type: 'blob' });
+                            const url = URL.createObjectURL(content);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `QR_Export_13x19_PNG_${new Date().getTime()}.zip`;
+                            link.click();
+                        } else if (exportFormat === 'pdf' && pdfInstance) {
+                            pdfInstance.save(`QR_Export_13x19_${new Date().getTime()}.pdf`);
+                        }
+
+                        setIsExportingZip(false);
+                        setBatchToExport(null);
+                        setZipInstance(null);
+                        setPdfInstance(null);
+                    }
+                }
+            } catch (err) {
+                console.error('Export failed:', err);
+                setIsExportingZip(false);
+                setBatchToExport(null);
+                setZipInstance(null);
+                setPdfInstance(null);
+                alert('Export failed.');
+            }
+        };
+
+        captureAndNext();
+    }, [batchToExport, zipInstance, pdfInstance, isExportingZip, currentBatchIndex, filteredCodes, exportFormat]);
+
+
+    // Removed the previous definition of filteredCodes downstream
 
     const totalPages = Math.ceil(filteredCodes.length / itemsPerPage);
     const paginatedCodes = filteredCodes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -251,12 +381,12 @@ export default function QrGenerator() {
                     .qr-card-branded {
                         width: 95mm !important;
                         height: 200mm !important;
-                        background: linear-gradient(165deg, #0a3d4f 0%, #0d5a6e 40%, #0f6b7a 70%, #1a8090 100%) !important;
+                        background: #012b39 !important;
                         border-radius: 0 !important;
-                        padding: 8mm !important;
+                        padding: 6mm !important;
                         display: flex !important;
-                        flex-direction: column !important;
                         align-items: center !important;
+                        justify-content: center !important;
                         position: relative !important;
                         overflow: hidden !important;
                         box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
@@ -271,109 +401,109 @@ export default function QrGenerator() {
                         background: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h20v2H10zM40 30h30v2H40zM20 50h15v2H20zM60 60h25v2H60zM5 80h20v2H5z' fill='rgba(255,255,255,0.05)'/%3E%3C/svg%3E") !important;
                         pointer-events: none !important;
                     }
-                    .qr-brand-top {
-                        text-align: center !important;
-                        margin-bottom: 5mm !important;
+                    .qr-outline-wrapper {
+                        background: linear-gradient(165deg, #0a3d4f 0%, #0d5a6e 40%, #0f6b7a 70%, #1a8090 100%) !important;
+                        border: 3px solid rgba(100, 210, 200, 0.5) !important;
+                        border-radius: 8mm !important;
+                        padding: 5mm 4mm !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        box-sizing: border-box !important;
                         position: relative !important;
                         z-index: 1 !important;
                     }
-                    .qr-brand-top .msme {
-                        font-size: 12pt !important;
-                        font-weight: 700 !important;
-                        color: #d4af37 !important;
-                        letter-spacing: 0.15em !important;
-                        text-transform: uppercase !important;
+                    .qr-line-break {
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 3mm !important;
+                        width: 100% !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                        margin-bottom: 4mm !important;
                     }
-                    .qr-brand-top .openscore {
+                    .qr-line-break .line {
+                        flex: 1 !important;
+                        height: 1px !important;
+                        background: rgba(100, 210, 200, 0.4) !important;
+                    }
+                    .qr-line-break .text {
                         font-size: 26pt !important;
                         font-weight: 900 !important;
                         color: white !important;
                         letter-spacing: 0.05em !important;
-                        margin-top: 2mm !important;
+                        white-space: nowrap !important;
                     }
-                    .qr-brand-top .tagline {
-                        font-size: 11pt !important;
-                        color: #5fd4d4 !important;
-                        font-style: italic !important;
-                        margin-top: 2mm !important;
+                    .qr-line-break-bottom {
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 3mm !important;
+                        width: 100% !important;
+                        position: relative !important;
+                        z-index: 1 !important;
+                        margin-top: 4mm !important;
+                    }
+                    .qr-line-break-bottom .line {
+                        flex: 1 !important;
+                        height: 1px !important;
+                        background: rgba(100, 210, 200, 0.4) !important;
+                    }
+                    .qr-line-break-bottom .text {
+                        font-size: 20pt !important;
+                        font-weight: 900 !important;
+                        color: white !important;
+                        letter-spacing: 0.1em !important;
+                        white-space: nowrap !important;
                     }
                     .qr-ring-container {
                         position: relative !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        flex: 1 !important;
                         z-index: 1 !important;
-                        width: 100% !important;
-                    }
-                    .qr-ring {
-                        position: absolute !important;
-                        width: 75mm !important;
-                        height: 75mm !important;
-                        border: 4px solid #00d4d4 !important;
-                        border-radius: 50% !important;
-                        box-shadow: 0 0 30px rgba(0,212,212,0.5), inset 0 0 30px rgba(0,212,212,0.15) !important;
                     }
                     .qr-box {
                         background: white !important;
                         padding: 6mm !important;
-                        border-radius: 0 !important;
+                        border-radius: 2mm !important;
                         position: relative !important;
                         z-index: 2 !important;
-                    }
-                    .qr-box .check-badge {
-                        position: absolute !important;
-                        top: -3mm !important;
-                        right: -3mm !important;
-                        width: 10mm !important;
-                        height: 10mm !important;
-                        background: #22c55e !important;
-                        border-radius: 50% !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        border: 3px solid white !important;
-                    }
-                    .qr-box .check-badge svg {
-                        width: 6mm !important;
-                        height: 6mm !important;
-                        color: white !important;
+                        border: 3px solid rgba(100, 210, 200, 0.6) !important;
                     }
                     .qr-bottom {
                         text-align: center !important;
-                        margin-top: 5mm !important;
+                        margin-top: 3mm !important;
                         position: relative !important;
                         z-index: 1 !important;
                     }
-                    .qr-bottom .scan-pay {
-                        font-size: 20pt !important;
-                        font-weight: 900 !important;
-                        color: white !important;
-                        letter-spacing: 0.1em !important;
-                    }
                     .qr-bottom .cashback-text {
-                        font-size: 11pt !important;
+                        font-size: 10pt !important;
                         color: white !important;
                         margin-top: 2mm !important;
+                        font-weight: 900 !important;
                     }
                     .qr-bottom .cashback-text span {
                         color: #fcd34d !important;
-                        font-weight: 700 !important;
+                        font-weight: 900 !important;
                     }
                     .qr-bottom .for-text {
-                        font-size: 9pt !important;
-                        color: rgba(255,255,255,0.6) !important;
+                        font-size: 8pt !important;
+                        color: rgba(255,255,255,0.7) !important;
                         text-transform: uppercase !important;
                         letter-spacing: 0.1em !important;
-                        margin-top: 3mm !important;
+                        margin-top: 2mm !important;
+                        font-weight: 900 !important;
                     }
                     .qr-footer {
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
                         width: 100% !important;
-                        margin-top: 5mm !important;
-                        padding-top: 4mm !important;
+                        margin-top: 3mm !important;
+                        padding-top: 3mm !important;
                         border-top: 1px solid rgba(255,255,255,0.15) !important;
                         position: relative !important;
                         z-index: 1 !important;
@@ -384,16 +514,17 @@ export default function QrGenerator() {
                         gap: 2mm !important;
                     }
                     .qr-footer .powered .icon {
-                        width: 6mm !important;
-                        height: 6mm !important;
+                        width: 5mm !important;
+                        height: 5mm !important;
                         background: #22c55e !important;
                         border-radius: 50% !important;
                     }
                     .qr-footer .powered span {
-                        font-size: 8pt !important;
-                        color: rgba(255,255,255,0.8) !important;
+                        font-size: 7pt !important;
+                        color: rgba(255,255,255,0.9) !important;
                         text-transform: uppercase !important;
                         letter-spacing: 0.05em !important;
+                        font-weight: 900 !important;
                     }
                     .qr-footer .date {
                         font-size: 6pt !important;
@@ -610,6 +741,59 @@ export default function QrGenerator() {
                                 {isPreparingPrint ? <Zap className="animate-pulse" size={18} /> : <Printer size={18} />}
                                 {isPreparingPrint ? 'Preparing...' : 'Print'}
                             </button>
+
+                            <button
+                                onClick={handleZipExport}
+                                disabled={loading || isExportingZip || filteredCodes.length === 0}
+                                className={cn(
+                                    "flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 flex-1 md:flex-initial justify-center relative overflow-hidden",
+                                    isExportingZip && "bg-indigo-500"
+                                )}
+                            >
+                                {isExportingZip && exportFormat === 'zip' ? (
+                                    <>
+                                        <div className="absolute inset-0 bg-indigo-700 opacity-50" style={{ width: `${exportProgress}%`, transition: 'width 0.3s ease' }} />
+                                        <DownloadCloud className="animate-bounce relative z-10" size={18} />
+                                        <span className="relative z-10">{exportProgress}% ZIP Export...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <DownloadCloud size={18} />
+                                        <span>Download 13/19 (ZIP)</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={handlePdfExport}
+                                disabled={loading || isExportingZip || filteredCodes.length === 0}
+                                className={cn(
+                                    "flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 disabled:opacity-50 flex-1 md:flex-initial justify-center relative overflow-hidden",
+                                    isExportingZip && exportFormat === 'pdf' && "bg-emerald-500"
+                                )}
+                            >
+                                {isExportingZip && exportFormat === 'pdf' ? (
+                                    <>
+                                        <div className="absolute inset-0 bg-emerald-700 opacity-50" style={{ width: `${exportProgress}%`, transition: 'width 0.3s ease' }} />
+                                        <DownloadCloud className="animate-bounce relative z-10" size={18} />
+                                        <span className="relative z-10">{exportProgress}% PDF Export...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <DownloadCloud size={18} />
+                                        <span>Download 13/19 (PDF)</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={handleSampleExport}
+                                disabled={loading || isExportingZip || filteredCodes.length === 0}
+                                className="flex items-center gap-3 px-6 py-4 bg-sky-50 text-sky-600 rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-sky-100 transition-all flex-1 md:flex-initial justify-center"
+                            >
+                                <Copy size={18} />
+                                <span>Generate Sample Image</span>
+                            </button>
                         </div>
                     </div>
 
@@ -771,6 +955,11 @@ export default function QrGenerator() {
                     <QrPrintSandbox codes={filteredCodes} />
                 )}
 
+                {/* 13x19 Export Sandbox (Used for PNG generation) */}
+                {isExportingZip && batchToExport && (
+                    <QrExportSandbox13x19 codes={batchToExport} />
+                )}
+
                 {/* Code Details Modal */}
                 {selectedCode && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6 no-print" onClick={() => setSelectedCode(null)}>
@@ -914,35 +1103,156 @@ const QrPrintSandbox = ({ codes }: { codes: any[] }) => {
                 <div key={pageIndex} className="print-page" style={{ display: 'flex', alignItems: 'center', gap: '3mm', padding: '3mm' }}>
                     {codes.slice(pageIndex * 3, pageIndex * 3 + 3).map((code) => (
                         <div key={code.id} className="qr-card-branded">
-                            <div className="qr-brand-top">
-                                <div className="msme">MSME SHAKTI</div>
-                                <div className="openscore">OPEN SCORE</div>
-                                <div className="tagline">Unlock Cashback Rewards!</div>
-                            </div>
-                            <div className="qr-ring-container">
-                                <div className="qr-ring"></div>
-                                <div className="qr-box">
-                                    <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={220} level="H" />
-                                    <div className="check-badge">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                            <path d="M20 6L9 17l-5-5" />
-                                        </svg>
+                            <div className="qr-outline-wrapper">
+                                <div className="qr-line-break">
+                                    <div className="line"></div>
+                                    <div className="text">OPEN SCORE</div>
+                                    <div className="line"></div>
+                                </div>
+                                <div className="qr-ring-container">
+                                    <div className="qr-box">
+                                        <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={220} level="H" />
                                     </div>
                                 </div>
-                            </div>
-                            <div className="qr-bottom">
-                                <div className="scan-pay">SCAN & PAY</div>
-                                <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
-                                <div className="for-text">For Businesses & Customers</div>
-                            </div>
-                            <div className="qr-footer">
-                                <div className="powered">
-                                    <div className="icon"></div>
-                                    <span>Powered by MSME Shakti</span>
+                                <div className="qr-line-break-bottom">
+                                    <div className="line"></div>
+                                    <div className="text">SCAN & PAY</div>
+                                    <div className="line"></div>
+                                </div>
+                                <div className="qr-bottom">
+                                    <div className="cashback-text">Get <span>Instant Cashback</span> on Every Transaction!</div>
+                                    <div className="for-text">For Businesses & Customers</div>
+                                </div>
+                                <div className="qr-footer">
+                                    <div className="powered">
+                                        <div className="icon"></div>
+                                        <span style={{ fontWeight: 900 }}>Powered by MSME Shakti</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+            ))}
+        </div>,
+        document.body
+    );
+};
+
+
+// 13x19 EXPORT SANDBOX (2x5 Grid for 10 QRs per sheet)
+const QrExportSandbox13x19 = ({ codes }: { codes: any[] }) => {
+    return createPortal(
+        <div
+            id="zip-export-sandbox"
+            className="export-sandbox-root"
+            style={{
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                width: '482.6mm', // 19 inches (Landscape)
+                height: '330.2mm', // 13 inches
+                background: 'white',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)', // 5 columns
+                gridTemplateRows: 'repeat(2, 1fr)', // 2 rows
+                padding: '0',
+                gap: '0',
+                zIndex: -200,
+                opacity: 1, // Full opacity for crisp capture
+                pointerEvents: 'none',
+                boxSizing: 'border-box'
+            }}
+        >
+            {codes.map((code) => (
+                <div key={code.id} style={{
+                    width: '100%',
+                    height: '100%',
+                    background: '#012b39',
+                    padding: '6mm',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxSizing: 'border-box'
+                }}>
+                    {/* Outer rounded outline */}
+                    <div style={{
+                        background: 'linear-gradient(165deg, #0a3d4f 0%, #0d5a6e 40%, #0f6b7a 70%, #1a8090 100%)',
+                        border: '3px solid rgba(100, 210, 200, 0.5)',
+                        borderRadius: '8mm',
+                        padding: '5mm 4mm',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                        position: 'relative'
+                    }}>
+                        {/* Top text with line breaks */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', width: '100%', zIndex: 1, marginBottom: '3mm' }}>
+                            <div style={{ flex: 1, height: '1px', background: 'rgba(100, 210, 200, 0.4)' }}></div>
+                            <div style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: '24pt', fontWeight: 900, color: 'white', letterSpacing: '0.05em', lineHeight: 1 }}>OPEN SCORE</div>
+                            </div>
+                            <div style={{ flex: 1, height: '1px', background: 'rgba(100, 210, 200, 0.4)' }}></div>
+                        </div>
+
+                        {/* QR box with outline */}
+                        <div style={{
+                            background: 'white',
+                            padding: '8mm',
+                            borderRadius: '2mm',
+                            position: 'relative',
+                            zIndex: 2,
+                            border: '3px solid rgba(100, 210, 200, 0.6)',
+                            width: '58mm',
+                            height: '58mm',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '2mm 0'
+                        }}>
+                            <QRCode value={`https://openscore.msmeloan.sbs/qr?id=${code.code}`} size={220} level="H" />
+                        </div>
+
+                        {/* Bottom text with line breaks */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', width: '100%', zIndex: 1, marginTop: '3mm' }}>
+                            <div style={{ flex: 1, height: '1px', background: 'rgba(100, 210, 200, 0.4)' }}></div>
+                            <div style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: '20pt', fontWeight: 900, color: 'white', letterSpacing: '0.12em' }}>SCAN & PAY</div>
+                            </div>
+                            <div style={{ flex: 1, height: '1px', background: 'rgba(100, 210, 200, 0.4)' }}></div>
+                        </div>
+
+                        <div style={{ textAlign: 'center', zIndex: 1, width: '100%', marginTop: '2mm' }}>
+                            <div style={{ fontSize: '9pt', color: 'rgba(255,255,255,0.9)', fontWeight: 900 }}>Get <span style={{ color: '#fcd34d', fontWeight: 900 }}>Instant Cashback</span> on Every Transaction!</div>
+                            <div style={{ fontSize: '7pt', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2mm', fontWeight: 900 }}>
+                                {code.status === 'assigned' ? (code.merchant_name || 'FOR BUSINESSES') : 'FOR BUSINESSES & CUSTOMERS'}
+                            </div>
+
+                            <div style={{
+                                width: '100%',
+                                marginTop: '3mm',
+                                paddingTop: '3mm',
+                                borderTop: '1px solid rgba(255,255,255,0.15)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '2mm'
+                            }}>
+                                <div style={{ width: '4mm', height: '4mm', background: '#22c55e', borderRadius: '50%' }}></div>
+                                <span style={{ fontSize: '7pt', color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 900 }}>Powered by MSME Shakti</span>
+                            </div>
+
+                            <div style={{ fontSize: '5pt', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', marginTop: '2mm', wordBreak: 'break-all' }}>
+                                {code.code}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ))}
         </div>,

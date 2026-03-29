@@ -17,6 +17,7 @@ import {
     ArrowRightLeft,
     ChevronDown,
     ChevronUp,
+    Download,
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
@@ -82,6 +83,30 @@ export default function PayoutsAdminPage() {
         }
     };
 
+    const handleExport = async () => {
+        try {
+            const params = new URLSearchParams();
+            if (searchQuery) params.append('query', searchQuery);
+            if (statusFilter !== 'ALL') params.append('status', statusFilter);
+            if (typeFilter !== 'ALL') params.append('type', typeFilter);
+
+            const blob = await apiFetch(`/admin/payouts/export?${params.toString()}`, {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `payouts_export_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            toast.success("Export started");
+        } catch (err) {
+            toast.error("Export failed");
+        }
+    };
+
     const filteredPayouts = payouts.filter(p => {
         const matchesSearch =
             p.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -132,6 +157,13 @@ export default function PayoutsAdminPage() {
                                 <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black">
                                     {payouts.filter(p => p.status === 'PENDING').length} PENDING
                                 </div>
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    EXPORT AS EXCEL
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -226,8 +258,8 @@ export default function PayoutsAdminPage() {
                                                 <tr key={payout.id} className="group hover:bg-slate-50/50 transition-colors">
                                                     <td className="px-8 py-6">
                                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wide ${payout.type === 'BANK_TRANSFER'
-                                                                ? 'bg-violet-50 text-violet-600 border border-violet-100'
-                                                                : 'bg-slate-50 text-slate-600 border border-slate-100'
+                                                            ? 'bg-violet-50 text-violet-600 border border-violet-100'
+                                                            : 'bg-slate-50 text-slate-600 border border-slate-100'
                                                             }`}>
                                                             {payout.type === 'BANK_TRANSFER' ? (
                                                                 <><ArrowRightLeft className="w-3 h-3" /> Bulk Pay</>
@@ -242,7 +274,17 @@ export default function PayoutsAdminPage() {
                                                                 {payout.user?.name?.[0]}
                                                             </div>
                                                             <div>
-                                                                <p className="text-sm font-black text-slate-900">{payout.user?.name}</p>
+                                                                <div className="flex items-center gap-2 mb-0.5">
+                                                                    <p className="text-sm font-black text-slate-900">{payout.user?.name}</p>
+                                                                    {payout.user?.role && (
+                                                                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter border ${payout.user.role === 'MERCHANT' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                                                payout.user.role === 'STUDENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                                                    'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                            }`}>
+                                                                            {payout.user.role}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 <p className="text-[10px] font-bold text-slate-400">{payout.user?.mobile_number}</p>
                                                             </div>
                                                         </div>

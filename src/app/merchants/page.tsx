@@ -141,7 +141,14 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                         {(user.name || 'M')[0]}
                     </div>
                     <div>
-                        <p className="font-bold text-slate-900">{user.name || 'Unknown Merchant'}</p>
+                        <p className="font-bold text-slate-900 flex items-center gap-2">
+                            {user.name || user.mobile_number}
+                            {!user.is_onboarded && (
+                                <span className="px-1.5 py-0.5 bg-rose-100 text-rose-700 text-[9px] font-black rounded uppercase tracking-tighter">
+                                    Pending Onboarding
+                                </span>
+                            )}
+                        </p>
                         <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
                     </div>
                 </div>
@@ -262,20 +269,38 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     <span className="text-slate-200">-</span>
                 )}
             </td>
-            <td className="p-6">
-                {user.location_url ? (
-                    <a 
-                        href={user.location_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                        title="View Location"
-                    >
-                        <MapPin size={18} />
-                    </a>
-                ) : (
-                    <span className="text-slate-200">-</span>
-                )}
+             <td className="p-6">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        {user.is_qr_mapped ? (
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-white font-black shadow-lg shadow-emerald-200 animate-in zoom-in duration-300">
+                                Y
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500 text-white font-black shadow-lg shadow-rose-200 animate-in zoom-in duration-300">
+                                N
+                            </span>
+                        )}
+                        {user.location_url && (
+                            <a 
+                                href={user.location_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="p-1.5 bg-slate-100 text-slate-500 hover:bg-slate-200 rounded-md transition-colors"
+                                title="View Map Location"
+                            >
+                                <MapPin size={12} />
+                            </a>
+                        )}
+                    </div>
+                    {user.qr_onboarded_by && (
+                        <div className="flex flex-col text-[9px] leading-tight">
+                            <span className="text-slate-400 font-medium uppercase tracking-tighter">Mapped By</span>
+                            <span className="text-blue-600 font-bold truncate max-w-[100px]">{user.qr_onboarded_by.name}</span>
+                            <span className="text-slate-500 font-mono">{user.qr_onboarded_by.code}</span>
+                        </div>
+                    )}
+                </div>
             </td>
             <td className="p-6">
                 <div className="flex items-center gap-2">
@@ -404,6 +429,7 @@ export default function MerchantsPage() {
     const [cashbackFlat, setCashbackFlat] = useState('');
     const [receivePercent, setReceivePercent] = useState('');
     const [receiveFlat, setReceiveFlat] = useState('');
+    const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
     const loadUsers = async () => {
         setLoading(true);
@@ -437,6 +463,17 @@ export default function MerchantsPage() {
     useEffect(() => {
         loadUsers();
     }, [currentPage, itemsPerPage, search, filters]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (showDownloadOptions && !target.closest('.download-dropdown')) {
+                setShowDownloadOptions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showDownloadOptions]);
 
     const handleAddFunds = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -570,44 +607,30 @@ export default function MerchantsPage() {
                     </div>
 
                     <div className="flex gap-2">
-                        <div className="relative group">
+                        <div className="relative download-dropdown">
                             <button
-                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                                onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+                                className={cn(
+                                    "flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-lg",
+                                    showDownloadOptions 
+                                        ? "bg-slate-800 text-white shadow-slate-300 scale-[0.98]" 
+                                        : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200"
+                                )}
                             >
                                 <Download className="w-5 h-5" />
                                 Bulk Data Download
                             </button>
-                            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const blob = await apiFetch(`/admin/users/export?type=merchant&search=${search}`, { responseType: 'blob' });
-                                            const url = window.URL.createObjectURL(blob);
-                                            const link = document.createElement('a');
-                                            link.href = url;
-                                            link.setAttribute('download', `merchants_all_${new Date().toISOString().split('T')[0]}.csv`);
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            link.remove();
-                                            window.URL.revokeObjectURL(url);
-                                        } catch (e) {
-                                            console.error('Export failed', e);
-                                            alert('Export failed.');
-                                        }
-                                    }}
-                                    className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                                >
-                                    Download All Matching
-                                </button>
-                                {selectedIds.length > 0 && (
+                            {showDownloadOptions && (
+                                <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                     <button
                                         onClick={async () => {
+                                            setShowDownloadOptions(false);
                                             try {
-                                                const blob = await apiFetch(`/admin/users/export?type=merchant&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                const blob = await apiFetch(`/admin/users/export?type=merchant&search=${search}`, { responseType: 'blob' });
                                                 const url = window.URL.createObjectURL(blob);
                                                 const link = document.createElement('a');
                                                 link.href = url;
-                                                link.setAttribute('download', `merchants_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
+                                                link.setAttribute('download', `merchants_all_${new Date().toISOString().split('T')[0]}.csv`);
                                                 document.body.appendChild(link);
                                                 link.click();
                                                 link.remove();
@@ -617,12 +640,38 @@ export default function MerchantsPage() {
                                                 alert('Export failed.');
                                             }
                                         }}
-                                        className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-50"
+                                        className="w-full text-left px-4 py-4 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-between group/item"
                                     >
-                                        Download Selected ({selectedIds.length})
+                                        <span>Download All Matching</span>
+                                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover/item:text-slate-400 transform group-hover/item:translate-x-0.5 transition-all" />
                                     </button>
-                                )}
-                            </div>
+                                    {selectedIds.length > 0 && (
+                                        <button
+                                            onClick={async () => {
+                                                setShowDownloadOptions(false);
+                                                try {
+                                                    const blob = await apiFetch(`/admin/users/export?type=merchant&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                    const url = window.URL.createObjectURL(blob);
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.setAttribute('download', `merchants_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    link.remove();
+                                                    window.URL.revokeObjectURL(url);
+                                                } catch (e) {
+                                                    console.error('Export failed', e);
+                                                    alert('Export failed.');
+                                                }
+                                            }}
+                                            className="w-full text-left px-4 py-4 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-50 flex items-center justify-between group/item"
+                                        >
+                                            <span>Download Selected ({selectedIds.length})</span>
+                                            <ChevronRight className="w-4 h-4 text-blue-300 group-hover/item:text-blue-400 transform group-hover/item:translate-x-0.5 transition-all" />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">

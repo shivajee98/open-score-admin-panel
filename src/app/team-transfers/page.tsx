@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Banknote, Users, CheckCircle, XCircle, Settings, X, Search, Trash2 } from 'lucide-react';
+import { Banknote, Users, CheckCircle, XCircle, Settings, X, Search, Trash2, History } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TeamTransfer {
@@ -59,7 +59,23 @@ export default function TeamTransfersPage() {
     useEffect(() => {
         loadTransfers();
         loadRuleHistory();
+        loadHistoryItems();
     }, []);
+
+    const [history, setHistory] = useState<any[]>([]);
+    const [loadingHistoryItems, setLoadingHistoryItems] = useState(false);
+
+    const loadHistoryItems = async () => {
+        setLoadingHistoryItems(true);
+        try {
+            const res = await apiFetch('/admin/team-transfers-history');
+            setHistory(res?.data || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingHistoryItems(false);
+        }
+    };
 
     const loadRuleHistory = async () => {
         setLoadingHistory(true);
@@ -117,7 +133,7 @@ export default function TeamTransfersPage() {
             setAutoApprovalMode(details.auto_approval_mode || 'MANUAL');
             setAutoApprovalLimit(String(details.auto_approval_limit || '0'));
             setAutoApprovalPercentage(String(details.auto_approval_percentage || '0'));
-            
+
             setRulesModal(true);
             toast.info('Rule configuration loaded. You can now adjust and deploy.');
         } else if (log.description) {
@@ -132,8 +148,8 @@ export default function TeamTransfersPage() {
             setIntervalHours(hoursMatch ? hoursMatch[1] : '0');
             setMinAmount(minAmountMatch ? minAmountMatch[1] : '0');
             setAutoApprovalMode(modeMatch ? modeMatch[1] : 'MANUAL');
-            
-            setApplyToAll(true); 
+
+            setApplyToAll(true);
             setRulesModal(true);
             toast.success('Partially recovered configuration from legacy log description.');
         } else {
@@ -143,7 +159,7 @@ export default function TeamTransfersPage() {
 
     const handleDeleteHistory = async (id: number) => {
         if (!confirm('Are you sure you want to delete this rule history? This action cannot be undone.')) return;
-        
+
         setActionLoading(true);
         try {
             const res = await apiFetch(`/admin/team-transfers/rule-history/${id}`, { method: 'DELETE' });
@@ -158,24 +174,24 @@ export default function TeamTransfersPage() {
     };
 
     const handleApproveFormSubmit = async (e: React.FormEvent) => {
-         e.preventDefault();
-         if (!approveModal.transfer) return;
+        e.preventDefault();
+        if (!approveModal.transfer) return;
 
-         setActionLoading(true);
-         try {
-             const res = await apiFetch(`/admin/team-transfers/${approveModal.transfer.id}/approve`, {
-                 method: 'POST',
-                 body: JSON.stringify({ approved_amount: approvedAmount })
-             });
-             if (res.error) throw new Error(res.error);
-             toast.success('Transfer Approved');
-             setApproveModal({ isOpen: false, transfer: null });
-             loadTransfers();
-         } catch (e: any) {
-             toast.error(e.message || 'Approval failed');
-         } finally {
-             setActionLoading(false);
-         }
+        setActionLoading(true);
+        try {
+            const res = await apiFetch(`/admin/team-transfers/${approveModal.transfer.id}/approve`, {
+                method: 'POST',
+                body: JSON.stringify({ approved_amount: approvedAmount })
+            });
+            if (res.error) throw new Error(res.error);
+            toast.success('Transfer Approved');
+            setApproveModal({ isOpen: false, transfer: null });
+            loadTransfers();
+        } catch (e: any) {
+            toast.error(e.message || 'Approval failed');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     const openApproveModal = (transfer: TeamTransfer) => {
@@ -223,11 +239,11 @@ export default function TeamTransfersPage() {
 
 
     const filteredUsersList = (Array.isArray(targetableUsers) ? targetableUsers : []).filter(user => {
-        const matchesSearch = !userFilters.search || 
+        const matchesSearch = !userFilters.search ||
             user.name?.toLowerCase().includes(userFilters.search.toLowerCase()) ||
             user.mobile_number?.includes(userFilters.search) ||
             user.mobile?.includes(userFilters.search);
-        
+
         return matchesSearch;
     });
 
@@ -288,7 +304,9 @@ export default function TeamTransfersPage() {
         const styles: Record<string, string> = {
             PENDING: 'bg-amber-100 text-amber-700 border-amber-200',
             COMPLETED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-            FAILED: 'bg-rose-100 text-rose-700 border-rose-200'
+            APPROVED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            FAILED: 'bg-rose-100 text-rose-700 border-rose-200',
+            REJECTED: 'bg-rose-100 text-rose-700 border-rose-200'
         };
         const activeStyle = styles[status] || 'bg-slate-100 text-slate-700 border-slate-200';
         return (
@@ -307,24 +325,24 @@ export default function TeamTransfersPage() {
                         <p className="text-slate-500 text-sm font-medium">Manage worker payouts and withdrawal rules</p>
                     </div>
                     <div className="flex gap-3">
-                         <button
+                        <button
                             onClick={() => {
                                 setIsVendorConfig(false);
                                 setRulesModal(true);
                             }}
                             className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
-                         >
-                             <Users size={18} /> Configure Workers
-                         </button>
-                         <button
+                        >
+                            <Users size={18} /> Configure Workers
+                        </button>
+                        <button
                             onClick={() => {
                                 setIsVendorConfig(true);
                                 setRulesModal(true);
                             }}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
-                         >
-                             <Settings size={18} /> Configure Vendors
-                         </button>
+                        >
+                            <Settings size={18} /> Configure Vendors
+                        </button>
                     </div>
                 </div>
 
@@ -354,7 +372,9 @@ export default function TeamTransfersPage() {
                                                         {t.wallet?.user?.name?.[0] || '?'}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-slate-900">{t.wallet?.user?.name || 'Unknown'}</p>
+                                                        <p className="font-bold text-slate-900 flex items-center gap-2">
+                                                            {t.wallet?.user?.name || 'Unknown'}
+                                                        </p>
                                                         <p className="text-xs text-slate-500 font-medium">{t.wallet?.user?.mobile_number || 'N/A'}</p>
                                                     </div>
                                                 </div>
@@ -425,20 +445,20 @@ export default function TeamTransfersPage() {
                         </div>
                     ) : ruleHistory.length === 0 ? (
                         <div className="bg-white rounded-[2.5rem] p-12 text-center border border-slate-100 shadow-sm">
-                             <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <Settings size={32} />
-                             </div>
-                             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No implementation history found</p>
+                            </div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No implementation history found</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {ruleHistory.map((log) => (
-                                <div 
-                                    key={log.id} 
+                                <div
+                                    key={log.id}
                                     className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group relative overflow-hidden flex flex-col justify-between"
                                 >
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50/50 rounded-full -mr-12 -mt-12 group-hover:bg-indigo-100/50 transition-colors" />
-                                    
+
                                     <div>
                                         <div className="flex justify-between items-start mb-4 relative z-10">
                                             <div className="flex flex-col">
@@ -450,7 +470,7 @@ export default function TeamTransfersPage() {
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button 
+                                                <button
                                                     onClick={() => handleDeleteHistory(log.id)}
                                                     className="p-2 bg-slate-50 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all border border-transparent hover:border-red-100"
                                                     title="Delete History"
@@ -468,7 +488,7 @@ export default function TeamTransfersPage() {
                                         </p>
                                     </div>
 
-                                    <button 
+                                    <button
                                         onClick={() => handleEditRule(log)}
                                         className="w-full py-3 bg-slate-50 hover:bg-indigo-600 hover:text-white text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/btn active:scale-95"
                                     >
@@ -487,7 +507,7 @@ export default function TeamTransfersPage() {
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                             <h3 className="font-bold text-lg text-slate-900">Approve Transfer</h3>
-                            <button onClick={() => setApproveModal({ isOpen: false, transfer: null })} className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X size={20}/></button>
+                            <button onClick={() => setApproveModal({ isOpen: false, transfer: null })} className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleApproveFormSubmit} className="p-6 space-y-6">
                             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex justify-between items-center text-sm">
@@ -659,7 +679,7 @@ export default function TeamTransfersPage() {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Minimum Transfer Amount (₹)</label>
                                 <div className="relative">
@@ -679,11 +699,11 @@ export default function TeamTransfersPage() {
                             </div>
 
                             <hr className="border-slate-100 border-t-2 border-dashed" />
-                            
+
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Auto Approval System</label>
-                                <select 
-                                    value={autoApprovalMode} 
+                                <select
+                                    value={autoApprovalMode}
                                     onChange={(e) => setAutoApprovalMode(e.target.value)}
                                     className="w-full bg-white border-2 border-slate-200 rounded-xl py-3 px-4 font-bold text-slate-900 focus:outline-none focus:border-indigo-500 mb-4"
                                 >
@@ -692,7 +712,7 @@ export default function TeamTransfersPage() {
                                     <option value="LIMIT_BASED">Limit Based Transfer</option>
                                     <option value="PERCENTAGE">Percentage Based Transfer</option>
                                 </select>
-                                
+
                                 {autoApprovalMode === 'LIMIT_BASED' && (
                                     <div className="animate-in fade-in slide-in-from-top-2">
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Max Auto-Approve Limit (₹)</label>
@@ -748,6 +768,82 @@ export default function TeamTransfersPage() {
                     </div>
                 </div>
             )}
+
+
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mt-8">
+                    <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+                                <History size={20} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-slate-900 tracking-tight">Consolidated Settlement History</h2>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Complete records of all Wallet & Bank transfers</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/30">
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vendor (Sender)</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {loadingHistoryItems ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold italic animate-pulse">Loading execution logs...</td>
+                                    </tr>
+                                ) : history.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold italic">No historical records found.</td>
+                                    </tr>
+                                ) : history.map((item) => (
+                                    <tr key={`${item.type}-${item.id}`} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-tight ${
+                                                item.type === 'WALLET_TRANSFER' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'
+                                            }`}>
+                                                {item.type === 'WALLET_TRANSFER' ? 'Wallet' : 'Bank'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-slate-900">{item.type === 'WALLET_TRANSFER' ? (item.source_sub_user?.name || 'Unknown') : (item.sub_user?.name || 'Unknown')}</span>
+                                                <span className="text-[10px] text-slate-400 font-mono tracking-tighter">#{item.type === 'WALLET_TRANSFER' ? item.source_id : item.sub_user_id}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-slate-900">
+                                                    {item.type === 'WALLET_TRANSFER' ? (item.user?.name || 'Wallet System') : (item.account_holder_name || 'N/A')}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 font-mono">
+                                                    {item.type === 'WALLET_TRANSFER' ? (item.user?.mobile_number || '') : (item.account_number || item.upi_id || 'N/A')}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 font-black text-slate-900 tracking-tighter">
+                                            ₹{parseFloat(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <StatusBadge status={item.status} />
+                                        </td>
+                                        <td className="px-6 py-4 text-[11px] font-bold text-slate-400 font-mono">
+                                            {new Date(item.created_at).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
         </AdminLayout>
     );

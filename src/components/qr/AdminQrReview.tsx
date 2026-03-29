@@ -142,92 +142,33 @@ export default function AdminQrReview({ searchTerm = '' }: AdminQrReviewProps) {
 
     const printDeliverySlip = (item: any) => {
         if (typeof window === 'undefined') return;
-        const receiver = item.full_name || item.user?.name || 'Receiver details pending';
+        const receiver = item.full_name || item.user?.name || 'N/A';
         const primaryPhone = item.mobile_number || item.user?.mobile_number || 'N/A';
-        const altPhone = item.alternate_mobile || '—';
-        const address = item.address || 'Address not provided';
-        const landmark = item.landmark || 'Landmark not set';
-        const cityStatePin = [item.city, item.state, item.pin_code].filter(Boolean).join(' • ') || 'City / State / PIN not set';
-        const bookingDate = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Date pending';
-        const slipFields = [
-            { label: 'Receiver', value: receiver },
-            { label: 'Phone', value: primaryPhone },
-            { label: 'Alternate', value: altPhone },
-            { label: 'City State PIN', value: cityStatePin },
-            { label: 'Landmark', value: landmark },
-            { label: 'Address', value: address }
-        ];
-
-        const slipCard = `<div class="slip-card">
-            <div class="slip-header">Delivery Details / Booking #${escapeHtml(item.id)}</div>
-            <div class="slip-grid">
-                ${slipFields.map((field) => `
-                    <div class="slip-row">
-                        <span class="label">${escapeHtml(field.label)}</span>
-                        <span class="value">${escapeHtml(field.value)}</span>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="slip-footer">
-                <div>
-                    <p class="label">Deposit</p>
-                    <p class="value">₹${escapeHtml(item.security_amount || '0')}</p>
-                </div>
-                <div>
-                    <p class="label">Requested On</p>
-                    <p class="value">${escapeHtml(bookingDate)}</p>
-                </div>
-            </div>
-        </div>`;
-
-        const page = `<div class="page">
-            ${Array.from({ length: 1 }).map(() => slipCard).join('')}
-        </div>`;
+        const address = item.address || 'N/A';
+        const city = item.city || '';
+        const state = item.state || '';
+        const pinCode = item.pin_code || '';
+        const landmark = item.landmark || '';
 
         const html = `<!doctype html>
         <html>
         <head>
-            <title>Delivery Details Slip</title>
+            <title>Shipping Label</title>
             <style>
-                @page { size: A4 portrait; margin: 0mm; }
-                body { margin: 0; background: #fff; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
-                .page { width: 210mm; height: 297mm; padding: 25mm; position: relative; box-sizing: border-box; border: 1px solid #000; }
-                .slip-card { height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
-                .slip-header { font-size: 24px; letter-spacing: 0.3em; text-transform: uppercase; font-weight: 800; color: #000; text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 50px; }
-                .slip-grid { display: flex; flex-direction: column; gap: 20px; }
-                .slip-row { display: flex; justify-content: flex-start; gap: 40px; font-size: 20px; padding-bottom: 10px; border-bottom: 1px dashed #eee; }
-                .slip-row .label { font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: #666; font-weight: 700; flex: 0 0 30%; }
-                .slip-row .value { flex: 1; font-weight: 600; color: #000; }
-                .slip-footer { margin-top: auto; padding-top: 40px; border-top: 2px solid #000; display: flex; justify-content: space-between; align-items: flex-end; }
-                .slip-footer-item { display: flex; flex-direction: column; gap: 5px; }
-                .slip-footer-item .label { font-size: 16px; letter-spacing: 0.2em; text-transform: uppercase; color: #666; font-weight: 700; }
-                .slip-footer-item .value { font-size: 42px; font-weight: 900; color: #000; }
-                @media print { body { background: #fff; } .page { border: 1px solid #000; } }
+                @page { size: 100mm 50mm; margin: 0; }
+                body { margin: 0; padding: 0; background: #fff; font-family: 'Arial', sans-serif; }
+                .label { width: 100mm; height: 50mm; padding: 3mm 4mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 1.5mm; }
+                .row { font-size: 9pt; font-weight: 600; color: #111; line-height: 1.3; }
+                .row b { font-weight: 900; color: #000; }
+                @media print { body { background: #fff; } }
             </style>
         </head>
         <body>
-            <div class="page">
-                <div class="slip-card">
-                    <div class="slip-header">Delivery Details / Booking #${escapeHtml(item.id)}</div>
-                    <div class="slip-grid">
-                        ${slipFields.map((field) => `
-                            <div class="slip-row">
-                                <span class="label">${escapeHtml(field.label)}</span>
-                                <span class="value">${escapeHtml(field.value)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="slip-footer">
-                        <div class="slip-footer-item">
-                            <p class="label">Deposit Amount</p>
-                            <p class="value">₹${escapeHtml(item.security_amount || '0')}</p>
-                        </div>
-                        <div class="slip-footer-item" style="text-align: right;">
-                            <p class="label">Booking Date</p>
-                            <p class="value" style="font-size: 24px;">${escapeHtml(bookingDate)}</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="label">
+                <div class="row"><b>TO:</b> ${escapeHtml(receiver)} | <b>Contact:</b> ${escapeHtml(primaryPhone)}</div>
+                <div class="row"><b>Address:</b> ${escapeHtml(address)}</div>
+                <div class="row"><b>City:</b> ${escapeHtml(city)}${state ? ` | <b>State:</b> ${escapeHtml(state)}` : ''}</div>
+                <div class="row"><b>PIN Code:</b> ${escapeHtml(pinCode)}${landmark ? ` | <b>Landmark:</b> ${escapeHtml(landmark)}` : ''}</div>
             </div>
             <script>
                 window.onload = () => { setTimeout(() => window.print(), 120); };
@@ -235,7 +176,7 @@ export default function AdminQrReview({ searchTerm = '' }: AdminQrReviewProps) {
         </body>
         </html>`;
 
-        const printWindow = window.open('', '_blank', 'width=900,height=700');
+        const printWindow = window.open('', '_blank', 'width=500,height=300');
         if (!printWindow) return;
         printWindow.document.write(html);
         printWindow.document.close();

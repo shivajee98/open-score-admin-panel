@@ -18,7 +18,7 @@ export default function CashbackSettings() {
 
     const fetchSettings = async () => {
         try {
-            const res = await apiFetch('/admin/settings');
+            const res = await apiFetch('/admin/system-settings');
             if (res) {
                 if (res.cashback_usage_percentage !== undefined) setPercentage(res.cashback_usage_percentage.toString());
                 if (res.cashback_threshold_amount !== undefined) setThreshold(res.cashback_threshold_amount.toString());
@@ -46,7 +46,7 @@ export default function CashbackSettings() {
 
         setIsSaving(true);
         try {
-            await apiFetch('/admin/settings', {
+            await apiFetch('/admin/system-settings', {
                 method: 'POST',
                 body: JSON.stringify({ 
                     cashback_usage_percentage: val,

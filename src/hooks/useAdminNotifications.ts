@@ -67,7 +67,7 @@ export function useAdminNotifications() {
         const interval = setInterval(() => {
             fetchCounts();
             fetchMonitoring();
-        }, 30000); // 30 seconds
+        }, 90000); // 90 seconds
         return () => clearInterval(interval);
     }, []);
 

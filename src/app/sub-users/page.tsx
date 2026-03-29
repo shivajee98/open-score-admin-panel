@@ -90,6 +90,7 @@ export default function SubUsersPage() {
         pincode: '',
         support_number: '',
         show_support: false,
+        is_active: true,
     } as any);
 
     const [jumpPage, setJumpPage] = useState('');
@@ -189,6 +190,7 @@ export default function SubUsersPage() {
             pincode: subUser.pincode || '',
             support_number: subUser.support_number || '',
             show_support: subUser.show_support || false,
+            is_active: subUser.is_active ?? true,
         });
         setEditingId(subUser.id);
         setIsEditMode(true);
@@ -1043,6 +1045,23 @@ export default function SubUsersPage() {
                                         }`}
                                 >
                                     <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${formData.show_letter ? 'translate-x-7' : 'translate-x-0'
+                                        }`} />
+                                </button>
+                            </div>
+
+                            {/* Account Active Toggle */}
+                            <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                <div>
+                                    <p className="text-sm font-black text-emerald-900">Account Active</p>
+                                    <p className="text-[10px] text-emerald-500 font-bold">Set this account to ACTIVE or SUSPENDED</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                                    className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${formData.is_active ? 'bg-emerald-600' : 'bg-rose-500'
+                                        }`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${formData.is_active ? 'translate-x-7' : 'translate-x-0'
                                         }`} />
                                 </button>
                             </div>

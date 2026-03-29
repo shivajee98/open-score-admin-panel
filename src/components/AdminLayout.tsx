@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -70,10 +70,13 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Internal Team & Funds', href: '/internal-users', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
+        { label: 'Field KYC Agent', href: '/team/kyc-agents', icon: <Shield className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
+        { label: 'Field KYC Leads', href: '/team/kyc-leads', icon: <ListFilter className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         
         // Nested Vendors inside User & Team
         { label: 'Vendor List', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
         { label: 'Agents', href: '/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
+        { label: 'Agent Setting', href: '/vendor-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
         { label: 'Unlinked History', href: '/agents/history', icon: <Archive className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
 
         // Promotions & Tools
@@ -90,6 +93,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Payout Requests', href: '/payouts', icon: <FileText className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Agent Cashouts', href: '/agent-payouts', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Team Transfers', href: '/team-transfers', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
+        { label: 'Agent & Vendor History', href: '/agent-history', icon: <Archive className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Cashback Usage', href: '/cashback-usage', icon: <Percent className="w-5 h-5 text-blue-400" />, roles: ['ADMIN'], group: 'Financial Operations' },
 
