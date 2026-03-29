@@ -626,7 +626,12 @@ export default function MerchantsPage() {
                                         onClick={async () => {
                                             setShowDownloadOptions(false);
                                             try {
-                                                const blob = await apiFetch(`/admin/users/export?type=merchant&search=${search}`, { responseType: 'blob' });
+                                                const params = new URLSearchParams({
+                                                    type: 'merchant',
+                                                    search: search,
+                                                    ...filters
+                                                });
+                                                const blob = await apiFetch(`/admin/users/export?${params.toString()}`, { responseType: 'blob' });
                                                 const url = window.URL.createObjectURL(blob);
                                                 const link = document.createElement('a');
                                                 link.href = url;
