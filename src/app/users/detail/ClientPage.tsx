@@ -125,6 +125,9 @@ export default function UserDetailsPage() {
     };
 
     const openEditModal = () => {
+        let decodedPin = user.visible_pin || '';
+        try { if (user.visible_pin) decodedPin = atob(user.visible_pin); } catch (e) {}
+
         setEditFormData({
             name: user.name || '',
             email: user.email || '',
@@ -139,7 +142,7 @@ export default function UserDetailsPage() {
             account_holder_name: user.account_holder_name || '',
             status: user.status || 'ACTIVE',
             role: user.role || 'CUSTOMER',
-            app_pin: user.visible_pin || ''
+            app_pin: decodedPin
         });
         setIsEditModalOpen(true);
     };
@@ -219,7 +222,12 @@ export default function UserDetailsPage() {
                                         <button
                                             onClick={() => {
                                                 if (user.visible_pin) {
-                                                    toast.success(`App PIN: ${user.visible_pin}`);
+                                                    try {
+                                                        const decodedPin = atob(user.visible_pin);
+                                                        toast.success(`App PIN: ${decodedPin}`);
+                                                    } catch (e) {
+                                                        toast.success(`App PIN: ${user.visible_pin}`);
+                                                    }
                                                 } else {
                                                     toast.info("PIN is Securely Hashed (Reset in Edit to View)");
                                                 }

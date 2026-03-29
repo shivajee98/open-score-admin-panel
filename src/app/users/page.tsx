@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -331,6 +331,55 @@ export default function UsersPage() {
     const [cashbackFlat, setCashbackFlat] = useState('');
     const [receivePercent, setReceivePercent] = useState('');
     const [receiveFlat, setReceiveFlat] = useState('');
+    const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+    const downloadDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (downloadDropdownRef.current && !downloadDropdownRef.current.contains(event.target as Node)) {
+                setShowDownloadOptions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [downloadDropdownRef]);
+
+    const handleExport = async (type: 'all' | 'selected') => {
+        try {
+            const query = new URLSearchParams();
+            query.append('type', filters.user_type);
+
+            if (type === 'all') {
+                if (search) query.append('search', search);
+                // Include other active filters
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value && key !== 'user_type') query.append(key, value.toString());
+                });
+            } else {
+                if (selectedIds.length === 0) {
+                    alert("Please select users first");
+                    return;
+                }
+                query.append('user_ids', selectedIds.join(','));
+            }
+
+            const blob = await apiFetch(`/admin/users/export?${query.toString()}`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const fileName = type === 'all' ? `users_all_${new Date().toISOString().split('T')[0]}.csv` : `users_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('Export failed', e);
+            alert('Export failed.');
+        } finally {
+            setShowDownloadOptions(false);
+        }
+    };
 
     const handleModalSenderPercentChange = (val: string) => {
         setCashbackPercent(val);
@@ -667,59 +716,62 @@ export default function UsersPage() {
                     </div>
 
                     <div className="flex gap-2">
-                        <div className="relative group">
+                        <div className="relative" ref={downloadDropdownRef}>
                             <button
-                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                                onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 border border-slate-700"
                             >
-                                <Download className="w-5 h-5" />
-                                Bulk Data Download
+                                <Download className="w-5 h-5 text-emerald-400" />
+                                <span>Bulk Data Download</span>
+                                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showDownloadOptions ? 'rotate-180' : ''}`} />
                             </button>
-                            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const blob = await apiFetch(`/admin/users/export?type=${filters.user_type}&search=${search}`, { responseType: 'blob' });
-                                            const url = window.URL.createObjectURL(blob);
-                                            const link = document.createElement('a');
-                                            link.href = url;
-                                            link.setAttribute('download', `${filters.user_type}s_all_${new Date().toISOString().split('T')[0]}.csv`);
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            link.remove();
-                                            window.URL.revokeObjectURL(url);
-                                        } catch (e) {
-                                            console.error('Export failed', e);
-                                            alert('Export failed.');
-                                        }
-                                    }}
-                                    className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                                >
-                                    Download All Matching
-                                </button>
-                                {selectedIds.length > 0 && (
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                const blob = await apiFetch(`/admin/users/export?type=${filters.user_type}&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
-                                                const url = window.URL.createObjectURL(blob);
-                                                const link = document.createElement('a');
-                                                link.href = url;
-                                                link.setAttribute('download', `${filters.user_type}s_selected_${selectedIds.length}_${new Date().toISOString().split('T')[0]}.csv`);
-                                                document.body.appendChild(link);
-                                                link.click();
-                                                link.remove();
-                                                window.URL.revokeObjectURL(url);
-                                            } catch (e) {
-                                                console.error('Export failed', e);
-                                                alert('Export failed.');
-                                            }
-                                        }}
-                                        className="w-full text-left px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-50"
-                                    >
-                                        Download Selected ({selectedIds.length})
-                                    </button>
-                                )}
-                            </div>
+                            
+                            {showDownloadOptions && (
+                                <div className="absolute right-0 mt-3 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="p-2 flex flex-col gap-1.5">
+                                        <button
+                                            onClick={() => handleExport('all')}
+                                            className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-emerald-400 rounded-xl transition-all text-sm group text-left w-full"
+                                        >
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
+                                                <Database className="w-5 h-5 text-emerald-500" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold">Download All</p>
+                                                <p className="text-[10px] text-slate-500 leading-tight">Export all matching users based on current filters</p>
+                                            </div>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (selectedIds.length === 0) {
+                                                    alert("Please select users first");
+                                                    return;
+                                                }
+                                                handleExport('selected');
+                                            }}
+                                            className={cn(
+                                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm group text-left w-full",
+                                                selectedIds.length > 0 
+                                                ? "text-slate-300 hover:bg-slate-800 hover:text-blue-400" 
+                                                : "text-slate-600 cursor-not-allowed"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                                                selectedIds.length > 0 ? "bg-blue-500/10 group-hover:bg-blue-500/20" : "bg-slate-800/50"
+                                            )}>
+                                                <CheckSquare className={cn("w-5 h-5", selectedIds.length > 0 ? "text-blue-500" : "text-slate-600")} />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold">Download Selected</p>
+                                                <p className="text-[10px] text-slate-500 leading-tight">
+                                                    {selectedIds.length > 0 ? `${selectedIds.length} users selected for export` : 'Select users in the list to export'}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center bg-slate-50 border-none rounded-2xl px-4 py-2">
