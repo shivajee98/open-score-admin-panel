@@ -43,6 +43,8 @@ export default function TeamTransfersPage() {
     const [autoApprovalLimit, setAutoApprovalLimit] = useState('0');
     const [autoApprovalPercentage, setAutoApprovalPercentage] = useState('0');
     const [isVendorConfig, setIsVendorConfig] = useState(false);
+    const [allowBankTransfer, setAllowBankTransfer] = useState(true);
+    const [allowWalletTransfer, setAllowWalletTransfer] = useState(true);
 
     // New Selection States (Loan Plan Style)
     const [targetableUsers, setTargetableUsers] = useState<any[]>([]);
@@ -133,6 +135,8 @@ export default function TeamTransfersPage() {
             setAutoApprovalMode(details.auto_approval_mode || 'MANUAL');
             setAutoApprovalLimit(String(details.auto_approval_limit || '0'));
             setAutoApprovalPercentage(String(details.auto_approval_percentage || '0'));
+            setAllowBankTransfer(details.allow_bank_transfer !== false);
+            setAllowWalletTransfer(details.allow_wallet_transfer !== false);
 
             setRulesModal(true);
             toast.info('Rule configuration loaded. You can now adjust and deploy.');
@@ -169,7 +173,7 @@ export default function TeamTransfersPage() {
         } catch (e: any) {
             toast.error(e.message || 'Failed to delete history');
         } finally {
-            setActionLoading(true);
+            setActionLoading(false);
         }
     };
 
@@ -220,7 +224,7 @@ export default function TeamTransfersPage() {
     const fetchTargetableUsers = async () => {
         setSearching(true);
         try {
-            const endpoint = isVendorConfig ? '/admin/sub-users' : '/admin/users/targetable?linked_only=1';
+            const endpoint = isVendorConfig ? '/admin/sub-users?per_page=5000' : '/admin/users/targetable?linked_only=1';
             const res = await apiFetch(endpoint);
             // sub-users is paginated, users/targetable is array
             setTargetableUsers(res?.data || (Array.isArray(res) ? res : []));
@@ -284,7 +288,9 @@ export default function TeamTransfersPage() {
                     min_amount: parseFloat(minAmount || '0'),
                     auto_approval_mode: autoApprovalMode,
                     auto_approval_limit: parseFloat(autoApprovalLimit || '0'),
-                    auto_approval_percentage: parseFloat(autoApprovalPercentage || '0')
+                    auto_approval_percentage: parseFloat(autoApprovalPercentage || '0'),
+                    allow_bank_transfer: allowBankTransfer,
+                    allow_wallet_transfer: allowWalletTransfer
                 })
             });
             if (res.error) throw new Error(res.error);
@@ -328,6 +334,7 @@ export default function TeamTransfersPage() {
                         <button
                             onClick={() => {
                                 setIsVendorConfig(false);
+                                setMinAmount('2000');
                                 setRulesModal(true);
                             }}
                             className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
@@ -337,6 +344,7 @@ export default function TeamTransfersPage() {
                         <button
                             onClick={() => {
                                 setIsVendorConfig(true);
+                                setMinAmount('5000');
                                 setRulesModal(true);
                             }}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
@@ -654,6 +662,36 @@ export default function TeamTransfersPage() {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-4">Withdrawal Options</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <label className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-2xl border border-slate-100 hover:bg-indigo-50/50 transition-all">
+                                        <input
+                                            type="checkbox"
+                                            checked={allowBankTransfer}
+                                            onChange={(e) => setAllowBankTransfer(e.target.checked)}
+                                            className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <div>
+                                            <span className="font-bold text-sm text-slate-900 block">Bank Transfer</span>
+                                            <span className="text-[10px] text-slate-500">Allow direct bank payout</span>
+                                        </div>
+                                    </label>
+                                    <label className="flex items-center gap-3 cursor-pointer bg-white p-4 rounded-2xl border border-slate-100 hover:bg-indigo-50/50 transition-all">
+                                        <input
+                                            type="checkbox"
+                                            checked={allowWalletTransfer}
+                                            onChange={(e) => setAllowWalletTransfer(e.target.checked)}
+                                            className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <div>
+                                            <span className="font-bold text-sm text-slate-900 block">Wallet Transfer</span>
+                                            <span className="text-[10px] text-slate-500">Allow self-wallet transfer</span>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

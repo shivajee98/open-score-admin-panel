@@ -270,11 +270,11 @@ export default function UserDetailsPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aadhaar</p>
-                                    <p className="font-mono font-bold text-slate-700">{user.aadhaar_number || 'Not Provided'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aadhar</p>
+                                    <p className="font-mono font-bold text-slate-700">{user.aadhar_number || 'Not Provided'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN Card</p>
                                     <p className="font-mono font-bold text-slate-700">{user.pan_number || 'Not Provided'}</p>
                                 </div>
                             </div>

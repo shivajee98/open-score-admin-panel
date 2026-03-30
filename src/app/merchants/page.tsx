@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import MerchantKycModal from '@/components/MerchantKycModal';
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onReviewKyc }: any) => {
     const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage ?? '');
     const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount ?? '');
     const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
@@ -86,6 +87,24 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     };
 
     const isAdmin = currentUser?.role === 'ADMIN';
+
+    const handleFullApprove = async () => {
+        if (!confirm('Are you sure you want to mark this merchant as FULLY VERIFIED? This will lock their profile from further edits.')) return;
+        setIsSaving(true);
+        try {
+            await apiFetch(`/admin/users/${user.id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kyc_status: 'FULL_VERIFIED' })
+            });
+            alert('Merchant fully approved!');
+            reloadUsers();
+        } catch (e: any) {
+            alert('Error approving merchant');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleToggleTransfer = async () => {
         setIsTogglingTransfer(true);
@@ -271,6 +290,38 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
              <td className="p-6">
                 <div className="flex flex-col gap-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Aadhar</p>
+                    <p className="text-xs font-bold text-slate-700 font-mono tracking-tighter">{user.aadhar_number || 'N/A'}</p>
+                    
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-1">PAN Card</p>
+                    <p className="text-xs font-bold text-slate-700 font-mono tracking-tighter uppercase">{user.pan_number || 'N/A'}</p>
+
+                    <div className="mt-2 flex flex-col gap-1">
+                        {user.kyc_status === 'FULL_VERIFIED' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 text-[9px] font-black rounded-lg uppercase tracking-tight border border-emerald-100 shadow-sm animate-in zoom-in duration-300">
+                                <ShieldCheck className="w-3 h-3" /> FULL APPROVED
+                            </span>
+                        ) : user.kyc_status === 'FIELD_VERIFIED' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-600 text-[9px] font-black rounded-lg uppercase tracking-tight border border-amber-100 shadow-sm animate-in zoom-in duration-300">
+                                <Clock className="w-3 h-3" /> FIELD VERIFIED
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-50 text-slate-400 text-[9px] font-black rounded-lg uppercase tracking-tight border border-slate-100 italic">
+                                <AlertTriangle className="w-3 h-3" /> PENDING KYC
+                            </span>
+                        )}
+                        {(user.aadhar_image || user.aadhar_back_image || user.pan_image) && (
+                            <div className="flex gap-1 mt-1">
+                                {user.aadhar_image && <a href={user.aadhar_image} target="_blank" className="w-6 h-4 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-400 hover:text-blue-500 transition-colors" title="Aadhar Front">F</a>}
+                                {user.aadhar_back_image && <a href={user.aadhar_back_image} target="_blank" className="w-6 h-4 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-400 hover:text-blue-500 transition-colors" title="Aadhar Back">B</a>}
+                                {user.pan_image && <a href={user.pan_image} target="_blank" className="w-6 h-4 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-400 hover:text-blue-500 transition-colors" title="PAN">P</a>}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </td>
+            <td className="p-6">
+                <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                         {user.is_qr_mapped ? (
                             <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-white font-black shadow-lg shadow-emerald-200 animate-in zoom-in duration-300">
@@ -313,19 +364,31 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     <Link
                         href={`/users/detail?id=${user.id}`}
                         className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                        title="View Full Details"
+                        title="View Profile Details"
                     >
                         <Eye className="w-5 h-5" />
                     </Link>
 
                     {isAdmin && (
-                        <button
-                            onClick={() => toggleStatus(user)}
-                            className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
-                            title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
-                        >
-                            {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
-                        </button>
+                        <>
+                            {user.role === 'MERCHANT' && (
+                                <button
+                                    onClick={() => onReviewKyc(user)}
+                                    disabled={isSaving}
+                                    className="p-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all shadow-md shadow-emerald-200 active:scale-95 disabled:opacity-50"
+                                    title="Review & Approve Merchant"
+                                >
+                                    <ShieldCheck className="w-5 h-5" />
+                                </button>
+                            )}
+                            <button
+                                onClick={() => toggleStatus(user)}
+                                className={`p-2 rounded-lg transition-colors ${user.status === 'SUSPENDED' ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                                title={user.status === 'SUSPENDED' ? 'Activate User' : 'Suspend User'}
+                            >
+                                {user.status === 'SUSPENDED' ? <CheckCircle className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                            </button>
+                        </>
                     )}
 
                     <button
@@ -420,6 +483,13 @@ export default function MerchantsPage() {
     const [creditType, setCreditType] = useState('WALLET_TOPUP');
     const [description, setDescription] = useState('');
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
+    const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+    const [selectedUserForKyc, setSelectedUserForKyc] = useState<any>(null);
+
+    const handleKycReview = (user: any) => {
+        setSelectedUserForKyc(user);
+        setIsKycModalOpen(true);
+    };
 
     // Bulk Cashback States
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -845,6 +915,7 @@ export default function MerchantsPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Ref CODE</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Details</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status QR</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
@@ -863,6 +934,7 @@ export default function MerchantsPage() {
                                     setIsCreditsModalOpen={setIsCreditsModalOpen}
                                     reloadUsers={loadUsers}
                                     currentUser={currentUser}
+                                    onReviewKyc={handleKycReview}
                                 />
                             ))}
                         </tbody>
@@ -1095,6 +1167,13 @@ export default function MerchantsPage() {
                     <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Help Center</a>
                 </div>
             </footer>
+            <MerchantKycModal 
+                isOpen={isKycModalOpen}
+                onClose={() => setIsKycModalOpen(false)}
+                merchant={selectedUserForKyc}
+                isAdmin={currentUser?.role === 'ADMIN'}
+                onSuccess={loadUsers}
+            />
         </AdminLayout>
     );
 }
