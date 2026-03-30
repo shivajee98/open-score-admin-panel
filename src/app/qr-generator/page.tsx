@@ -6,7 +6,7 @@ import QRCode from 'react-qr-code';
 import { apiFetch } from '@/lib/api';
 import { Printer, ArrowLeft, Info, CheckCircle, UserCheck, Trash2, Search, Zap, ChevronLeft, ChevronRight, Filter, Settings, Copy, Plus, FolderPlus, CheckSquare, Square, DownloadCloud } from 'lucide-react';
 import JSZip from 'jszip';
-import { toPng } from 'html-to-image';
+import { toPng, toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -155,7 +155,11 @@ export default function QrGenerator() {
 
     const handlePrint = () => {
         setIsPreparingPrint(true);
-        // Give the browser time to render 500+ QRs before opening the print dialog
+        // Trigger a Sample JPEG export (first 10) to fulfill "also exports in jpeg" 
+        // without the long wait of a full batch ZIP export.
+        handleSampleExport();
+
+        // Give the browser time to render the print view
         setTimeout(() => {
             window.print();
             setIsPreparingPrint(false);
@@ -213,19 +217,21 @@ export default function QrGenerator() {
 
         const captureAndNext = async () => {
             try {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 500));
 
                 const element = document.getElementById('zip-export-sandbox');
                 if (element) {
-                    const dataUrl = await toPng(element, {
-                        pixelRatio: exportFormat === 'sample' ? 1 : 1.5,
-                        backgroundColor: 'white'
+                    // Use JPEG with quality for ZIP/PDF to save size, Keep PNG for sample if needed
+                    const dataUrl = await toJpeg(element, { 
+                        pixelRatio: 1.5, 
+                        backgroundColor: 'white',
+                        quality: 0.85 // High quality JPEG compression (SWEET SPOT)
                     });
 
                     if (exportFormat === 'sample') {
                         const link = document.createElement('a');
                         link.href = dataUrl;
-                        link.download = `QR_Sample_13x19_${new Date().getTime()}.png`;
+                        link.download = `QR_Sample_13x19_${new Date().getTime()}.jpg`;
                         link.click();
                         setIsExportingZip(false);
                         setBatchToExport(null);
@@ -234,10 +240,10 @@ export default function QrGenerator() {
 
                     if (exportFormat === 'zip' && zipInstance) {
                         const base64Data = dataUrl.split(',')[1];
-                        zipInstance.file(`QR_Batch_${currentBatchIndex + 1}_13x19.png`, base64Data, { base64: true });
+                        zipInstance.file(`QR_Batch_${currentBatchIndex + 1}_13x19.jpg`, base64Data, { base64: true });
                     } else if (exportFormat === 'pdf' && pdfInstance) {
                         if (currentBatchIndex > 0) pdfInstance.addPage([482.6, 330.2], 'landscape');
-                        pdfInstance.addImage(dataUrl, 'PNG', 0, 0, 482.6, 330.2);
+                        pdfInstance.addImage(dataUrl, 'JPEG', 0, 0, 482.6, 330.2, undefined, 'FAST');
                     }
 
                     const nextIndex = currentBatchIndex + 1;
@@ -246,6 +252,7 @@ export default function QrGenerator() {
 
                     if (nextIndex < totalBatches) {
                         setExportProgress(Math.round((nextIndex / totalBatches) * 100));
+                        setCurrentPage(nextIndex + 1); // Optional: Sync UI to show which batch is printing
                         setCurrentBatchIndex(nextIndex);
                         setBatchToExport(filteredCodes.slice(nextIndex * batchSize, nextIndex * batchSize + batchSize));
                     } else {
@@ -255,7 +262,7 @@ export default function QrGenerator() {
                             const url = URL.createObjectURL(content);
                             const link = document.createElement('a');
                             link.href = url;
-                            link.download = `QR_Export_13x19_PNG_${new Date().getTime()}.zip`;
+                            link.download = `QR_Export_13x19_JPG_${new Date().getTime()}.zip`;
                             link.click();
                         } else if (exportFormat === 'pdf' && pdfInstance) {
                             pdfInstance.save(`QR_Export_13x19_${new Date().getTime()}.pdf`);
@@ -759,7 +766,7 @@ export default function QrGenerator() {
                                 ) : (
                                     <>
                                         <DownloadCloud size={18} />
-                                        <span>Download 13/19 (ZIP)</span>
+                                        <span>Download Compressed ZIP</span>
                                     </>
                                 )}
                             </button>
@@ -781,7 +788,7 @@ export default function QrGenerator() {
                                 ) : (
                                     <>
                                         <DownloadCloud size={18} />
-                                        <span>Download 13/19 (PDF)</span>
+                                        <span>Download Compressed PDF</span>
                                     </>
                                 )}
                             </button>
