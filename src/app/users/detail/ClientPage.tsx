@@ -142,6 +142,7 @@ export default function UserDetailsPage() {
             account_holder_name: user.account_holder_name || '',
             status: user.status || 'ACTIVE',
             role: user.role || 'CUSTOMER',
+            kyc_status: user.kyc_status || 'PENDING',
             app_pin: decodedPin
         });
         setIsEditModalOpen(true);
@@ -244,9 +245,14 @@ export default function UserDetailsPage() {
                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Wallet Balance</p>
                                 <p className="text-3xl font-black italic">₹{parseFloat(user.wallet_balance).toLocaleString('en-IN')}</p>
                                 <div className="mt-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                                        <BadgeCheck className="w-4 h-4" />
-                                        Verified Account
+                                    <div className={cn(
+                                        "flex items-center gap-2 text-xs font-bold",
+                                        user.kyc_status === 'FULL_VERIFIED' ? "text-emerald-400" : 
+                                        user.kyc_status === 'FIELD_VERIFIED' ? "text-amber-400" : "text-slate-400 opacity-50"
+                                    )}>
+                                        {user.kyc_status === 'FULL_VERIFIED' ? <BadgeCheck className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                                        {user.kyc_status === 'FULL_VERIFIED' ? 'Verified Merchant' : 
+                                         user.kyc_status === 'FIELD_VERIFIED' ? 'Field Verified' : 'Pending KYC'}
                                     </div>
                                     <button
                                         onClick={openEditModal}
@@ -259,23 +265,80 @@ export default function UserDetailsPage() {
                         </div>
 
                         {user.business_name && (
-                            <div className="mt-8 pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center">
-                                        <Building2 className="w-5 h-5" />
+                            <div className="mt-8 pt-8 border-t border-slate-100 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center">
+                                            <Building2 className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Business</p>
+                                            <p className="font-bold text-slate-900">{user.business_name}</p>
+                                        </div>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Business</p>
-                                        <p className="font-bold text-slate-900">{user.business_name}</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aadhar</p>
+                                        <p className="font-mono font-bold text-slate-700">{user.aadhar_number || 'Not Provided'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN Card</p>
+                                        <p className="font-mono font-bold text-slate-700">{user.pan_number || 'Not Provided'}</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aadhar</p>
-                                    <p className="font-mono font-bold text-slate-700">{user.aadhar_number || 'Not Provided'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN Card</p>
-                                    <p className="font-mono font-bold text-slate-700">{user.pan_number || 'Not Provided'}</p>
+
+                                {/* KYC & Documents Display */}
+                                <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <Shield className="w-3 h-3" /> KYC Documents & Shop Proofs
+                                    </h4>
+                                    <div className="flex flex-wrap gap-4">
+                                        {user.aadhar_image && (
+                                            <a href={user.aadhar_image} target="_blank" className="group relative">
+                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                    <img src={user.aadhar_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Aadhar Front" />
+                                                    <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
+                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">Aadhar Front</span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        )}
+                                        {user.aadhar_back_image && (
+                                            <a href={user.aadhar_back_image} target="_blank" className="group relative">
+                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                    <img src={user.aadhar_back_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Aadhar Back" />
+                                                    <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
+                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">Aadhar Back</span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        )}
+                                        {user.pan_image && (
+                                            <a href={user.pan_image} target="_blank" className="group relative">
+                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                    <img src={user.pan_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="PAN Card" />
+                                                    <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
+                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">PAN Card</span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        )}
+                                        {user.shop_images && Array.isArray(user.shop_images) && user.shop_images.map((img: string, idx: number) => (
+                                            <a key={idx} href={img} target="_blank" className="group relative">
+                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                    <img src={img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={`Shop ${idx + 1}`} />
+                                                    <div className="absolute inset-x-0 bottom-0 bg-emerald-900/60 backdrop-blur-sm p-1 text-center">
+                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">Shop Photo {idx + 1}</span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        ))}
+                                        {!user.aadhar_image && !user.pan_image && (!user.shop_images || user.shop_images.length === 0) && (
+                                            <div className="w-full py-8 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-100 border-dashed">
+                                                <ShieldAlert className="w-6 h-6 text-slate-200 mb-2" />
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Documents Uploaded</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}

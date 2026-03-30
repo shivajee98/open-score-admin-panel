@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -235,9 +235,21 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 )}
             </td>
             <td className="p-6">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                    <span className="text-sm font-bold text-slate-600">{user.status}</span>
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span className="text-sm font-bold text-slate-600">{user.status}</span>
+                    </div>
+                    {user.kyc_status && (
+                        <div className={cn(
+                            "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tight w-fit",
+                            user.kyc_status === 'FULL_VERIFIED' ? "bg-emerald-100 text-emerald-700" :
+                            user.kyc_status === 'FIELD_VERIFIED' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+                        )}>
+                            {user.kyc_status === 'FULL_VERIFIED' ? <BadgeCheck className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                            {user.kyc_status}
+                        </div>
+                    )}
                 </div>
             </td>
             <td className="p-6 pr-8 text-right">
