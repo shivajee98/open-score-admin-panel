@@ -40,6 +40,11 @@ export default function QrGenerator() {
     const [isExportingZip, setIsExportingZip] = useState(false);
     const [exportFormat, setExportFormat] = useState<'zip' | 'pdf' | 'sample'>('zip');
     const [exportProgress, setExportProgress] = useState(0);
+    // Batch Export States
+    const [exportStatus, setExportStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle');
+    const [batchExportData, setBatchExportData] = useState<any>(null);
+    const pollingInterval = useRef<any>(null);
+
     const zipSandboxRef = useRef<HTMLDivElement>(null);
 
     // Initial Fetch
@@ -286,6 +291,91 @@ export default function QrGenerator() {
 
         captureAndNext();
     }, [batchToExport, zipInstance, pdfInstance, isExportingZip, currentBatchIndex, filteredCodes, exportFormat]);
+
+    const handleSendToBatchExport = async () => {
+        if (!selectedBatchId) return;
+        setExportStatus('processing');
+        try {
+            const res = await apiFetch(`/admin/qr/batches/${selectedBatchId}/export`, {
+                method: 'POST'
+            });
+            startPollingStatus();
+        } catch (e: any) {
+            alert(e.message || 'Failed to start batch export');
+            setExportStatus('idle');
+        }
+    };
+
+    const startPollingStatus = () => {
+        if (pollingInterval.current) clearInterval(pollingInterval.current);
+        
+        pollingInterval.current = setInterval(async () => {
+            try {
+                const res = await apiFetch(`/admin/qr/batches/${selectedBatchId}/export-status`);
+                setBatchExportData(res);
+                if (res.status === 'completed' || res.status === 'failed') {
+                    setExportStatus(res.status);
+                    clearInterval(pollingInterval.current);
+                } else if (res.status === 'processing') {
+                    setExportStatus('processing');
+                }
+            } catch (e) {
+                console.error('Polling failed', e);
+            }
+        }, 3000);
+    };
+
+    const handleBatchDownload = async (type: 'pdf' | 'csv') => {
+        if (!batchExportData) return;
+        const url = type === 'pdf' ? batchExportData.pdf_url : batchExportData.csv_url;
+        if (!url) return;
+
+        // Increment download count
+        try {
+            await apiFetch(`/admin/qr/batches/${selectedBatchId}/downloaded`, { method: 'POST' });
+            // Refresh batch data to show updated count
+            const statusRes = await apiFetch(`/admin/qr/batches/${selectedBatchId}/export-status`);
+            setBatchExportData(statusRes);
+        } catch (e) {
+            console.error('Failed to update download count', e);
+        }
+
+        // Trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', '');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (pollingInterval.current) clearInterval(pollingInterval.current);
+        };
+    }, []);
+
+    // Also check status when batch changes
+    useEffect(() => {
+        if (selectedBatchId) {
+            const checkInitialStatus = async () => {
+                try {
+                    const res = await apiFetch(`/admin/qr/batches/${selectedBatchId}/export-status`);
+                    setBatchExportData(res);
+                    if (res.status === 'processing') {
+                        setExportStatus('processing');
+                        startPollingStatus();
+                    } else {
+                        setExportStatus(res.status || 'idle');
+                    }
+                } catch (e) {
+                    setExportStatus('idle');
+                }
+            };
+            checkInitialStatus();
+        }
+    }, [selectedBatchId]);
+
 
 
     // Removed the previous definition of filteredCodes downstream
@@ -792,6 +882,46 @@ export default function QrGenerator() {
                                     </>
                                 )}
                             </button>
+
+                            {/* New Batch Processing Button */}
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={handleSendToBatchExport}
+                                    disabled={loading || exportStatus === 'processing' || !selectedBatchId}
+                                    className={cn(
+                                        "flex items-center gap-3 px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest transition-all shadow-xl flex-1 md:flex-initial justify-center border-2",
+                                        exportStatus === 'processing' 
+                                            ? "bg-amber-50 border-amber-200 text-amber-600 animate-pulse" 
+                                            : "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100"
+                                    )}
+                                >
+                                    {exportStatus === 'processing' ? <Zap className="animate-spin" size={18} /> : <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin invisible" />}
+                                    <span>{exportStatus === 'processing' ? 'Processing on Server...' : 'Send to Batch Processing'}</span>
+                                </button>
+                                
+                                {exportStatus === 'completed' && batchExportData && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleBatchDownload('pdf')}
+                                            className="flex-1 py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <DownloadCloud size={14} /> PDF ({batchExportData.download_count || 0})
+                                        </button>
+                                        <button
+                                            onClick={() => handleBatchDownload('csv')}
+                                            className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Copy size={14} /> CSV Backup
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {exportStatus === 'failed' && (
+                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center mt-1">
+                                        Server export failed. Try again.
+                                    </p>
+                                )}
+                            </div>
 
                             <button
                                 onClick={handleSampleExport}
