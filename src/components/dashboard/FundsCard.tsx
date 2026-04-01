@@ -22,7 +22,8 @@ interface FundStats {
     overdue_amount: number;
     profit_collection: number;
     fee_collection: number;
-    total_profit: number;
+    total_profit?: number;
+    net_profit_display?: number;
     cashback_transfer: number;
     total_merchant_credits: number;
     qr_deposits: number;
@@ -99,7 +100,7 @@ export default function FundsCard() {
                         <Wallet className="h-3.5 w-3.5 text-indigo-100" />
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
-                        <div className="text-xl font-bold">₹{stats?.total_funds.toLocaleString()}</div>
+                        <div className="text-xl font-bold font-mono">₹{stats?.total_funds?.toLocaleString() ?? '0'}</div>
                         <p className="text-[10px] text-indigo-200 mt-1">Lendable Capital</p>
                         <div className="mt-4 flex gap-2">
                             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -154,7 +155,7 @@ export default function FundsCard() {
                                                 value={editTotal}
                                                 onChange={(e) => setEditTotal(e.target.value)}
                                             />
-                                            <p className="text-xs text-slate-500">Current Capital: ₹{stats?.total_funds.toLocaleString()}</p>
+                                            <p className="text-xs text-slate-500">Current Capital: ₹{stats?.total_funds?.toLocaleString() ?? '0'}</p>
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -185,7 +186,7 @@ export default function FundsCard() {
                         <TrendingDown className="h-3.5 w-3.5 text-emerald-100 rotate-180" />
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
-                        <div className="text-xl font-bold">₹{stats?.total_profit.toLocaleString()}</div>
+                        <div className="text-xl font-bold">₹{(stats?.net_profit_display ?? stats?.total_profit ?? 0).toLocaleString()}</div>
                         <p className="text-[10px] text-emerald-200 mt-1">Total (Interest + Fees)</p>
                     </CardContent>
                 </Card>
@@ -196,7 +197,7 @@ export default function FundsCard() {
                         <IndianRupee className="h-3.5 w-3.5 text-blue-100" />
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
-                        <div className="text-xl font-bold">₹{stats?.available_funds.toLocaleString()}</div>
+                        <div className="text-xl font-bold">₹{stats?.available_funds?.toLocaleString() ?? '0'}</div>
                         <p className="text-[10px] text-blue-200 mt-1">Remaining principal reserve</p>
                     </CardContent>
                 </Card>
@@ -218,7 +219,7 @@ export default function FundsCard() {
                         <Wallet className="h-3.5 w-3.5 text-slate-100" />
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
-                        <div className="text-xl font-bold">₹{stats?.disbursed_funds.toLocaleString()}</div>
+                        <div className="text-xl font-bold">₹{stats?.disbursed_funds?.toLocaleString() ?? '0'}</div>
                         <p className="text-[10px] text-slate-300 mt-1">Principal out in market</p>
                     </CardContent>
                 </Card>

@@ -71,6 +71,7 @@ export default function CreateLoanPlan() {
         milestone_enabled: false,
         milestone_min_amount: '',
         milestone_max_amount: '',
+        postal_pin: '',
     });
 
     const [targetableUsers, setTargetableUsers] = useState<any[]>([]);
@@ -670,6 +671,19 @@ export default function CreateLoanPlan() {
                                 </div>
                                 <p className="text-[10px] text-slate-400 mt-2 font-medium">Plan will NOT be visible at all for these roles.</p>
                             </div>
+                        </div>
+
+                        {/* Postal PIN Targeting */}
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Target Postal PIN(s)</label>
+                            <input
+                                type="text"
+                                value={formData.postal_pin}
+                                onChange={(e) => setFormData({ ...formData, postal_pin: e.target.value })}
+                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-bold text-slate-800"
+                                placeholder="e.g. 110001, 110002 (Comma separated)"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-2 font-medium">Leave empty for no postal restriction. If set, only users in these PIN codes will see the loan.</p>
                         </div>
 
                         {!formData.is_public && (
