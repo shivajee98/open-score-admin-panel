@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
 import { apiFetch } from '@/lib/api';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MapPin, Users } from 'lucide-react';
 
 // Interfaces for V2 Structure
 interface FeeConfig {
@@ -135,8 +135,8 @@ export default function EditLoanPlan() {
                     postal_pin: plan.postal_pin || '',
                 });
 
-                // If it's targeted, pre-fetch assigned users or at least some users
-                if (!plan.is_public) {
+                // If it's targeted OR locked, fetch users for management
+                if (!plan.is_public || !!plan.is_locked) {
                     const data = await apiFetch(`/admin/users/targetable`);
                     setTargetableUsers(data);
                 }
@@ -276,23 +276,27 @@ export default function EditLoanPlan() {
         }
 
         try {
+            const payload = {
+                ...formData,
+                amount: Number(formData.amount),
+                configurations: formData.configurations.map(c => ({
+                    ...c,
+                    tenure_days: Number(c.tenure_days),
+                    interest_rate: Number(c.interest_rate || 0),
+                    interest_rates: Object.fromEntries(
+                        Object.entries(c.interest_rates || {}).map(([k, v]) => [k, Number(v)])
+                    ),
+                    fees: (c.fees || []).map(f => ({ ...f, amount: Number(f.amount) }))
+                })),
+                milestone_min_amount: formData.milestone_enabled ? Number(formData.milestone_min_amount) : null,
+                milestone_max_amount: formData.milestone_enabled ? Number(formData.milestone_max_amount) : null,
+            };
+
+            console.log("[TargetingDebug] Sending Update Payload:", payload);
+
             await apiFetch(`/admin/loan-plans/${id}`, {
                 method: 'PUT',
-                body: JSON.stringify({
-                    ...formData,
-                    amount: Number(formData.amount),
-                    configurations: formData.configurations.map(c => ({
-                        ...c,
-                        tenure_days: Number(c.tenure_days),
-                        interest_rate: Number(c.interest_rate || 0),
-                        interest_rates: Object.fromEntries(
-                            Object.entries(c.interest_rates || {}).map(([k, v]) => [k, Number(v)])
-                        ),
-                        fees: (c.fees || []).map(f => ({ ...f, amount: Number(f.amount) }))
-                    })),
-                    milestone_min_amount: formData.milestone_enabled ? Number(formData.milestone_min_amount) : null,
-                    milestone_max_amount: formData.milestone_enabled ? Number(formData.milestone_max_amount) : null,
-                })
+                body: JSON.stringify(payload)
             });
 
             router.push('/loan-plans');
@@ -740,6 +744,77 @@ export default function EditLoanPlan() {
                                 <p className="text-[10px] text-slate-400 mt-2 font-medium">Plan will NOT be visible at all for these roles.</p>
                             </div>
                         </div>
+
+                        {/* Premium Targeting Strategy Card */}
+                        {(formData.postal_pin || formData.assigned_user_ids.length > 0) && (
+                            <div className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 shadow-sm space-y-6 animate-in fade-in zoom-in duration-500">
+                                <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] animate-pulse" />
+                                            Active Targeting Strategy
+                                        </h3>
+                                        <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">REAL-TIME DATA</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">Saved configuration applied to this plan</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Regional Insights */}
+                                    {formData.postal_pin ? (
+                                        <div className="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100/50 group hover:border-indigo-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="p-2 bg-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform">
+                                                    <MapPin size={18} strokeWidth={2.5} />
+                                                </div>
+                                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-tighter bg-white px-2 py-1 rounded-md border border-indigo-100 italic">Regional Lock</span>
+                                            </div>
+                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Target PIN Codes</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {(formData.postal_pin || "").split(',').map((pin, i) => (
+                                                    <span key={i} className="text-xs font-black text-indigo-700 bg-white border border-indigo-200/50 px-2 py-1 rounded-lg font-mono">
+                                                        {pin.trim()}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <p className="text-[10px] font-bold text-indigo-400 mt-4 italic opacity-70 leading-relaxed">
+                                                Only users in these {(formData.postal_pin || "").split(',').length} regions can discover this plan.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col items-center justify-center text-center opacity-60">
+                                            <MapPin size={24} className="text-slate-300 mb-2" />
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Discovery Enabled</p>
+                                        </div>
+                                    )}
+
+                                    {/* Override Insights */}
+                                    {formData.assigned_user_ids.length > 0 ? (
+                                        <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100/50 group hover:border-amber-200 transition-colors">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="p-2 bg-amber-500 rounded-xl text-white shadow-lg shadow-amber-200 group-hover:scale-110 transition-transform">
+                                                    <Users size={18} strokeWidth={2.5} />
+                                                </div>
+                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-tighter bg-white px-2 py-1 rounded-md border border-amber-100 italic">Access Override</span>
+                                            </div>
+                                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">Assigned Users</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl font-black text-amber-600 tracking-tighter">{formData.assigned_user_ids.length}</span>
+                                                <span className="text-[11px] font-black text-amber-400 uppercase tracking-widest">Accounts</span>
+                                            </div>
+                                            <p className="text-[10px] font-bold text-amber-500 mt-4 italic opacity-70 leading-relaxed">
+                                                These {formData.assigned_user_ids.length} users bypass all locks and discovery restrictions.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col items-center justify-center text-center opacity-60">
+                                            <Users size={24} className="text-slate-300 mb-2" />
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Manual Overrides</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Postal PIN Targeting */}
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">

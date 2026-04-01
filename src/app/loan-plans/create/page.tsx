@@ -686,7 +686,7 @@ export default function CreateLoanPlan() {
                             <p className="text-[10px] text-slate-400 mt-2 font-medium">Leave empty for no postal restriction. If set, only users in these PIN codes will see the loan.</p>
                         </div>
 
-                        {!formData.is_public && (
+                        {(!formData.is_public || formData.is_locked) && (
                             <div className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
                                 {/* WhatsApp Style Search Bar */}
                                 <div className="relative">
