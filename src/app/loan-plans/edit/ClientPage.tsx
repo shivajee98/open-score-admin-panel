@@ -78,6 +78,7 @@ export default function EditLoanPlan() {
         milestone_min_amount: '',
         milestone_max_amount: '',
         postal_pin: '',
+        excluded_user_ids: [] as number[],
     });
 
     const [targetableUsers, setTargetableUsers] = useState<any[]>([]);
@@ -88,6 +89,9 @@ export default function EditLoanPlan() {
         account_type: '' // '' = All, 'MERCHANT', 'STUDENT', 'CUSTOMER'
     });
     const [searching, setSearching] = useState(false);
+    const [pincodeUsers, setPincodeUsers] = useState<any[]>([]);
+    const [fetchingPincodeUsers, setFetchingPincodeUsers] = useState(false);
+    const [pincodeSearch, setPincodeSearch] = useState('');
 
     const [error, setError] = useState('');
 
@@ -133,12 +137,19 @@ export default function EditLoanPlan() {
                     milestone_min_amount: plan.milestone_min_amount || '',
                     milestone_max_amount: plan.milestone_max_amount || '',
                     postal_pin: plan.postal_pin || '',
+                    excluded_user_ids: plan.excluded_user_ids || [],
                 });
 
                 // If it's targeted OR locked, fetch users for management
                 if (!plan.is_public || !!plan.is_locked) {
                     const data = await apiFetch(`/admin/users/targetable`);
                     setTargetableUsers(data);
+                }
+
+                // Fetch users by postal pin if postal_pin is set
+                if (plan.postal_pin) {
+                    const pinUsers = await apiFetch(`/admin/users/by-pincode?pincode=${encodeURIComponent(plan.postal_pin)}`);
+                    setPincodeUsers(pinUsers);
                 }
             }
         } catch (err) {
@@ -262,6 +273,64 @@ export default function EditLoanPlan() {
         const filteredIds = filteredUsersList.map(u => u.id);
         const remaining = formData.assigned_user_ids.filter(id => !filteredIds.includes(id));
         setFormData({ ...formData, assigned_user_ids: remaining });
+    };
+
+    // --- Pincode exclusion helpers ---
+    const fetchPincodeUsers = async (pincode: string) => {
+        if (!pincode.trim()) {
+            setPincodeUsers([]);
+            return;
+        }
+        setFetchingPincodeUsers(true);
+        try {
+            const data = await apiFetch(`/admin/users/by-pincode?pincode=${encodeURIComponent(pincode)}`);
+            setPincodeUsers(data);
+        } catch (err) {
+            console.error('Failed to fetch pincode users', err);
+        } finally {
+            setFetchingPincodeUsers(false);
+        }
+    };
+
+    // Debounced postal pin fetch
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchPincodeUsers(formData.postal_pin);
+        }, 600);
+        return () => clearTimeout(handler);
+    }, [formData.postal_pin]);
+
+    const filteredPincodeUsers = pincodeUsers.filter(user => {
+        if (!pincodeSearch) return true;
+        const s = pincodeSearch.toLowerCase();
+        return (
+            user.name?.toLowerCase().includes(s) ||
+            user.mobile_number?.includes(s) ||
+            user.business_name?.toLowerCase().includes(s)
+        );
+    });
+
+    const toggleExcludedUser = (userId: number) => {
+        const current = [...formData.excluded_user_ids];
+        const index = current.indexOf(userId);
+        if (index > -1) {
+            current.splice(index, 1);
+        } else {
+            current.push(userId);
+        }
+        setFormData({ ...formData, excluded_user_ids: current });
+    };
+
+    const excludeAllFilteredPincodeUsers = () => {
+        const ids = filteredPincodeUsers.map(u => u.id);
+        const combined = Array.from(new Set([...formData.excluded_user_ids, ...ids]));
+        setFormData({ ...formData, excluded_user_ids: combined });
+    };
+
+    const unexcludeAllFilteredPincodeUsers = () => {
+        const ids = filteredPincodeUsers.map(u => u.id);
+        const remaining = formData.excluded_user_ids.filter(id => !ids.includes(id));
+        setFormData({ ...formData, excluded_user_ids: remaining });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -828,6 +897,113 @@ export default function EditLoanPlan() {
                             />
                             <p className="text-[10px] text-slate-400 mt-2 font-medium">Leave empty for no postal restriction. If set, only users in these PIN codes will see the loan.</p>
                         </div>
+
+                        {/* Postal PIN User Exclusion */}
+                        {formData.postal_pin.trim() && (
+                            <div className="space-y-4 pt-4 border-t border-red-100 animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-200">
+                                    <span className="text-2xl">🔒</span>
+                                    <div>
+                                        <p className="text-xs font-black text-red-700 uppercase tracking-widest">Keep Locked For Specific Users</p>
+                                        <p className="text-[11px] text-red-600 font-medium">These users belong to postal PIN {formData.postal_pin} but will still see the loan as <strong>locked</strong>.</p>
+                                    </div>
+                                </div>
+
+                                {/* Search within pincode users */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={pincodeSearch}
+                                        onChange={(e) => setPincodeSearch(e.target.value)}
+                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold pl-12 focus:outline-none focus:border-red-400 transition-all shadow-inner"
+                                        placeholder="Search users in this PIN area..."
+                                    />
+                                    <svg className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center bg-red-50/50 px-4 py-3 rounded-xl border border-red-100">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                                                {filteredPincodeUsers.length} Users in Area
+                                            </span>
+                                            <span className="text-[10px] font-bold text-red-500">
+                                                {formData.excluded_user_ids.length} Kept Locked
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <button
+                                                type="button"
+                                                onClick={excludeAllFilteredPincodeUsers}
+                                                className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-red-800 transition"
+                                            >
+                                                Lock All
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={unexcludeAllFilteredPincodeUsers}
+                                                className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-800 transition"
+                                            >
+                                                Unlock All
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="max-h-[300px] overflow-y-auto border border-slate-200 rounded-2xl bg-white shadow-sm custom-scrollbar scroll-smooth">
+                                        {fetchingPincodeUsers ? (
+                                            <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Fetching users in PIN area...</div>
+                                        ) : filteredPincodeUsers.length > 0 ? (
+                                            <div className="divide-y divide-slate-50">
+                                                {filteredPincodeUsers.map(user => (
+                                                    <div
+                                                        key={user.id}
+                                                        onClick={() => toggleExcludedUser(user.id)}
+                                                        className={`p-4 flex items-center justify-between cursor-pointer transition-all ${formData.excluded_user_ids.includes(user.id)
+                                                            ? 'bg-red-50/60 hover:bg-red-50'
+                                                            : 'hover:bg-slate-50/80'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="relative">
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${formData.excluded_user_ids.includes(user.id) ? 'bg-red-500' : 'bg-slate-300'}`}>
+                                                                    {user.name?.charAt(0) || 'U'}
+                                                                </div>
+                                                                <span className="absolute -bottom-1 -right-1 text-[11px] leading-none">
+                                                                    {formData.excluded_user_ids.includes(user.id) ? '🔒' : '🔓'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-slate-800">{user.name}</h4>
+                                                                <p className="text-[11px] text-slate-500 font-bold tracking-tight">
+                                                                    {user.mobile_number}
+                                                                    {user.business_name && <span className="text-slate-300 mx-1">|</span>}
+                                                                    {user.business_name}
+                                                                </p>
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">
+                                                                    PIN {user.pincode}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${formData.excluded_user_ids.includes(user.id)
+                                                            ? 'bg-red-500 border-red-500 scale-110 shadow-md'
+                                                            : 'border-slate-300'
+                                                            }`}>
+                                                            {formData.excluded_user_ids.includes(user.id) && (
+                                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" /></svg>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="p-10 text-center">
+                                                <p className="text-slate-400 font-bold">No users found in this postal PIN area</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {(!formData.is_public || formData.is_locked) && (
                             <div className={`space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-2 ${formData.is_locked && formData.is_public ? 'border-amber-100' : 'border-slate-100'}`}>

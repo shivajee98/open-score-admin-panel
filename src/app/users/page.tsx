@@ -654,7 +654,7 @@ export default function UsersPage() {
                                         <button
                                             onClick={async () => {
                                                 if (!confirm("Confirm service fee payment receipt?")) return;
-                                                await apiFetch(`/admin/support/payment-tickets/${ticket.id}/confirm`, { method: 'POST' });
+                                                await apiFetch(`/admin/repayments/${ticket.target_id}/approve`, { method: 'POST' });
                                                 loadPendingServiceFees();
                                                 loadUsers();
                                             }}

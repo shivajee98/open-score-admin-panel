@@ -22,6 +22,12 @@ const hasPlatformFee = (loan: any): boolean => {
     return loan.repayments.some((r: any) => r.emi_number === 0);
 };
 
+// Helper: Get the pending platform fee repayment object if it exists
+const getPendingPlatformFee = (loan: any) => {
+    if (!loan.repayments || !Array.isArray(loan.repayments)) return null;
+    return loan.repayments.find((r: any) => r.emi_number === 0 && ['PENDING_VERIFICATION', 'AGENT_APPROVED', 'MANUAL_VERIFICATION'].includes(r.status));
+};
+
 export default function LoanApprovals() {
     const { counts } = useAdminNotifications();
     const searchParams = useSearchParams();
@@ -102,6 +108,22 @@ export default function LoanApprovals() {
             loadLoans();
         } catch (e) {
             alert('Action failed');
+        } finally {
+            setActionLoading(null);
+            loadLoans();
+        }
+    };
+
+    const handleApproveFee = async (e: React.MouseEvent, repaymentId: number) => {
+        e.stopPropagation();
+        if (!confirm('Confirm receipt of platform fee?')) return;
+        setActionLoading(`approve-fee-${repaymentId}`);
+        try {
+            await apiFetch(`/admin/repayments/${repaymentId}/approve`, { method: 'POST' });
+            alert('Fee approved!');
+            loadLoans();
+        } catch (e: any) {
+            alert(e.message || 'Failed to approve fee');
         } finally {
             setActionLoading(null);
         }
@@ -591,6 +613,15 @@ export default function LoanApprovals() {
 
                                                 {loan.status === 'APPROVED' && (
                                                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        {getPendingPlatformFee(loan) && (
+                                                            <button
+                                                                disabled={!!actionLoading}
+                                                                onClick={(e) => handleApproveFee(e, getPendingPlatformFee(loan).id)}
+                                                                className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 transition-all font-mono"
+                                                            >
+                                                                {actionLoading === `approve-fee-${getPendingPlatformFee(loan).id}` ? '...' : 'Confirm Fee'}
+                                                            </button>
+                                                        )}
                                                         <button
                                                             disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan))}
                                                             onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'release', 'Funds Released!'); }}
@@ -603,7 +634,9 @@ export default function LoanApprovals() {
                                                             Disburse
                                                         </button>
                                                         {hasPlatformFee(loan) && !isPlatformFeePaid(loan) && (
-                                                            <span className="text-[9px] font-bold text-orange-500 max-w-[100px] leading-tight">Fee unpaid</span>
+                                                            <span className="text-[9px] font-bold text-orange-500 max-w-[100px] leading-tight">
+                                                                {getPendingPlatformFee(loan) ? 'Awaiting Approval' : 'Fee unpaid'}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 )}
