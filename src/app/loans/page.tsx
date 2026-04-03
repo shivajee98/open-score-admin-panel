@@ -6,7 +6,6 @@ import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
-import FormDetailsModal from '@/components/loans/FormDetailsModal';
 import { useSearchParams } from 'next/navigation';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
@@ -36,7 +35,6 @@ export default function LoanApprovals() {
     const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
     const [selectedLoan, setSelectedLoan] = useState<any>(null);
-    const [formDetailLoan, setFormDetailLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedLoanIds, setSelectedLoanIds] = useState<number[]>([]);
@@ -248,7 +246,7 @@ export default function LoanApprovals() {
                     'Permanent Street Address': formData.permanent_street_address || user.permanent_street_address || '',
                     'Permanent City': formData.permanent_city || user.permanent_city || '',
                     'Permanent State': formData.permanent_state || user.permanent_state || '',
-                    'Permanent PIN Code': formData.permanent_pincode || user.permanent_pincode || '',
+                    'Permanent PIN Code': formData.permanent_postal_code || formData.permanent_pincode || user.permanent_pincode || '',
                     'Employment Type': formData.employment_type || '',
                     'Business Type': formData.business_type || 'N/A',
                     'Business Location': formData.business_location || 'N/A',
@@ -543,7 +541,7 @@ export default function LoanApprovals() {
                                                     {/* Quick KYC Access */}
                                                     {loan.form_data && Object.keys(loan.form_data).length > 0 && (
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); setFormDetailLoan(loan); }}
+                                                            onClick={(e) => { e.stopPropagation(); setSelectedLoan(loan.id); }}
                                                             className="mt-1 text-[9px] font-bold text-purple-500 hover:text-purple-700 flex items-center gap-0.5 transition-colors"
                                                         >
                                                             <FileText size={10} /> View KYC
@@ -644,20 +642,11 @@ export default function LoanApprovals() {
                                                     </div>
                                                 )}
 
-                                                {/* View Form Details Button */}
-                                                <button
-                                                    onClick={() => setFormDetailLoan(loan)}
-                                                    className="p-2.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
-                                                    title="View Form Details"
-                                                >
-                                                    <FileText size={18} />
-                                                </button>
-
-                                                {/* View Repayment Schedule Button */}
+                                                {/* View Full Details Button (Combined View) */}
                                                 <button
                                                     onClick={() => setSelectedLoan(loan.id)}
-                                                    className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                                    title="View Repayment Schedule"
+                                                    className="p-2.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                    title="View Full Details"
                                                 >
                                                     <Eye size={18} />
                                                 </button>
@@ -766,15 +755,7 @@ export default function LoanApprovals() {
                 )
             }
 
-            {/* Form Details Modal */}
-            {
-                formDetailLoan && (
-                    <FormDetailsModal
-                        loan={formDetailLoan}
-                        onClose={() => setFormDetailLoan(null)}
-                    />
-                )
-            }
+
 
             {/* Repayment Schedule Modal */}
             {

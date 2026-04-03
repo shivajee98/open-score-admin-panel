@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck, MessageSquare, Send, FileText, Wallet } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck, MessageSquare, Send, FileText, Wallet, IndianRupee } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -348,6 +348,7 @@ export default function UsersPage() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [pendingTransactions, setPendingTransactions] = useState([]);
+    const [pendingRepayments, setPendingRepayments] = useState([]);
     const [pendingServiceFees, setPendingServiceFees] = useState([]);
     const [pendingPartnerRepayments, setPendingPartnerRepayments] = useState([]);
     const [search, setSearch] = useState('');
@@ -511,6 +512,16 @@ export default function UsersPage() {
         }
     };
 
+    const loadPendingRepayments = async () => {
+        if (currentUser?.role !== 'ADMIN') return;
+        try {
+            const data = await apiFetch('/admin/repayments/pending');
+            setPendingRepayments(data || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const loadPendingServiceFees = async () => {
         if (currentUser?.role !== 'ADMIN') return;
         try {
@@ -538,6 +549,7 @@ export default function UsersPage() {
     useEffect(() => {
         if (currentUser?.role === 'ADMIN') {
             loadPendingTransactions();
+            loadPendingRepayments();
             loadPendingServiceFees();
             loadPendingPartnerRepayments();
         }
@@ -699,7 +711,7 @@ export default function UsersPage() {
         <AdminLayout title="User Management">
 
             {/* Pending Approvals Section (Admin Only) */}
-            {isAdmin && (pendingTransactions.length > 0 || pendingServiceFees.length > 0 || pendingPartnerRepayments.length > 0) && (
+            {isAdmin && (pendingTransactions.length > 0 || pendingRepayments.length > 0 || pendingServiceFees.length > 0 || pendingPartnerRepayments.length > 0) && (
                 <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center gap-3 mb-4">
                         <Clock className="text-amber-500" />
@@ -707,6 +719,45 @@ export default function UsersPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* Repayments Approval (EMIs & Platform Fees) */}
+                        {pendingRepayments.map((rep: any) => (
+                            <div key={`rep-${rep.id}`} className="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-lg shadow-blue-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <IndianRupee size={48} className="text-blue-500" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">EMI/Repayment Approval</p>
+                                            <p className="text-2xl font-black text-slate-900">₹{parseFloat(rep.amount).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-600 mb-1">{rep.loan?.user?.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono mb-4">{rep.loan?.display_id ? `Loan #${rep.loan.display_id}` : `ID: ${rep.loan_id}`}</p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm("Approve EMI repayment?")) return;
+                                                await apiFetch(`/admin/repayments/${rep.id}/approve`, { method: 'POST' });
+                                                loadPendingRepayments();
+                                                loadUsers();
+                                            }}
+                                            className="flex-1 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-md active:scale-95"
+                                        >
+                                            Confirm
+                                        </button>
+                                        {rep.proof_image && (
+                                            <button
+                                                onClick={() => window.open(`https://api.msmeloan.sbs/storage/${rep.proof_image}`, '_blank')}
+                                                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 transition-all border border-blue-100"
+                                            >
+                                                Proof
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                         {pendingTransactions.map((tx: any) => (
                             <div key={tx.id} className="bg-white p-6 rounded-[2rem] border border-amber-100 shadow-lg shadow-amber-500/5 relative overflow-hidden group hover:shadow-xl transition-all">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
