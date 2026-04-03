@@ -16,6 +16,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
     const [receiveFlat, setReceiveFlat] = useState(user.receive_cashback_flat_amount ?? '');
     const [isSaving, setIsSaving] = useState(false);
+    const [fetchedPin, setFetchedPin] = useState<string | null>(null);
+    const [isFetchingPin, setIsFetchingPin] = useState(false);
 
     // Sync state if user prop changes (e.g. after reload)
     useEffect(() => {
@@ -75,6 +77,18 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             alert('Error updating cashback');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleFetchAppPin = async () => {
+        setIsFetchingPin(true);
+        try {
+            const data = await apiFetch(`/admin/users/${user.id}/app-pin`);
+            setFetchedPin(data.pin);
+        } catch (e: any) {
+            alert(e.message || 'Failed to fetch PIN');
+        } finally {
+            setIsFetchingPin(false);
         }
     };
 
@@ -223,6 +237,40 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             </td>
             <td className="p-6">
                 <p className="text-xs font-bold text-slate-700">{user.pincode || 'N/A'}</p>
+            </td>
+            <td className="p-6 text-center">
+                {isAdmin ? (
+                    <div className="flex items-center justify-center gap-2">
+                        {fetchedPin ? (
+                            <div className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center gap-2 animate-in zoom-in duration-300">
+                                <span className={cn(
+                                    "font-mono text-sm font-black tracking-widest",
+                                    fetchedPin === 'ENCODED' ? "text-slate-400 italic" : "text-blue-700"
+                                )}>
+                                    {fetchedPin}
+                                </span>
+                                <button onClick={() => setFetchedPin(null)} className="text-slate-400 hover:text-slate-600">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={handleFetchAppPin}
+                                disabled={isFetchingPin}
+                                className="p-2.5 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all border border-slate-100 hover:border-blue-100 shadow-sm disabled:opacity-50 group/eye"
+                                title="View App Auth PIN"
+                            >
+                                {isFetchingPin ? (
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Eye className="w-4 h-4 group-hover/eye:scale-110 transition-transform" />
+                                )}
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <span className="text-slate-200">-</span>
+                )}
             </td>
             <td className="p-6">
                 {user.referred_by ? (
@@ -950,6 +998,7 @@ export default function UsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Auth PIN</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
