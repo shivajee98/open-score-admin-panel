@@ -276,35 +276,34 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                         <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Address Information</span>
                                                     </div>
                                                     
-                                                    {loan.form_data.is_permanent_same !== false ? (
-                                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
-                                                            <div>
-                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current & Permanent Address (Same)</p>
-                                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                                                                    {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code]
-                                                                        .filter(Boolean).join(', ')}
-                                                                </p>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Current Address</p>
+                                                                {loan.user?.is_permanent_same && (
+                                                                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">Primary</span>
+                                                                )}
                                                             </div>
-                                                            <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight">Verified Same</div>
+                                                            <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                                {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code || loan.form_data.pincode]
+                                                                    .filter(Boolean).join(', ')}
+                                                            </p>
                                                         </div>
-                                                    ) : (
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
-                                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Current Address</p>
-                                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                                                                    {[loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code]
-                                                                        .filter(Boolean).join(', ')}
-                                                                </p>
+                                                        <div className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100/50">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Permanent Address</p>
+                                                                {loan.form_data.is_permanent_same !== false && (
+                                                                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">Same as Current</span>
+                                                                )}
                                                             </div>
-                                                            <div className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100/50">
-                                                                <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-1">Permanent Address</p>
-                                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">
-                                                                    {[loan.form_data.permanent_street_address, loan.form_data.permanent_city, loan.form_data.permanent_state, loan.form_data.permanent_postal_code]
-                                                                        .filter(Boolean).join(', ')}
-                                                                </p>
-                                                            </div>
+                                                            <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                                {loan.form_data.is_permanent_same !== false 
+                                                                    ? [loan.form_data.street_address, loan.form_data.street_address_2, loan.form_data.city, loan.form_data.state, loan.form_data.postal_code || loan.form_data.pincode].filter(Boolean).join(', ')
+                                                                    : [loan.form_data.permanent_street_address, loan.form_data.permanent_city, loan.form_data.permanent_state, loan.form_data.permanent_postal_code || loan.form_data.permanent_pincode].filter(Boolean).join(', ')
+                                                                }
+                                                            </p>
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

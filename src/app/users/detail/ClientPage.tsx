@@ -54,17 +54,7 @@ export default function UserDetailsPage() {
         }
     }, [data?.user]);
 
-    useEffect(() => {
-        if (editFormData.is_permanent_same) {
-            setEditFormData((prev: any) => ({
-                ...prev,
-                permanent_street_address: prev.business_address,
-                permanent_city: prev.city,
-                permanent_state: prev.state,
-                permanent_pincode: prev.pincode
-            }));
-        }
-    }, [editFormData.is_permanent_same, editFormData.business_address, editFormData.city, editFormData.state, editFormData.pincode]);
+
 
     const handleSenderPercentChange = (val: string) => {
         setCashbackPercent(val);
@@ -121,10 +111,15 @@ export default function UserDetailsPage() {
         e.preventDefault();
         setIsSaving(true);
         try {
+            // Filter out empty fields to avoid overriding with null/empty in DB
+            const filteredData = Object.fromEntries(
+                Object.entries(editFormData).filter(([_, val]) => val !== null && val !== undefined && val !== '')
+            );
+
             await apiFetch(`/admin/users/${id}/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editFormData)
+                body: JSON.stringify(filteredData)
             });
             toast.success("User profile updated successfully");
             setIsEditModalOpen(false);
@@ -966,57 +961,42 @@ export default function UserDetailsPage() {
                                     </div>
 
                                     <div className="col-span-1 md:col-span-2 py-2 border-b border-slate-50">
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Permanent Address</p>
-                                            <div className="flex items-center gap-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Same as Current?</label>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={!!editFormData.is_permanent_same} 
-                                                    onChange={e => setEditFormData({ ...editFormData, is_permanent_same: e.target.checked })}
-                                                    className="w-4 h-4 rounded-md border-slate-200 text-blue-600 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                        </div>
+                                        <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Permanent Address (Mandatory)</p>
                                     </div>
 
-                                    {!editFormData.is_permanent_same && (
-                                        <>
-                                            <div className="space-y-1 col-span-1 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent Street Address</label>
-                                                <textarea
-                                                    rows={2}
-                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900 resize-none"
-                                                    value={editFormData.permanent_street_address || ''}
-                                                    onChange={e => setEditFormData({ ...editFormData, permanent_street_address: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent City</label>
-                                                <input
-                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
-                                                    value={editFormData.permanent_city || ''}
-                                                    onChange={e => setEditFormData({ ...editFormData, permanent_city: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent State</label>
-                                                <input
-                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
-                                                    value={editFormData.permanent_state || ''}
-                                                    onChange={e => setEditFormData({ ...editFormData, permanent_state: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent PIN Code</label>
-                                                <input
-                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
-                                                    value={editFormData.permanent_pincode || ''}
-                                                    onChange={e => setEditFormData({ ...editFormData, permanent_pincode: e.target.value })}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
+                                    <div className="space-y-1 col-span-1 md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent Street Address</label>
+                                        <textarea
+                                            rows={2}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900 resize-none"
+                                            value={editFormData.permanent_street_address || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, permanent_street_address: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent City</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.permanent_city || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, permanent_city: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent State</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.permanent_state || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, permanent_state: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent PIN Code</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.permanent_pincode || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, permanent_pincode: e.target.value })}
+                                        />
+                                    </div>
 
                                     <div className="col-span-1 md:col-span-2 py-2 border-b border-slate-50">
                                         <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Bank Details</p>
