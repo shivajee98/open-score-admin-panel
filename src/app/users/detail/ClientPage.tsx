@@ -7,7 +7,7 @@ import AdminLayout from '@/components/AdminLayout';
 import {
     User, Wallet, History, CreditCard, ArrowLeft,
     Calendar, Shield, ShieldAlert, CheckCircle2,
-    Clock, BadgeCheck, Phone, Mail, Building2,
+    Clock, BadgeCheck, Phone, Mail, Building2, MapPin,
     ArrowUpRight, ArrowDownLeft, Download, Users, X
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
@@ -53,6 +53,18 @@ export default function UserDetailsPage() {
             setReceiveFlat(data.user.receive_cashback_flat_amount ?? '');
         }
     }, [data?.user]);
+
+    useEffect(() => {
+        if (editFormData.is_permanent_same) {
+            setEditFormData((prev: any) => ({
+                ...prev,
+                permanent_street_address: prev.business_address,
+                permanent_city: prev.city,
+                permanent_state: prev.state,
+                permanent_pincode: prev.pincode
+            }));
+        }
+    }, [editFormData.is_permanent_same, editFormData.business_address, editFormData.city, editFormData.state, editFormData.pincode]);
 
     const handleSenderPercentChange = (val: string) => {
         setCashbackPercent(val);
@@ -143,7 +155,20 @@ export default function UserDetailsPage() {
             status: user.status || 'ACTIVE',
             role: user.role || 'CUSTOMER',
             kyc_status: user.kyc_status || 'PENDING',
-            app_pin: decodedPin
+            app_pin: decodedPin,
+            business_address: user.business_address || '',
+            city: user.city || '',
+            state: user.state || '',
+            pincode: user.pincode || '',
+            business_nature: user.business_nature || '',
+            business_segment: user.business_segment || '',
+            business_type: user.business_type || '',
+            customer_segment: user.customer_segment || '',
+            permanent_street_address: user.permanent_street_address || '',
+            permanent_city: user.permanent_city || '',
+            permanent_state: user.permanent_state || '',
+            permanent_pincode: user.permanent_pincode || '',
+            is_permanent_same: user.is_permanent_same ?? true
         });
         setIsEditModalOpen(true);
     };
@@ -283,6 +308,37 @@ export default function UserDetailsPage() {
                                     <div>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN Card</p>
                                         <p className="font-mono font-bold text-slate-700">{user.pan_number || 'Not Provided'}</p>
+                                    </div>
+                                </div>
+
+                                {/* Address Section */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <MapPin className="w-3 h-3 text-blue-500" /> Current Business Address
+                                        </h4>
+                                        <p className="text-sm font-bold text-slate-900">{user.business_address || 'Not Provided'}</p>
+                                        <p className="text-xs text-slate-500 mt-1">{user.city ? `${user.city}, ` : ''}{user.state ? `${user.state} ` : ''}{user.pincode ? `- ${user.pincode}` : ''}</p>
+                                    </div>
+                                    <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <Shield className="w-3 h-3 text-purple-500" /> Permanent Address
+                                        </h4>
+                                        {user.is_permanent_same ? (
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-sm font-bold text-emerald-600 flex items-center gap-1.5">
+                                                    <CheckCircle2 className="w-4 h-4" /> Same as Current Address
+                                                </p>
+                                                <p className="text-[10px] font-medium text-slate-400 italic">Identity verification synced with current business location.</p>
+                                            </div>
+                                        ) : user.permanent_street_address ? (
+                                            <>
+                                                <p className="text-sm font-bold text-slate-900">{user.permanent_street_address}</p>
+                                                <p className="text-xs text-slate-500 mt-1">{user.permanent_city ? `${user.permanent_city}, ` : ''}{user.permanent_state ? `${user.permanent_state} ` : ''}{user.permanent_pincode ? `- ${user.permanent_pincode}` : ''}</p>
+                                            </>
+                                        ) : (
+                                            <p className="text-sm font-bold text-slate-400 italic">Not Provided</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -820,6 +876,42 @@ export default function UserDetailsPage() {
                                         </select>
                                     </div>
                                     <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Nature</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.business_nature || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, business_nature: e.target.value })}
+                                            placeholder="e.g. Retail, Service"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Segment</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.business_segment || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, business_segment: e.target.value })}
+                                            placeholder="e.g. MSME, Individual"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Type</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.business_type || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, business_type: e.target.value })}
+                                            placeholder="e.g. Proprietorship"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Customer Segment</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.customer_segment || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, customer_segment: e.target.value })}
+                                            placeholder="e.g. Tier-1, Premium"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Aadhaar Number</label>
                                         <input
                                             className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
@@ -835,6 +927,96 @@ export default function UserDetailsPage() {
                                             onChange={e => setEditFormData({ ...editFormData, pan_number: e.target.value })}
                                         />
                                     </div>
+
+                                    <div className="col-span-1 md:col-span-2 py-2 border-b border-slate-50">
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Current Address</p>
+                                    </div>
+                                    <div className="space-y-1 col-span-1 md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Street Address</label>
+                                        <textarea
+                                            rows={2}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900 resize-none"
+                                            value={editFormData.business_address || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, business_address: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current City</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.city || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, city: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current State</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.state || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, state: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current PIN Code</label>
+                                        <input
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.pincode || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, pincode: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="col-span-1 md:col-span-2 py-2 border-b border-slate-50">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Permanent Address</p>
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Same as Current?</label>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={!!editFormData.is_permanent_same} 
+                                                    onChange={e => setEditFormData({ ...editFormData, is_permanent_same: e.target.checked })}
+                                                    className="w-4 h-4 rounded-md border-slate-200 text-blue-600 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {!editFormData.is_permanent_same && (
+                                        <>
+                                            <div className="space-y-1 col-span-1 md:col-span-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent Street Address</label>
+                                                <textarea
+                                                    rows={2}
+                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900 resize-none"
+                                                    value={editFormData.permanent_street_address || ''}
+                                                    onChange={e => setEditFormData({ ...editFormData, permanent_street_address: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent City</label>
+                                                <input
+                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                                    value={editFormData.permanent_city || ''}
+                                                    onChange={e => setEditFormData({ ...editFormData, permanent_city: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent State</label>
+                                                <input
+                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                                    value={editFormData.permanent_state || ''}
+                                                    onChange={e => setEditFormData({ ...editFormData, permanent_state: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Permanent PIN Code</label>
+                                                <input
+                                                    className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                                    value={editFormData.permanent_pincode || ''}
+                                                    onChange={e => setEditFormData({ ...editFormData, permanent_pincode: e.target.value })}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
 
                                     <div className="col-span-1 md:col-span-2 py-2 border-b border-slate-50">
                                         <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Bank Details</p>
@@ -905,12 +1087,12 @@ export default function UserDetailsPage() {
                                         </select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">App PIN (4 Digits)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">App PIN (4 or 6 Digits)</label>
                                         <input
                                             type="text"
-                                            maxLength={4}
+                                            maxLength={6}
                                             className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
-                                            placeholder="Enter 4-digit PIN"
+                                            placeholder="Enter 4 or 6-digit PIN"
                                             value={editFormData.app_pin}
                                             onChange={e => setEditFormData({ ...editFormData, app_pin: e.target.value.replace(/[^0-9]/g, '') })}
                                         />

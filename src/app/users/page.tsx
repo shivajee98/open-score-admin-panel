@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck, MessageSquare, Send, FileText, Wallet } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -245,7 +245,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             <div className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center gap-2 animate-in zoom-in duration-300">
                                 <span className={cn(
                                     "font-mono text-sm font-black tracking-widest",
-                                    fetchedPin === 'ENCODED' ? "text-slate-400 italic" : "text-blue-700"
+                                    fetchedPin === 'ENCODED' ? "text-slate-400 italic" : 
+                                    fetchedPin.length === 6 ? "text-amber-600" : "text-blue-700"
                                 )}>
                                     {fetchedPin}
                                 </span>
@@ -393,6 +394,15 @@ export default function UsersPage() {
     const [receiveFlat, setReceiveFlat] = useState('');
     const [showDownloadOptions, setShowDownloadOptions] = useState(false);
     const downloadDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Support Ticket Approval States
+    const [viewingTicket, setViewingTicket] = useState<any>(null);
+    const [ticketMessages, setTicketMessages] = useState<any[]>([]);
+    const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+    const [isLoadingTicket, setIsLoadingTicket] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [showRejectionInput, setShowRejectionInput] = useState(false);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -598,13 +608,69 @@ export default function UsersPage() {
 
         try {
             await apiFetch(`/admin/users/${user.id}/status`, {
-                method: 'POST',
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
             loadUsers();
         } catch (e) {
-            alert('Error updating status');
+            console.error(e);
+        }
+    };
+
+    const fetchTicketDetail = async (ticketId: number) => {
+        setIsLoadingTicket(true);
+        try {
+            const data = await apiFetch(`/admin/support/tickets/${ticketId}`);
+            setViewingTicket(data);
+            setTicketMessages(data.messages || []);
+            setIsTicketModalOpen(true);
+        } catch (e) {
+            console.error("Failed to load ticket details", e);
+            alert("Could not load ticket conversation");
+        } finally {
+            setIsLoadingTicket(false);
+        }
+    };
+
+    const handleApproveTicket = async (ticketId: number) => {
+        if (!confirm('Are you sure you want to approve this payment receipt?')) return;
+        setActionLoading(true);
+        try {
+            await apiFetch(`/admin/support/tickets/${ticketId}/approve-payment`, { method: 'POST' });
+            alert('Payment approved successfully!');
+            setIsTicketModalOpen(false);
+            setViewingTicket(null);
+            loadPendingServiceFees();
+            loadUsers();
+        } catch (e: any) {
+            alert(e.message || 'Approval failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleRejectTicket = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!viewingTicket || !rejectionReason.trim()) return;
+        
+        setActionLoading(true);
+        try {
+            await apiFetch(`/admin/support/tickets/${viewingTicket.id}/reject-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: rejectionReason })
+            });
+            alert('Payment rejected');
+            setIsTicketModalOpen(false);
+            setViewingTicket(null);
+            setRejectionReason('');
+            setShowRejectionInput(false);
+            loadPendingServiceFees();
+        } catch (e: any) {
+            alert(e.message || 'Rejection failed');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -700,15 +766,16 @@ export default function UsersPage() {
                                     <p className="text-[10px] text-slate-400 font-mono mb-4">{ticket.user?.mobile_number}</p>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={async () => {
-                                                if (!confirm("Confirm service fee payment receipt?")) return;
-                                                await apiFetch(`/admin/repayments/${ticket.target_id}/approve`, { method: 'POST' });
-                                                loadPendingServiceFees();
-                                                loadUsers();
-                                            }}
-                                            className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+                                            onClick={() => fetchTicketDetail(ticket.id)}
+                                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm flex items-center gap-1.5"
                                         >
-                                            Confirm Receipt
+                                            <Eye size={12} /> View Proof
+                                        </button>
+                                        <button
+                                            onClick={() => handleApproveTicket(ticket.id)}
+                                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-1.5"
+                                        >
+                                            <Check size={12} /> Confirm
                                         </button>
                                     </div>
                                 </div>
@@ -998,7 +1065,7 @@ export default function UsersPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Auth PIN</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">App Unlock PIN</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
@@ -1239,6 +1306,164 @@ export default function UsersPage() {
                         setSelectedIds([]);
                     }}
                 />
+            )}
+
+            {/* Ticket Approval Modal (Chat + Screenshot) */}
+            {isTicketModalOpen && viewingTicket && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in" onClick={() => !actionLoading && setIsTicketModalOpen(false)}></div>
+                    
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-6xl h-[85vh] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-10 flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-300">
+                        
+                        {/* Left Side: Proof / Screenshot */}
+                        <div className="w-full md:w-1/2 bg-slate-100 flex flex-col border-r border-slate-200">
+                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                                <div>
+                                    <h3 className="font-black text-slate-900 flex items-center gap-2">
+                                        <ShieldAlert className="text-blue-600" size={18} />
+                                        PAYMENT PROOF
+                                    </h3>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{viewingTicket.unique_ticket_id}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-black text-blue-600">₹{parseFloat(viewingTicket.payment_amount || '0').toLocaleString()}</p>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase">{viewingTicket.sub_action || 'GENERAL'}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex-1 overflow-auto p-8 flex items-center justify-center bg-slate-50 relative group">
+                                {ticketMessages.some(m => m.attachment_url) ? (
+                                    <div className="space-y-4 w-full">
+                                        {ticketMessages.filter(m => m.attachment_url).map((m, idx) => (
+                                            <div key={idx} className="relative group/img">
+                                                <img 
+                                                    src={m.attachment_url.startsWith('http') ? m.attachment_url : `${process.env.NEXT_PUBLIC_STORAGE_URL}/${m.attachment_url}`} 
+                                                    alt="Payment Proof" 
+                                                    className="max-w-full rounded-2xl shadow-xl border-4 border-white transform transition-transform group-hover/img:scale-[1.02]"
+                                                />
+                                                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
+                                                    <p className="text-[9px] font-black text-slate-900 uppercase">Uploaded on {new Date(m.created_at).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center p-12 bg-white rounded-3xl border-2 border-dashed border-slate-200 max-w-sm">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                            <FileText className="text-slate-300" size={32} />
+                                        </div>
+                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">No Screenshot found</h4>
+                                        <p className="text-xs text-slate-400 mt-2 font-medium">This payment might have been verified by agent through direct transaction ID or verbal confirmation.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right Side: Chat & Actions */}
+                        <div className="w-full md:w-1/2 flex flex-col bg-white">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-xl">
+                                        {viewingTicket.user?.name?.[0] || 'U'}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-slate-900 leading-tight">{viewingTicket.user?.name}</h4>
+                                        <p className="text-xs font-bold text-slate-400 font-mono italic">{viewingTicket.user?.mobile_number}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsTicketModalOpen(false)}
+                                    className="p-2.5 bg-slate-100 text-slate-400 hover:bg-slate-200 rounded-2xl transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30">
+                                <div className="text-center py-2">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 bg-slate-100 px-4 py-1 rounded-full border border-slate-200">Conversation History</span>
+                                </div>
+                                {ticketMessages.map((msg, idx) => (
+                                    <div key={idx} className={`flex ${msg.is_admin_reply ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] group`}>
+                                            <div className={`flex items-center gap-2 mb-1.5 ${msg.is_admin_reply ? 'flex-row-reverse' : ''}`}>
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                                    {msg.is_admin_reply ? 'Support Agent' : 'Customer'}
+                                                </span>
+                                                <span className="text-[9px] font-black text-slate-300">•</span>
+                                                <span className="text-[9px] font-bold text-slate-300 font-mono">
+                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <div className={`p-4 rounded-3xl text-[13px] font-bold shadow-sm leading-relaxed ${
+                                                msg.is_admin_reply 
+                                                ? 'bg-blue-600 text-white rounded-tr-none' 
+                                                : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none'
+                                            }`}>
+                                                {msg.message}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="p-8 border-t border-slate-100 bg-white">
+                                {showRejectionInput ? (
+                                    <form onSubmit={handleRejectTicket} className="space-y-4 animate-in slide-in-from-bottom-4">
+                                        <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
+                                            <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                <ShieldAlert size={14} /> Rejection Reason
+                                            </p>
+                                            <textarea
+                                                autoFocus
+                                                required
+                                                className="w-full bg-white border border-rose-100 rounded-xl p-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-rose-200 outline-none h-24 placeholder:font-medium"
+                                                placeholder="Please specify why this payment is being rejected..."
+                                                value={rejectionReason}
+                                                onChange={e => setRejectionReason(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowRejectionInput(false);
+                                                    setRejectionReason('');
+                                                }}
+                                                className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-colors rounded-xl"
+                                            >
+                                                Back
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={actionLoading}
+                                                className="flex-[2] py-4 bg-rose-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-95 disabled:opacity-50"
+                                            >
+                                                {actionLoading ? 'Processing...' : 'Confirm Rejection'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => setShowRejectionInput(true)}
+                                            className="py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            <X size={16} strokeWidth={3} /> Reject Payment
+                                        </button>
+                                        <button
+                                            onClick={() => handleApproveTicket(viewingTicket.id)}
+                                            disabled={actionLoading}
+                                            className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            <BadgeCheck size={16} strokeWidth={2.5} /> {actionLoading ? 'Processing...' : 'Confirm Receipt'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Footer */}

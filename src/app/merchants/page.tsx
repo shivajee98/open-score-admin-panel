@@ -290,7 +290,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             <div className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center gap-2 animate-in zoom-in duration-300">
                                 <span className={cn(
                                     "font-mono text-sm font-black tracking-widest",
-                                    fetchedPin === 'ENCODED' ? "text-slate-400 italic" : "text-blue-700"
+                                    fetchedPin === 'ENCODED' ? "text-slate-400 italic" : 
+                                    fetchedPin.length === 6 ? "text-amber-600" : "text-blue-700"
                                 )}>
                                     {fetchedPin}
                                 </span>
@@ -971,7 +972,7 @@ export default function MerchantsPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Postal PIN</th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Auth PIN</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">App Unlock PIN</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referred By</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Ref CODE</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Details</th>

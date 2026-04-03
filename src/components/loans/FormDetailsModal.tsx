@@ -87,6 +87,7 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
         'first_name', 'last_name', 'birth_month', 'birth_day', 'birth_year',
         'marital_status', 'email', 'phone',
         'street_address', 'street_address_2', 'city', 'state', 'postal_code', 'address_duration',
+        'permanent_street_address', 'permanent_city', 'permanent_state', 'permanent_postal_code', 'is_permanent_same',
         'employer', 'occupation', 'aadhar_number', 'pan_number',
         'experience_years', 'gross_monthly_income', 'rent_mortgage', 'down_payment',
         'comments', 'bank_references', 'consent',
@@ -106,7 +107,7 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
 
     // Personal fields
     const personalKeys = ['first_name', 'last_name', 'birth_month', 'birth_day', 'birth_year', 'marital_status', 'aadhar_number', 'pan_number'];
-    const contactKeys = ['email', 'phone', 'street_address', 'street_address_2', 'city', 'state', 'postal_code', 'address_duration'];
+    const contactKeys = ['email', 'phone', 'street_address', 'street_address_2', 'city', 'state', 'postal_code', 'permanent_street_address', 'permanent_city', 'permanent_state', 'permanent_postal_code', 'is_permanent_same'];
     const employmentKeys = ['employer', 'occupation', 'experience_years', 'gross_monthly_income', 'annual_income', 'rent_mortgage', 'down_payment'];
     const loanKeys = ['desired_amount', 'loan_usage', 'comments', 'bank_references'];
 
@@ -132,6 +133,15 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
     if (user.account_holder_name) bankInfo['account_holder_name'] = user.account_holder_name;
     if (user.account_number) bankInfo['account_number'] = user.account_number;
     if (user.location_url) bankInfo['location_url'] = user.location_url;
+    
+    // Fallback labels for permanent address fields if they are missing from prettifyKey
+    const customLabels: Record<string, string> = {
+        permanent_street_address: 'Permanent Street Address',
+        permanent_city: 'Permanent City',
+        permanent_state: 'Permanent State',
+        permanent_postal_code: 'Permanent PIN Code',
+        is_permanent_same: 'Permanent Address same as current?'
+    };
 
     const isEmpty = Object.keys(formData).length === 0 && Object.keys(bankInfo).length === 0;
 
@@ -230,6 +240,20 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
                                         <Field label="State" value={contactInfo.state} />
                                         <Field label="PIN Code" value={contactInfo.postal_code} />
                                         <Field label="Address Duration" value={contactInfo.address_duration} />
+                                        
+                                        {/* Permanent Address Fields */}
+                                        <div className="col-span-2 pt-4 border-t border-slate-100/50 mt-2">
+                                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">Permanent Address</p>
+                                        </div>
+                                        <Field label="Is Same as Current?" value={contactInfo.is_permanent_same === true || contactInfo.is_permanent_same === 'true' ? 'Yes' : 'No'} />
+                                        {(contactInfo.is_permanent_same === false || contactInfo.is_permanent_same === 'false' || contactInfo.is_permanent_same === 0) && (
+                                            <>
+                                                <Field label="Permanent Street Address" value={contactInfo.permanent_street_address} />
+                                                <Field label="Permanent City" value={contactInfo.permanent_city} />
+                                                <Field label="Permanent State" value={contactInfo.permanent_state} />
+                                                <Field label="Permanent PIN Code" value={contactInfo.permanent_postal_code} />
+                                            </>
+                                        )}
                                     </div>
                                 </Section>
                             )}
