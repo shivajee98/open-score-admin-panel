@@ -246,8 +246,8 @@ export default function BarringSettings() {
 
             const payload = {
                 target_type: selectedTargetUserIds.length > 0 ? 'SPECIFIC_USER' : 'ALL_USERS',
-                target_user_id: selectedTargetUserIds.length === 1 ? selectedTargetUserIds[0] : null,
-                target_user_ids: selectedTargetUserIds.length > 1 ? selectedTargetUserIds : null,
+                target_user_id: selectedTargetUserIds.length > 0 ? selectedTargetUserIds[0] : null,
+                target_user_ids: selectedTargetUserIds.length > 0 ? selectedTargetUserIds : null,
                 user_category: selectedTargetUserIds.length === 0 ? tieredUserCategory : null,
                 rules: rules
             };
@@ -529,6 +529,7 @@ export default function BarringSettings() {
 
                 const payload = {
                     target_type: targetType,
+                    target_user_id: targetType === 'SPECIFIC_USER' ? assignedUserIds[0] : null,
                     target_user_ids: assignedUserIds,
                     user_category: userCategory,
                     rules: rulesToSave
