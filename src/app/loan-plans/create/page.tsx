@@ -18,7 +18,8 @@ interface TenureConfig {
     fees: FeeConfig[];
     allowed_frequencies: string[];
     cashback: Record<string, number>;
-    gst_rate?: number; // Added GST Rate
+    gst_rate?: number; // Legacy
+    other_fees_rate?: number;
 }
 
 const formatTenure = (days: number, type: string = 'months') => {
@@ -104,7 +105,7 @@ export default function CreateLoanPlan() {
                     ],
                     allowed_frequencies: ['MONTHLY'],
                     cashback: {},
-                    gst_rate: 18 // Default 18%
+                    other_fees_rate: 18 // Default 18%
                 }
             ]
         }));
@@ -453,7 +454,7 @@ export default function CreateLoanPlan() {
                         {formData.configurations.map((config, idx) => {
                             // Calculate Summary for Display
                             const totalFees = config.fees.reduce((acc, fee) => acc + (Number(fee.amount) || 0), 0);
-                            const estimatedGst = Math.round(totalFees * ((config.gst_rate ?? 18) / 100));
+                            const estimatedOtherFees = Math.round(totalFees * ((config.other_fees_rate ?? 18) / 100));
 
                             return (
                                 <div key={idx} className="bg-white p-6 rounded-xl border-2 border-slate-200 shadow-sm relative group">
@@ -481,13 +482,13 @@ export default function CreateLoanPlan() {
                                             />
                                         </div>
                                         <div className="md:col-span-1">
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">GST Rate (%)</label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Other Fees Rate (%)</label>
                                             <input
                                                 type="number"
-                                                value={config.gst_rate ?? ''}
+                                                value={config.other_fees_rate ?? ''}
                                                 onChange={(e) => {
                                                     const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                                                    updateConfig(idx, 'gst_rate', val);
+                                                    updateConfig(idx, 'other_fees_rate', val);
                                                 }}
                                                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800"
                                                 placeholder="18"
@@ -639,7 +640,7 @@ export default function CreateLoanPlan() {
                                         {/* Summary Display */}
                                         <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center text-xs font-bold text-slate-600">
                                             <span>Total Fees: ₹{totalFees}</span>
-                                            <span>+ Est. GST ({config.gst_rate ?? 18}%): ₹{isNaN(estimatedGst) ? 0 : estimatedGst}</span>
+                                            <span>+ Est. Other Fees ({config.other_fees_rate ?? 18}%): ₹{isNaN(estimatedOtherFees) ? 0 : estimatedOtherFees}</span>
                                         </div>
                                     </div>
                                 </div>
