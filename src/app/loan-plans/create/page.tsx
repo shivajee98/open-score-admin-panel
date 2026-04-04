@@ -79,7 +79,8 @@ export default function CreateLoanPlan() {
     const [userFilters, setUserFilters] = useState({
         min_loan_completed: '',
         min_loans_count: '',
-        search: ''
+        search: '',
+        account_type: ''
     });
     const [searching, setSearching] = useState(false);
     const [pincodeUsers, setPincodeUsers] = useState<any[]>([]);
@@ -168,6 +169,9 @@ export default function CreateLoanPlan() {
             const minCount = parseInt(userFilters.min_loans_count);
             if ((user.loans_count || 0) < minCount) return false;
         }
+
+        // Account Type Filter
+        if (userFilters.account_type && user.role !== userFilters.account_type) return false;
 
         return true;
     });
@@ -696,7 +700,7 @@ export default function CreateLoanPlan() {
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-3">Lock For Roles</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT', 'AGENT'].map(role => (
                                         <button
                                             key={role}
                                             type="button"
@@ -717,7 +721,7 @@ export default function CreateLoanPlan() {
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-3">Hide For Roles</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT', 'AGENT'].map(role => (
                                         <button
                                             key={role}
                                             type="button"
@@ -866,6 +870,40 @@ export default function CreateLoanPlan() {
                                         placeholder="Search by name, mobile number or business..."
                                     />
                                     <svg className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+
+                                {/* Account Type Filter */}
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mx-1">Account Type</label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {[
+                                            { label: 'All', value: '', color: 'slate' },
+                                            { label: 'Merchant', value: 'MERCHANT', color: 'blue' },
+                                            { label: 'Student', value: 'STUDENT', color: 'indigo' },
+                                            { label: 'Customer', value: 'CUSTOMER', color: 'emerald' },
+                                            { label: 'Agent', value: 'AGENT', color: 'rose' },
+                                        ].map(({ label, value, color }) => (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => setUserFilters({ ...userFilters, account_type: value })}
+                                                className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border-2 ${userFilters.account_type === value
+                                                    ? color === 'slate' ? 'bg-slate-800 text-white border-slate-800'
+                                                        : color === 'blue' ? 'bg-blue-600 text-white border-blue-600'
+                                                            : color === 'indigo' ? 'bg-indigo-600 text-white border-indigo-600'
+                                                                : color === 'emerald' ? 'bg-emerald-600 text-white border-emerald-600'
+                                                                    : 'bg-rose-600 text-white border-rose-600'
+                                                    : color === 'slate' ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                                                        : color === 'blue' ? 'bg-white text-blue-500 border-blue-200 hover:border-blue-400'
+                                                            : color === 'indigo' ? 'bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400'
+                                                                : color === 'emerald' ? 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
+                                                                    : 'bg-white text-rose-500 border-rose-200 hover:border-rose-400'
+                                                    } `}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {/* Mini Filters Row */}

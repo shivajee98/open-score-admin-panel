@@ -775,7 +775,7 @@ export default function EditLoanPlan() {
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-3">Lock For Roles</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT', 'AGENT'].map(role => (
                                         <button
                                             key={role}
                                             type="button"
@@ -796,7 +796,7 @@ export default function EditLoanPlan() {
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-3">Hide For Roles</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(role => (
+                                    {['CUSTOMER', 'MERCHANT', 'STUDENT', 'AGENT'].map(role => (
                                         <button
                                             key={role}
                                             type="button"
@@ -1040,6 +1040,7 @@ export default function EditLoanPlan() {
                                             { label: 'Merchant', value: 'MERCHANT', color: 'blue' },
                                             { label: 'Student', value: 'STUDENT', color: 'indigo' },
                                             { label: 'Customer', value: 'CUSTOMER', color: 'emerald' },
+                                            { label: 'Agent', value: 'AGENT', color: 'rose' },
                                         ].map(({ label, value, color }) => (
                                             <button
                                                 key={value}
@@ -1049,12 +1050,14 @@ export default function EditLoanPlan() {
                                                     ? color === 'slate' ? 'bg-slate-800 text-white border-slate-800'
                                                         : color === 'blue' ? 'bg-blue-600 text-white border-blue-600'
                                                             : color === 'indigo' ? 'bg-indigo-600 text-white border-indigo-600'
-                                                                : 'bg-emerald-600 text-white border-emerald-600'
+                                                                : color === 'emerald' ? 'bg-emerald-600 text-white border-emerald-600'
+                                                                    : 'bg-rose-600 text-white border-rose-600'
                                                     : color === 'slate' ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
                                                         : color === 'blue' ? 'bg-white text-blue-500 border-blue-200 hover:border-blue-400'
                                                             : color === 'indigo' ? 'bg-white text-indigo-500 border-indigo-200 hover:border-indigo-400'
-                                                                : 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
-                                                    }`}
+                                                                : color === 'emerald' ? 'bg-white text-emerald-500 border-emerald-200 hover:border-emerald-400'
+                                                                    : 'bg-white text-rose-500 border-rose-200 hover:border-rose-400'
+                                                    } `}
                                             >
                                                 {label}
                                             </button>
