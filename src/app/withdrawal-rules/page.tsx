@@ -32,7 +32,6 @@ export default function WithdrawalRulesPage() {
         max_withdrawal_amount: '',
         min_spend_amount: '',
         min_txn_count: '',
-        daily_limit: '',
         daily_txn_limit: '',
         target_mode: 'ALL', // ALL | SPECIFIC
         target_users_input: '', // Comma separated IDs for now
@@ -122,7 +121,6 @@ export default function WithdrawalRulesPage() {
                 max_withdrawal_amount: parseFloat(formData.max_withdrawal_amount || '0'),
                 min_spend_amount: parseFloat(formData.min_spend_amount || '0'),
                 min_txn_count: parseInt(formData.min_txn_count || '0'),
-                daily_limit: formData.daily_limit ? parseFloat(formData.daily_limit) : null,
                 daily_txn_limit: formData.daily_txn_limit ? parseInt(formData.daily_txn_limit) : null,
                 target_users: formData.target_mode === 'ALL' ? ['*'] : formData.target_users_input.split(',').map(s => s.trim()).filter(Boolean),
                 is_active: formData.is_active
@@ -147,7 +145,6 @@ export default function WithdrawalRulesPage() {
                 max_withdrawal_amount: '',
                 min_spend_amount: '',
                 min_txn_count: '',
-                daily_limit: '',
                 daily_txn_limit: '',
                 target_mode: 'ALL',
                 target_users_input: '',
@@ -166,7 +163,6 @@ export default function WithdrawalRulesPage() {
             max_withdrawal_amount: rule.max_withdrawal_amount?.toString() || '',
             min_spend_amount: rule.min_spend_amount?.toString() || '',
             min_txn_count: rule.min_txn_count?.toString() || '',
-            daily_limit: rule.daily_limit?.toString() || '',
             daily_txn_limit: rule.daily_txn_limit?.toString() || '',
             target_mode: rule.target_users?.includes('*') ? 'ALL' : 'SPECIFIC',
             target_users_input: rule.target_users?.includes('*') ? '' : rule.target_users.join(','),
@@ -225,8 +221,8 @@ export default function WithdrawalRulesPage() {
                                             <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Withdrawal Range: ₹{rule.min_withdrawal_amount} - ₹{rule.max_withdrawal_amount}</span>
                                         </div>
                                         <h3 className="text-lg font-black text-slate-900">
-                                            {rule.daily_limit ? `Daily Limit: ₹${rule.daily_limit}` : 'No Daily Limit'} 
-                                            {rule.daily_txn_limit && <span className="text-xs text-slate-400 font-bold ml-2">({rule.daily_txn_limit} Times/Day)</span>}
+                                            Daily Request Limit: {rule.daily_txn_limit || 'Unlimited'} 
+                                            {rule.daily_txn_limit && <span className="text-xs text-slate-400 font-bold ml-2">Times/Day</span>}
                                         </h3>
                                     </div>
                                 </div>
@@ -342,27 +338,15 @@ export default function WithdrawalRulesPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Daily Withdrawal Limit (₹)</label>
-                                        <input
-                                            type="number"
-                                            value={formData.daily_limit}
-                                            onChange={(e) => setFormData({ ...formData, daily_limit: e.target.value })}
-                                            placeholder="e.g. 1000"
-                                            className="w-full p-4 bg-indigo-50 text-indigo-900 rounded-2xl text-sm font-bold focus:outline-none placeholder:text-indigo-300"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Daily Request Limit</label>
-                                        <input
-                                            type="number"
-                                            value={formData.daily_txn_limit}
-                                            onChange={(e) => setFormData({ ...formData, daily_txn_limit: e.target.value })}
-                                            placeholder="e.g. 1"
-                                            className="w-full p-4 bg-indigo-50 text-indigo-900 rounded-2xl text-sm font-bold focus:outline-none placeholder:text-indigo-300"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Daily Request Limit</label>
+                                    <input
+                                        type="number"
+                                        value={formData.daily_txn_limit}
+                                        onChange={(e) => setFormData({ ...formData, daily_txn_limit: e.target.value })}
+                                        placeholder="e.g. 1"
+                                        className="w-full p-4 bg-indigo-50 text-indigo-900 rounded-2xl text-sm font-bold focus:outline-none placeholder:text-indigo-300"
+                                    />
                                 </div>
 
                                 <div>
