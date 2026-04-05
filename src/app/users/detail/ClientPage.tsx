@@ -904,31 +904,29 @@ export default function UserDetailsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="p-6">
-                                                    {tx.paid_to ? (
+                                                    {(tx.paid_to && tx.paid_to.role === 'MERCHANT') ? (
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black text-slate-500">
-                                                                {tx.paid_to.name?.[0] || '?'}
+                                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm border border-slate-50">
+                                                                {tx.paid_to.name?.[0] || 'M'}
                                                             </div>
                                                             <div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <p className="text-xs font-black text-slate-800">
-                                                                        {(tx.paid_to.role === 'MERCHANT' && tx.paid_to.business_name) ? tx.paid_to.business_name : tx.paid_to.name}
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <p className="text-sm font-black text-slate-900 italic">
+                                                                        {tx.paid_to.business_name || tx.paid_to.name}
                                                                     </p>
-                                                                    {tx.paid_to.role && (
-                                                                        <span className="text-[8px] px-1 bg-slate-100 text-slate-400 font-black rounded uppercase">
-                                                                            {tx.paid_to.role}
-                                                                        </span>
-                                                                    )}
+                                                                    <span className="text-[7px] px-1 bg-indigo-50 text-indigo-400 font-black rounded uppercase border border-indigo-100">
+                                                                        MERCHANT
+                                                                    </span>
                                                                 </div>
                                                                 <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                                    <Phone className="w-2 h-2" /> {tx.paid_to.mobile}
+                                                                    <Phone className="w-2.5 h-2.5" /> {tx.paid_to.mobile}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex items-center gap-2 opacity-50">
-                                                            <Shield size={14} className="text-slate-400" />
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal System</span>
+                                                        <div className="flex items-center gap-2 opacity-50 px-1">
+                                                            <Shield size={14} className="text-slate-300" />
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Core Transaction</span>
                                                         </div>
                                                     )}
                                                 </td>
