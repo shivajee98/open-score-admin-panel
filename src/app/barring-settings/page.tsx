@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { apiFetch } from '@/lib/api';
-import { Plus, Trash2, Edit2, AlertCircle, Search, User, CheckCircle, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Layers, Info, LayoutGrid, Banknote, X, XCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, AlertCircle, Search, User, Users, CheckCircle, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Layers, Info, LayoutGrid, Banknote, X, XCircle, Clock, Calendar, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BarringRule {
     id: number;
+    rule_name: string | null;
     target_type: string;
     target_user_id: number | null;
     user_category: string | null;
@@ -137,6 +138,10 @@ export default function BarringSettings() {
     const [selectedTieredLoanPlanId, setSelectedTieredLoanPlanId] = useState<any>('');
     const [selectedTargetUserIds, setSelectedTargetUserIds] = useState<number[]>([]);
     const [tieredUserCategory, setTieredUserCategory] = useState('CUSTOMER');
+    const [tieredRuleName, setTieredRuleName] = useState('');
+
+    // Rule Name for wizard
+    const [ruleName, setRuleName] = useState('');
 
     const categories = ['CUSTOMER', 'MERCHANT', 'STUDENT'];
 
@@ -160,16 +165,15 @@ export default function BarringSettings() {
             const data = await apiFetch('/admin/barring-rules');
             setRules(data);
             
-            // Group rules by target to display in list
-            const grouped = data.reduce((acc: any, rule: BarringRule) => {
-                // For Tiered Rules, we might want to keep them separate or group them
-                // For now, let's just use the existing grouping logic
+            // Phase 1: Group rules by individual target user
+            const byTarget: any = {};
+            data.forEach((rule: BarringRule) => {
                 const key = rule.target_type === 'ALL_USERS' 
                     ? `ALL_${rule.user_category}` 
                     : `USER_${rule.target_user_id}`;
                 
-                if (!acc[key]) {
-                    acc[key] = {
+                if (!byTarget[key]) {
+                    byTarget[key] = {
                         target_type: rule.target_type,
                         user_category: rule.user_category,
                         target_user_id: rule.target_user_id,
@@ -177,11 +181,52 @@ export default function BarringSettings() {
                         rules: []
                     };
                 }
-                acc[key].rules.push(rule);
-                return acc;
-            }, {});
+                byTarget[key].rules.push(rule);
+            });
+
+            // Phase 2: Merge groups with identical rule configurations
+            const merged: any = {};
+            Object.values(byTarget).forEach((group: any) => {
+                const fingerprint = group.rules
+                    .map((r: any) => `${r.rule_side}|${r.limit_type}|${r.limit_value}|${r.min_balance}|${r.business_nature}|${r.business_segment}|${r.loan_plan_id}|${r.is_total_cap}|${r.rule_name || ''}`)
+                    .sort()
+                    .join('::');
+                
+                const mergeKey = group.target_type === 'ALL_USERS'
+                    ? `ALL_${group.user_category}_${fingerprint}`
+                    : `SPECIFIC_${fingerprint}`;
+                
+                if (!merged[mergeKey]) {
+                    merged[mergeKey] = {
+                        target_type: group.target_type,
+                        user_category: group.user_category,
+                        target_user_ids: [],
+                        targetUsers: [],
+                        rules: group.rules,
+                        allRules: [],
+                        rule_name: group.rules[0]?.rule_name || null,
+                        created_at: group.rules[0]?.created_at,
+                        updated_at: group.rules[0]?.updated_at,
+                    };
+                }
+                
+                if (group.target_type === 'SPECIFIC_USER') {
+                    merged[mergeKey].target_user_ids.push(group.target_user_id);
+                    if (group.targetUser) {
+                        merged[mergeKey].targetUsers.push(group.targetUser);
+                    }
+                }
+                merged[mergeKey].allRules.push(...group.rules);
+                // Keep latest updated_at
+                if (group.rules[0]?.updated_at > merged[mergeKey].updated_at) {
+                    merged[mergeKey].updated_at = group.rules[0]?.updated_at;
+                }
+                if (group.rules[0]?.created_at < merged[mergeKey].created_at) {
+                    merged[mergeKey].created_at = group.rules[0]?.created_at;
+                }
+            });
             
-            setGroupedTargets(Object.values(grouped));
+            setGroupedTargets(Object.values(merged));
         } catch (error) {
             toast.error("Failed to load rules");
         } finally {
@@ -245,6 +290,7 @@ export default function BarringSettings() {
             }));
 
             const payload = {
+                rule_name: tieredRuleName || null,
                 target_type: selectedTargetUserIds.length > 0 ? 'SPECIFIC_USER' : 'ALL_USERS',
                 target_user_id: selectedTargetUserIds.length > 0 ? selectedTargetUserIds[0] : null,
                 target_user_ids: selectedTargetUserIds.length > 0 ? selectedTargetUserIds : null,
@@ -263,6 +309,7 @@ export default function BarringSettings() {
             setSelectedTieredLoanPlanId('');
             setTieredTiers([{ minBalance: '0', spendPercentage: '0' }]);
             setSelectedTargetUserIds([]);
+            setTieredRuleName('');
             fetchRules();
         } catch (e: any) {
             toast.error(e.message || 'Failed to save capacity rules');
@@ -359,6 +406,7 @@ export default function BarringSettings() {
         initEmptyRules();
         setWizardStep(1);
         setSaveSuccess(false);
+        setRuleName('');
         setIsWizardOpen(true);
     };
 
@@ -381,9 +429,10 @@ export default function BarringSettings() {
             })));
             setSelectedTieredLoanPlanId(targetData.rules[0].loan_plan_id || '');
             setTieredUserCategory(targetData.user_category || 'CUSTOMER');
+            setTieredRuleName(targetData.rule_name || '');
             
             if (targetData.target_type === 'SPECIFIC_USER') {
-                setSelectedTargetUserIds([targetData.target_user_id]);
+                setSelectedTargetUserIds(targetData.target_user_ids || []);
             } else {
                 setSelectedTargetUserIds([]);
             }
@@ -397,8 +446,8 @@ export default function BarringSettings() {
             setUserCategory(targetData.user_category);
             setAssignedUserIds([]);
         } else {
-            setSelectedUser(targetData.targetUser);
-            setAssignedUserIds([targetData.target_user_id]);
+            setSelectedUser(targetData.targetUsers?.[0] || null);
+            setAssignedUserIds(targetData.target_user_ids || []);
         }
         
         // Populate existing rules
@@ -415,7 +464,7 @@ export default function BarringSettings() {
                 const initialRSR: any = {};
                 const targetKey = targetData.target_type === 'ALL_USERS' 
                     ? `ALL_${targetData.user_category}` 
-                    : `USER_${targetData.target_user_id}`;
+                    : `USER_${targetData.target_user_ids?.[0]}`;
                 
                 const globalRule = targetData.rules.find((r: any) => !r.allowed_merchants || r.allowed_merchants.length === 0);
                 const senderRules = targetData.rules.filter((r: any) => r.allowed_merchants && r.allowed_merchants.length > 0);
@@ -457,6 +506,7 @@ export default function BarringSettings() {
         
         setWizardStep(2);
         setSaveSuccess(false);
+        setRuleName(targetData.rule_name || '');
         setIsWizardOpen(true);
     };
 
@@ -474,17 +524,96 @@ export default function BarringSettings() {
     };
 
     const handleDeleteTarget = async (targetData: any) => {
-        if (!confirm('Are you sure you want to delete all rules for this target?')) return;
+        const userCount = targetData.target_user_ids?.length || 0;
+        const msg = userCount > 1 
+            ? `Delete rules for ${userCount} users in this group?` 
+            : 'Are you sure you want to delete all rules for this target?';
+        if (!confirm(msg)) return;
         
         try {
-            // Delete each rule associated with this target
-            for (const rule of targetData.rules) {
+            // Delete ALL rules across all users in this merged group
+            const rulesToDelete = targetData.allRules || targetData.rules;
+            for (const rule of rulesToDelete) {
                 await apiFetch(`/admin/barring-rules/${rule.id}`, { method: 'DELETE' });
             }
             toast.success('Rules deleted successfully');
             fetchRules();
         } catch (error: any) {
             toast.error(error.message || 'Failed to delete rules');
+        }
+    };
+
+    const formatDate = (dateStr: string | null) => {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+    };
+
+    const formatTime = (dateStr: string | null) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    };
+
+    const getRuleLabel = (group: any) => {
+        const firstRule = group.rules[0];
+        if (!firstRule) return 'Unknown Rule';
+        const isTiered = group.rules.every((r: any) => r.limit_type === 'PERCENTAGE_OF_WALLET' && !r.business_nature);
+        if (isTiered && group.rules.length > 1) return 'Tiered Capacity';
+        if (firstRule.is_total_cap) return 'Total Volume Cap';
+        if (firstRule.business_segment) return `${firstRule.business_nature} > ${firstRule.business_segment}`;
+        if (firstRule.business_nature) return firstRule.business_nature;
+        return 'Global / Generic';
+    };
+
+    const handleDuplicateGroup = (group: any) => {
+        // Detect if tiered capacity
+        const isTiered = group.rules.length > 0 && 
+            group.rules.every((r: any) => 
+                r.rule_side === 'SENDER' && 
+                !r.business_nature && 
+                !r.business_segment && 
+                r.limit_type === 'PERCENTAGE_OF_WALLET'
+            );
+
+        if (isTiered) {
+            setTieredTiers(group.rules.map((r: any) => ({
+                minBalance: String(r.min_balance),
+                spendPercentage: String(r.limit_value)
+            })));
+            setSelectedTieredLoanPlanId(group.rules[0].loan_plan_id || '');
+            setTieredUserCategory(group.user_category || 'CUSTOMER');
+            setTieredRuleName((group.rule_name || '') + ' (Copy)');
+            // Clear users - this is the key difference from edit
+            setSelectedTargetUserIds([]);
+            setCapacityModal(true);
+        } else {
+            // For wizard-style rules
+            setTargetType('ALL_USERS');
+            setUserCategory(group.user_category || 'CUSTOMER');
+            setAssignedUserIds([]);
+            setRuleName((group.rule_name || '') + ' (Copy)');
+
+            initEmptyRules();
+            const firstRule = group.rules[0];
+            if (firstRule) {
+                setRuleSide(firstRule.rule_side || 'SENDER');
+                setSelectedLoanPlanId(firstRule.loan_plan_id);
+                setMinBalance(String(firstRule.min_balance || '0'));
+                setMaxReceivePerUser(String(firstRule.max_receive_per_user || ''));
+            }
+            const newForms = { ...ruleForms };
+            const expanded: string[] = [];
+            group.rules.forEach((r: BarringRule) => {
+                const key = `${r.business_nature}:${r.business_segment}`;
+                newForms[key] = { enabled: true, limit_type: r.limit_type, limit_value: r.limit_value };
+                if (r.business_nature) expanded.push(r.business_nature);
+            });
+            setRuleForms(newForms);
+            setExpandedCats(Array.from(new Set(expanded)));
+            setWizardStep(1); // Start at step 1 so they pick new users
+            setSaveSuccess(false);
+            setIsWizardOpen(true);
         }
     };
 
@@ -557,6 +686,7 @@ export default function BarringSettings() {
                 }
 
                 const payload = {
+                    rule_name: ruleName || null,
                     target_type: targetType,
                     target_user_id: targetType === 'SPECIFIC_USER' ? assignedUserIds[0] : null,
                     target_user_ids: assignedUserIds,
@@ -660,100 +790,97 @@ export default function BarringSettings() {
                     <p className="text-slate-500 mt-2">Create targeted rules to control user expenses.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {groupedTargets.map((group, idx) => (
-                        <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
-                            <div className="flex bg-slate-50 border-b border-slate-100 p-4 items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${group.rules[0]?.rule_side === 'RECEIVER' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                                        <User className="w-5 h-5" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {groupedTargets.map((group: any, idx: number) => {
+                        const isReceiver = group.rules[0]?.rule_side === 'RECEIVER';
+                        const userCount = group.target_user_ids?.length || 0;
+                        const targetLabel = group.target_type === 'ALL_USERS'
+                            ? `All ${group.user_category}s`
+                            : userCount > 1 
+                                ? `${userCount} Users` 
+                                : (group.targetUsers?.[0]?.name || 'Specific User');
+
+                        return (
+                            <div 
+                                key={idx} 
+                                className="bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-slate-300 transition-colors group/card"
+                            >
+                                {/* Compact Header Row */}
+                                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-50">
+                                    <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${isReceiver ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                                        {userCount > 1 ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
                                     </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-slate-800 text-sm">
-                                                {group.target_type === 'ALL_USERS' 
-                                                    ? `ALL ${group.user_category}S`
-                                                    : group.targetUser?.name || 'Specific User'
-                                                }
-                                            </h3>
-                                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase ${group.rules[0]?.rule_side === 'RECEIVER' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                {group.rules[0]?.rule_side || 'SENDER'}
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[11px] font-bold text-slate-800 truncate">{targetLabel}</span>
+                                            <span className={`text-[7px] font-black px-1 py-px rounded uppercase shrink-0 ${isReceiver ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                {group.rules[0]?.rule_side || 'S'}
                                             </span>
                                         </div>
-                                        {group.target_type === 'SPECIFIC_USER' && (
-                                            <p className="text-xs text-slate-500">{group.targetUser?.mobile_number}</p>
-                                        )}
-                                        {group.rules[0]?.loanPlan && (
-                                            <p className="text-[10px] text-blue-600 font-bold">Plan: {group.rules[0].loanPlan.name}</p>
-                                        )}
-                                        {group.rules[0]?.min_balance > 0 && (
-                                            <p className="text-[10px] text-orange-600 font-bold">Balance below ₹{group.rules[0].min_balance}</p>
-                                        )}
-                                        {group.rules[0]?.rule_side === 'RECEIVER' && group.rules[0]?.max_receive_per_user && (
-                                            <p className="text-[10px] text-emerald-600 font-bold">Capacity: ₹{group.rules[0].max_receive_per_user}/user</p>
-                                        )}
-                                        {group.rules.some((r: any) => r.is_total_cap) && (
-                                            <p className="text-[10px] text-blue-600 font-black uppercase tracking-tighter">Total Cap: ₹{group.rules.find((r: any) => r.is_total_cap).limit_value}</p>
+                                        {group.rule_name && (
+                                            <p className="text-[9px] text-blue-500 font-bold truncate" title={group.rule_name}>{group.rule_name}</p>
                                         )}
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div className="p-4 bg-white">
-                                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Active Rules ({group.rules.length})</h4>
-                                <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                                    {group.rules.map((r: any) => (
-                                        <div key={r.id} className={`p-3 rounded-lg border space-y-2 ${r.is_total_cap ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex flex-col truncate pr-2">
-                                                    <span className={`text-sm font-bold truncate ${r.is_total_cap ? 'text-white' : 'text-slate-700'}`}>
-                                                        {r.is_total_cap ? 'DAILY TOTAL VOLUME CAP' : (r.business_segment 
-                                                            ? `${r.business_nature} > ${r.business_segment}` 
-                                                            : (r.business_nature || 'Generic / Global'))
-                                                        }
-                                                    </span>
-                                                </div>
-                                                <div className="text-right flex-shrink-0">
-                                                    <span className={`text-xs font-black ${r.is_total_cap ? 'text-blue-100' : 'text-blue-600'}`}>
-                                                        {r.limit_type === 'PERCENTAGE_OF_WALLET' ? `${r.limit_value}%` : `₹${r.limit_value}`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            
-                                            {(r.loan_plan_id || r.min_balance > 0 || r.allowed_merchants?.length > 0) && (
-                                                <div className={`flex flex-wrap gap-2 pt-1 border-t mt-1 ${r.is_total_cap ? 'border-white/20' : 'border-slate-200/50'}`}>
-                                                    {r.loanPlan && (
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${r.is_total_cap ? 'bg-white/10 text-white border-white/20' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                                            Plan: {r.loanPlan.name}
-                                                        </span>
-                                                    )}
-                                                    {r.min_balance > 0 && (
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${r.is_total_cap ? 'bg-white/10 text-white border-white/20' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                                            Min Bal: ₹{r.min_balance}
-                                                        </span>
-                                                    )}
-                                                    {r.allowed_merchants?.length > 0 && (
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${r.is_total_cap ? 'bg-white/10 text-white border-white/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                                                            {r.allowed_merchants.length} Mapped Senders
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+
+                                {/* Meta Row */}
+                                <div className="grid grid-cols-3 gap-0 px-3 py-1.5 text-center bg-slate-50/50">
+                                    <div>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase">Rules</p>
+                                        <p className="text-[11px] font-black text-slate-700">{group.rules.length}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase">Users</p>
+                                        <p className={`text-[11px] font-black ${userCount > 1 ? 'text-blue-600' : 'text-slate-500'}`}>
+                                            {group.target_type === 'ALL_USERS' ? '∞' : userCount}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase">Type</p>
+                                        <p className="text-[9px] font-bold text-slate-600 truncate">{getRuleLabel(group)}</p>
+                                    </div>
+                                </div>
+
+                                {/* User names preview */}
+                                {userCount > 0 && (
+                                    <div className="px-3 py-1 border-t border-slate-50">
+                                        <p className="text-[9px] text-slate-400 truncate">
+                                            {group.targetUsers.slice(0, 2).map((u: any) => u.name).join(', ')}
+                                            {userCount > 2 && ` +${userCount - 2}`}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Date + Actions */}
+                                <div className="flex items-center justify-between px-3 py-1.5 border-t border-slate-100 bg-slate-50/30">
+                                    <span className="text-[9px] text-slate-400">{formatDate(group.created_at)}</span>
+                                    <div className="flex gap-1 opacity-50 group-hover/card:opacity-100 transition-opacity">
+                                        <button 
+                                            onClick={() => handleOpenWizardForEdit(group)} 
+                                            title="Edit" 
+                                            className="p-1 text-slate-400 hover:text-blue-600 rounded transition"
+                                        >
+                                            <Edit2 className="w-3 h-3" />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDuplicateGroup(group)} 
+                                            title="Duplicate without users" 
+                                            className="p-1 text-slate-400 hover:text-violet-600 rounded transition"
+                                        >
+                                            <Copy className="w-3 h-3" />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteTarget(group)} 
+                                            title="Delete" 
+                                            className="p-1 text-slate-400 hover:text-red-500 rounded transition"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
-                                <button onClick={() => handleOpenWizardForEdit(group)} className="px-3 py-1.5 text-sm bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-1 font-semibold transition">
-                                    <Edit2 className="w-3.5 h-3.5" /> Edit
-                                </button>
-                                <button onClick={() => handleDeleteTarget(group)} className="px-3 py-1.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg flex items-center gap-1 font-semibold transition">
-                                    <Trash2 className="w-3.5 h-3.5" /> Remove
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -792,6 +919,18 @@ export default function BarringSettings() {
                                         <div className="text-center">
                                             <h2 className="text-2xl font-bold text-slate-800">Rule Type & Target</h2>
                                             <p className="text-slate-500 mt-2">Define the nature of the rule and who it applies to.</p>
+                                        </div>
+
+                                        {/* Rule Name */}
+                                        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Rule Name <span className="text-slate-400 font-medium normal-case">(optional, like a policy name)</span></label>
+                                            <input 
+                                                type="text" 
+                                                value={ruleName} 
+                                                onChange={(e) => setRuleName(e.target.value)}
+                                                placeholder="e.g. Student Daily Cap, Merchant Tier-B"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-4 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder:font-medium placeholder:text-slate-300"
+                                            />
                                         </div>
 
                                         {/* NEW: Rule Side Selection */}
@@ -912,6 +1051,33 @@ export default function BarringSettings() {
                                                 </div>
 
                                                 <div className="space-y-3">
+                                                    {/* Show currently selected users (useful in edit mode) */}
+                                                    {assignedUserIds.length > 0 && (
+                                                        <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 space-y-1.5">
+                                                            <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Selected ({assignedUserIds.length})</p>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {assignedUserIds.map(id => {
+                                                                    const u = targetableUsers.find(u => u.id === id);
+                                                                    return (
+                                                                        <span 
+                                                                            key={id} 
+                                                                            className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded-lg text-[10px] font-bold text-slate-700 group/chip"
+                                                                        >
+                                                                            {u?.name || `User #${id}`}
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={() => toggleUser(id)} 
+                                                                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex justify-between items-center bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
                                                         <div className="flex flex-col">
                                                             <span className="text-[10px] font-black text-slate-500 uppercase">
@@ -1358,6 +1524,18 @@ export default function BarringSettings() {
 
                         <div className="p-6 overflow-y-auto space-y-8 flex-1">
                             <form onSubmit={handleSaveTieredRules} className="space-y-6">
+                                {/* Rule Name */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Rule Name <span className="text-slate-400 font-medium normal-case">(optional, like a policy name)</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={tieredRuleName} 
+                                        onChange={(e) => setTieredRuleName(e.target.value)}
+                                        placeholder="e.g. Conservative Spend Policy, Student Tier A"
+                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all placeholder:font-medium placeholder:text-slate-300"
+                                    />
+                                </div>
+
                                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Configure Rule Parameters</h4>
                                 
                                 <div className="grid grid-cols-2 gap-6">
@@ -1515,17 +1693,36 @@ export default function BarringSettings() {
                                     </div>
 
                                     {selectedTargetUserIds.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 pt-2">
-                                            <span className="text-[10px] font-black text-emerald-600 uppercase bg-emerald-50 px-2 py-1 rounded-md">
-                                                {selectedTargetUserIds.length} Total Users Selected
-                                            </span>
-                                            <button 
-                                                type="button" 
-                                                onClick={() => setSelectedTargetUserIds([])}
-                                                className="text-[10px] font-black text-red-500 uppercase hover:underline"
-                                            >
-                                                Unselect All
-                                            </button>
+                                        <div className="space-y-2 pt-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-emerald-600 uppercase">
+                                                    {selectedTargetUserIds.length} Users Selected
+                                                </span>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setSelectedTargetUserIds([])}
+                                                    className="text-[10px] font-black text-red-500 uppercase hover:underline"
+                                                >
+                                                    Unselect All
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {selectedTargetUserIds.map(uid => {
+                                                    const user = targetableUsers.find((u: any) => u.id === uid);
+                                                    return (
+                                                        <span key={uid} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-md border border-emerald-100">
+                                                            {user?.name || `#${uid}`}
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={(e) => { e.stopPropagation(); setSelectedTargetUserIds(prev => prev.filter(id => id !== uid)); }}
+                                                                className="text-emerald-400 hover:text-red-500 transition"
+                                                            >
+                                                                <X size={10} />
+                                                            </button>
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
