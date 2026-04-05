@@ -521,6 +521,8 @@ export default function MerchantsPage() {
         min_signup: '',
         max_signup: '',
         pincode: '',
+        is_qr_mapped: '',
+        agent_search: '',
         sort_by: 'created_at',
         sort_order: 'desc'
     });
@@ -920,6 +922,33 @@ export default function MerchantsPage() {
                                     value={filters.pincode}
                                     onChange={(e) => {setFilters({ ...filters, pincode: e.target.value }); setCurrentPage(1);}}
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">QR Onboarded</label>
+                                <select
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={filters.is_qr_mapped}
+                                    onChange={(e) => {setFilters({ ...filters, is_qr_mapped: e.target.value }); setCurrentPage(1);}}
+                                >
+                                    <option value="">All Status</option>
+                                    <option value="yes">Yes (Mapped)</option>
+                                    <option value="no">No (Unmapped)</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Agent Search (Mapped By)</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Agent Name or Code"
+                                        className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.agent_search}
+                                        onChange={(e) => {setFilters({ ...filters, agent_search: e.target.value }); setCurrentPage(1);}}
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
