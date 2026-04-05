@@ -45,6 +45,7 @@ export default function LoanApprovals() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [reuploadFields, setReuploadFields] = useState<string[]>([]);
 
     // Initial query param setup
     useEffect(() => {
@@ -710,20 +711,44 @@ export default function LoanApprovals() {
                                     <h2 className="text-xl font-black text-slate-900">KYC Form Details</h2>
                                     <p className="text-sm text-slate-500">Submitted on {new Date(previewLoan.updated_at).toLocaleDateString()}</p>
                                 </div>
-                                <button onClick={() => setPreviewLoan(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900">
+                                <button 
+                                    onClick={() => { setPreviewLoan(null); setReuploadFields([]); }} 
+                                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900"
+                                >
                                     <BadgeCheck className="w-6 h-6 rotate-45" />
                                 </button>
                             </div>
                             <div className="p-8 space-y-8">
                                 {previewLoan.form_data ? (
+                                    <>
                                     <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                                         {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => {
                                             const isImageObject = value && typeof value === 'object' && value.url;
+                                            const isSelected = reuploadFields.includes(key);
                                             return (
                                                 <div key={key} className={isImageObject ? "col-span-2 sm:col-span-1" : ""}>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{key.replace(/_/g, ' ')}</p>
+                                                        {isImageObject && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setReuploadFields(prev => 
+                                                                        prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                                                    );
+                                                                }}
+                                                                className={`text-[9px] font-black uppercase tracking-tighter transition-colors px-2 py-0.5 rounded-md border ${
+                                                                    isSelected 
+                                                                    ? "bg-rose-500 text-white border-rose-500 hover:bg-rose-600" 
+                                                                    : "text-rose-500 border-rose-100 hover:bg-rose-50"
+                                                                }`}
+                                                            >
+                                                                {isSelected ? 'Selected' : 'Select for Reupload'}
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                     {isImageObject ? (
-                                                        <div className="space-y-2">
+                                                        <div className={`space-y-2 p-1 rounded-2xl transition-all ${isSelected ? 'ring-2 ring-rose-500 ring-offset-2' : ''}`}>
                                                             <a href={value.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
                                                                 <img src={value.url} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                                                                 <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
@@ -741,10 +766,35 @@ export default function LoanApprovals() {
                                                         <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
                                                     )}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
+                                        );
+                                    })}
+                                </div>
+                                {reuploadFields.length > 0 && (
+                                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm(`Ask user to re-upload ${reuploadFields.length} field(s)?`)) return;
+                                                try {
+                                                    await apiFetch(`/admin/loans/${previewLoan.id}/request-reupload`, {
+                                                        method: 'POST',
+                                                        body: JSON.stringify({ fields: reuploadFields })
+                                                    });
+                                                    alert('Re-upload request sent!');
+                                                    setPreviewLoan(null);
+                                                    setReuploadFields([]);
+                                                    loadLoans();
+                                                    } catch (err) {
+                                                        alert('Failed to send request');
+                                                    }
+                                                }}
+                                                className="px-6 py-3 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all font-mono"
+                                            >
+                                                Submit Re-upload Request ({reuploadFields.length})
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                        ) : (
                                     <p className="text-slate-500 italic">No form data submitted.</p>
                                 )}
                             </div>

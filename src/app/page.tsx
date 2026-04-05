@@ -27,7 +27,9 @@ export default function AdminDashboard() {
         pendingLoans: 0,
         recentRepayments: [],
         totalReferralPaid: 0,
-        totalQrDeposits: 0
+        totalQrDeposits: 0,
+        totalVendorsPendingDues: 0,
+        totalAgentsPendingDues: 0
     });
     const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [pendingRepayments, setPendingRepayments] = useState<any[]>([]);
@@ -78,7 +80,9 @@ export default function AdminDashboard() {
                     : 0,
                 totalVendors: analytics?.total_vendors || 0,
                 totalVendorsTransactionSum: analytics?.total_vendors_transaction_sum || 0,
-                totalAgents: analytics?.total_agents || 0
+                totalVendorsPendingDues: analytics?.total_vendors_pending_dues || 0,
+                totalAgents: analytics?.total_agents || 0,
+                totalAgentsPendingDues: analytics?.total_agents_pending_dues || 0
             } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
@@ -202,9 +206,12 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Vendors Overview</p>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-xl font-black text-slate-900">{(stats as any).totalVendors || 0}</p>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Sub-Users</span>
+                        <div className="flex flex-col">
+                            <div className="flex items-baseline gap-2">
+                                <p className="text-xl font-black text-slate-900">{(stats as any).totalVendors || 0}</p>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">Sub-Users</span>
+                            </div>
+                            <p className="text-[10px] font-black text-rose-600 mt-0.5">₹{(stats as any).totalVendorsPendingDues?.toLocaleString('en-IN') || 0} Pending</p>
                         </div>
                     </div>
                 </div>
@@ -215,7 +222,10 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Field Agents</p>
-                        <p className="text-xl font-black text-slate-900">{(stats as any).totalAgents || 0}</p>
+                        <div className="flex flex-col">
+                            <p className="text-xl font-black text-slate-900">{(stats as any).totalAgents || 0}</p>
+                            <p className="text-[10px] font-black text-violet-600 mt-0.5">₹{(stats as any).totalAgentsPendingDues?.toLocaleString('en-IN') || 0} Pending</p>
+                        </div>
                     </div>
                 </div>
 

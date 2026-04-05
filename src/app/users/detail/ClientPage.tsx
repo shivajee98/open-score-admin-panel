@@ -8,7 +8,8 @@ import {
     User, Wallet, History, CreditCard, ArrowLeft,
     Calendar, Shield, ShieldAlert, CheckCircle2,
     Clock, BadgeCheck, Phone, Mail, Building2, MapPin,
-    ArrowUpRight, ArrowDownLeft, Download, Users, X
+    ArrowUpRight, ArrowDownLeft, Download, Users, X,
+    Search, Filter, ChevronLeft, ChevronRight, FileSpreadsheet
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import Link from 'next/link';
@@ -29,6 +30,63 @@ export default function UserDetailsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editFormData, setEditFormData] = useState<any>({});
+
+    // Transaction States
+    const [txSearch, setTxSearch] = useState('');
+    const [txRoleFilter, setTxRoleFilter] = useState('ALL');
+    const [txMinAmt, setTxMinAmt] = useState('');
+    const [txMaxAmt, setTxMaxAmt] = useState('');
+    const [txPage, setTxPage] = useState(1);
+    const TXS_PER_PAGE = 10;
+
+    // Filter Logic
+    const filteredTransactions = (data?.transactions || []).filter((tx: any) => {
+        const matchesSearch = txSearch === '' || 
+            tx.description?.toLowerCase().includes(txSearch.toLowerCase()) ||
+            tx.source_type?.toLowerCase().includes(txSearch.toLowerCase()) ||
+            tx.paid_to?.name?.toLowerCase().includes(txSearch.toLowerCase()) ||
+            tx.paid_to?.mobile?.includes(txSearch);
+
+        const matchesRole = txRoleFilter === 'ALL' || 
+                           (txRoleFilter === 'SYSTEM' ? !tx.paid_to : tx.paid_to?.role === txRoleFilter);
+        
+        const matchesAmt = (txMinAmt === '' || parseFloat(tx.amount) >= parseFloat(txMinAmt)) &&
+                         (txMaxAmt === '' || parseFloat(tx.amount) <= parseFloat(txMaxAmt));
+
+        return matchesSearch && matchesRole && matchesAmt;
+    });
+
+    const totalPages = Math.ceil(filteredTransactions.length / TXS_PER_PAGE);
+    const paginatedTransactions = filteredTransactions.slice((txPage - 1) * TXS_PER_PAGE, txPage * TXS_PER_PAGE);
+
+    const handleExportCSV = () => {
+        if (!data?.user || !data?.transactions) return;
+        
+        const headers = ["ID", "Date", "Type", "Source", "Amount", "Description", "Interaction Name", "Interaction Mobile", "Interaction Role"];
+        const rows = filteredTransactions.map((tx: any) => [
+            tx.id,
+            `"${new Date(tx.created_at).toLocaleString()}"`,
+            tx.type,
+            tx.source_type,
+            tx.amount,
+            `"${tx.description || ''}"`,
+            `"${tx.paid_to?.name || 'System'}"`,
+            `"${tx.paid_to?.mobile || '-'}"`,
+            tx.paid_to?.role || '-'
+        ]);
+
+        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `tx_${data.user.mobile_number}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Transaction report exported successfully");
+    };
 
     const loadData = async () => {
         try {
@@ -238,6 +296,14 @@ export default function UserDetailsPage() {
                                         user.status === 'ACTIVE' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
                                     )}>
                                         {user.status}
+                                    </span>
+                                    <span className={cn(
+                                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                        user.role === 'MERCHANT' ? "bg-indigo-100 text-indigo-700" : 
+                                        user.role === 'STUDENT' ? "bg-purple-100 text-purple-700" : 
+                                        user.role === 'AGENT' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                                    )}>
+                                        {user.role}
                                     </span>
                                 </div>
                                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
@@ -732,86 +798,184 @@ export default function UserDetailsPage() {
                                 )}
                             </div>
                         )}
-                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                            <div className="flex justify-between items-center px-2">
-                                <h3 className="text-lg font-black text-slate-900">Transaction Flow</h3>
-                                {!['ADMIN', 'SUPPORT', 'SUPPORT_AGENT', 'SYSTEM'].includes(user.role) && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-4 gap-4">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 italic">Financial Activity Trace</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                        Total Records Trace: {filteredTransactions.length}
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
                                     <button
-                                        onClick={() => toast.info("Preparing detailed statement for " + user.name)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+                                        onClick={handleExportCSV}
+                                        className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all"
                                     >
-                                        <Download className="w-3 h-3" /> Download Statement
+                                        <FileSpreadsheet className="w-4 h-4" /> Export Report
                                     </button>
-                                )}
+                                </div>
+                            </div>
+
+                            {/* Logic Filter Panel */}
+                            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-wrap items-center gap-6">
+                                <div className="flex-1 min-w-[280px] relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <input 
+                                        value={txSearch}
+                                        onChange={e => {setTxSearch(e.target.value); setTxPage(1);}}
+                                        placeholder="Search by name, ID or description..."
+                                        className="w-full pl-12 pr-6 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-100 transition-all"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type:</label>
+                                        <select 
+                                            value={txRoleFilter}
+                                            onChange={e => {setTxRoleFilter(e.target.value); setTxPage(1);}}
+                                            className="bg-slate-50 border-none rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 focus:ring-1 focus:ring-slate-100"
+                                        >
+                                            <option value="ALL">ALL ENTITIES</option>
+                                            <option value="MERCHANT">MERCHANTS</option>
+                                            <option value="CUSTOMER">CUSTOMERS</option>
+                                            <option value="STUDENT">STUDENTS</option>
+                                            <option value="SYSTEM">CORE SYSTEM</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Min Amount:</label>
+                                        <input 
+                                            type="number"
+                                            value={txMinAmt}
+                                            onChange={e => {setTxMinAmt(e.target.value); setTxPage(1);}}
+                                            className="w-24 bg-slate-50 border-none rounded-2xl px-4 py-3 text-[10px] font-black text-slate-900 focus:ring-1 focus:ring-slate-100"
+                                            placeholder="₹"
+                                        />
+                                    </div>
+                                    {(txSearch || txRoleFilter !== 'ALL' || txMinAmt) && (
+                                        <button 
+                                            onClick={() => {setTxSearch(''); setTxRoleFilter('ALL'); setTxMinAmt(''); setTxPage(1);}}
+                                            className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 px-4 py-3 rounded-2xl transition-all"
+                                        >
+                                            Clear Trace
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
                                 <table className="w-full text-left">
-                                    <thead className="bg-slate-50">
+                                    <thead className="bg-slate-50/50">
                                         <tr>
-                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity</th>
-                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity Trace</th>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Volume (₹)</th>
                                             <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Interaction</th>
                                             <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Timestamp</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {transactions.map((tx: any) => (
+                                        {paginatedTransactions.map((tx: any) => (
                                             <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn(
-                                                            "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
-                                                            tx.type === 'CREDIT' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                                                            "w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform",
+                                                            tx.type === 'CREDIT' ? "bg-emerald-50 text-emerald-600 shadow-emerald-50" : "bg-rose-50 text-rose-600 shadow-rose-50"
                                                         )}>
                                                             {tx.type === 'CREDIT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-slate-900 text-sm">
+                                                            <p className="font-black text-slate-900 text-sm italic">
                                                                 {(tx.source_type === 'MAINTENANCE_CHARGE' && tx.description?.match(/^\[(.*?)\]/)) 
                                                                     ? tx.description.match(/^\[(.*?)\]/)[1] 
                                                                     : tx.source_type.replace(/_/g, ' ')}
                                                             </p>
-                                                            <p className="text-[10px] font-medium text-slate-500">{tx.description?.replace(/^\[.*?\]\s*/, '')}</p>
+                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter opacity-70">{tx.description?.replace(/^\[.*?\]\s*/, '')}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-6">
                                                     <span className={cn(
-                                                        "font-black text-base",
+                                                        "font-black text-base flex flex-col",
                                                         tx.type === 'CREDIT' ? "text-emerald-600" : "text-rose-600"
                                                     )}>
                                                         {tx.type === 'CREDIT' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString('en-IN')}
+                                                        <span className="text-[8px] font-black uppercase opacity-40">TX #{tx.id}</span>
                                                     </span>
                                                 </td>
                                                 <td className="p-6">
                                                     {tx.paid_to ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black text-slate-500">
                                                                 {tx.paid_to.name?.[0] || '?'}
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs font-black text-slate-800">{tx.paid_to.business_name || tx.paid_to.name}</p>
-                                                                <p className="text-[10px] font-medium text-slate-400">{tx.paid_to.mobile}</p>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <p className="text-xs font-black text-slate-800">
+                                                                        {(tx.paid_to.role === 'MERCHANT' && tx.paid_to.business_name) ? tx.paid_to.business_name : tx.paid_to.name}
+                                                                    </p>
+                                                                    {tx.paid_to.role && (
+                                                                        <span className="text-[8px] px-1 bg-slate-100 text-slate-400 font-black rounded uppercase">
+                                                                            {tx.paid_to.role}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                                                    <Phone className="w-2 h-2" /> {tx.paid_to.mobile}
+                                                                </p>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System</span>
+                                                        <div className="flex items-center gap-2 opacity-50">
+                                                            <Shield size={14} className="text-slate-400" />
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal System</span>
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td className="p-6 text-right">
-                                                    <p className="text-xs font-bold text-slate-900">{new Date(tx.created_at).toLocaleDateString()}</p>
-                                                    <p className="text-[10px] font-medium text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</p>
+                                                    <div className="flex flex-col items-end">
+                                                        <p className="text-xs font-black text-slate-900">{new Date(tx.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase italic opacity-60">{new Date(tx.created_at).toLocaleTimeString()}</p>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
-                                        {transactions.length === 0 && (
+                                        {paginatedTransactions.length === 0 && (
                                             <tr>
-                                                <td colSpan={4} className="p-12 text-center text-slate-400 font-bold">No transactions found</td>
+                                                <td colSpan={4} className="p-20 text-center">
+                                                    <div className="flex flex-col items-center gap-4 opacity-30">
+                                                        <History size={48} className="text-slate-200" />
+                                                        <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No trace entities found for this query</p>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
+
+                                {/* Trace Pagination */}
+                                <div className="flex items-center justify-between p-8 bg-slate-50/50 border-t border-slate-100">
+                                    <div className="flex flex-col">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page Sequence</p>
+                                        <p className="text-[10px] font-bold text-slate-900">Index {txPage} of {totalPages || 1}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            disabled={txPage <= 1}
+                                            onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                                            className="w-12 h-12 bg-white text-slate-500 rounded-2xl flex items-center justify-center border border-slate-200 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50 active:scale-95"
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        <button
+                                            disabled={txPage >= totalPages}
+                                            onClick={() => setTxPage(p => Math.min(totalPages, p + 1))}
+                                            className="w-12 h-12 bg-white text-slate-500 rounded-2xl flex items-center justify-center border border-slate-200 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50 active:scale-95"
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
