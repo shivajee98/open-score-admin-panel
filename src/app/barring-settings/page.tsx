@@ -363,6 +363,35 @@ export default function BarringSettings() {
     };
 
     const handleOpenWizardForEdit = (targetData: any) => {
+        // Detect if this is a Tiered Capacity Rule Group 
+        // Created via "Manage Capacity Settings" (percentage based global rules)
+        const isTieredCapacity = targetData.rules.length > 0 && 
+            targetData.rules.every((r: any) => 
+                r.rule_side === 'SENDER' && 
+                !r.business_nature && 
+                !r.business_segment && 
+                r.limit_type === 'PERCENTAGE_OF_WALLET'
+            );
+
+        if (isTieredCapacity) {
+            // Populate Tiered Modal states
+            setTieredTiers(targetData.rules.map((r: any) => ({
+                minBalance: String(r.min_balance),
+                spendPercentage: String(r.limit_value)
+            })));
+            setSelectedTieredLoanPlanId(targetData.rules[0].loan_plan_id || '');
+            setTieredUserCategory(targetData.user_category || 'CUSTOMER');
+            
+            if (targetData.target_type === 'SPECIFIC_USER') {
+                setSelectedTargetUserIds([targetData.target_user_id]);
+            } else {
+                setSelectedTargetUserIds([]);
+            }
+            
+            setCapacityModal(true);
+            return;
+        }
+
         setTargetType(targetData.target_type);
         if (targetData.target_type === 'ALL_USERS') {
             setUserCategory(targetData.user_category);

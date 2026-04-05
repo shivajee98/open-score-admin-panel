@@ -10,8 +10,8 @@ interface KycAgent {
     id: number;
     name: string;
     mobile_number: string;
-    city_access: string;
-    pincode_access: string[];
+    city_access: string[] | null;
+    pincode_access: string[] | null;
     access_type: 'LOAN' | 'MERCHANT' | 'BOTH';
     status: 'ACTIVE' | 'SUSPENDED';
     score: number;
@@ -59,6 +59,7 @@ export default function KycAgentsPage() {
 
         const payload = {
             ...formData,
+            city_access: formData.city_access.split(',').map(p => p.trim()).filter(p => p.length > 0),
             pincode_access: formData.pincode_access.split(',').map(p => p.trim()).filter(p => p.length > 0)
         };
 
@@ -103,8 +104,8 @@ export default function KycAgentsPage() {
                 name: agent.name,
                 mobile_number: agent.mobile_number,
                 pin: '',
-                city_access: agent.city_access,
-                pincode_access: agent.pincode_access.join(', '),
+                city_access: (agent.city_access || []).join(', '),
+                pincode_access: (agent.pincode_access || []).join(', '),
                 access_type: agent.access_type
             });
         } else {
@@ -196,16 +197,26 @@ export default function KycAgentsPage() {
 
                                     <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Assigned Area</span>
-                                        <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                                            <MapPin size={14} className="text-rose-500" />
-                                            {agent.city_access}
-                                        </div>
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                            {agent.pincode_access.map(pc => (
-                                                <span key={pc} className="text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded-md font-mono text-slate-500">
+                                        <div className="flex flex-wrap gap-1 mb-2">
+                                            {(agent.pincode_access || []).map(pc => (
+                                                <span key={pc} className="text-sm bg-white border border-slate-200 px-2 py-0.5 rounded-lg font-mono font-black text-blue-600 shadow-sm">
                                                     {pc}
                                                 </span>
                                             ))}
+                                        </div>
+                                        <div className="flex items-center flex-wrap gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                            <MapPin size={10} className="text-slate-300 shrink-0" />
+                                            {(agent.city_access || []).length > 0 ? (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(agent.city_access || []).map(city => (
+                                                        <span key={city} className="bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md">
+                                                            {city}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                "General Access"
+                                            )}
                                         </div>
                                     </div>
 
@@ -268,10 +279,13 @@ export default function KycAgentsPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">City Access</label>
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">City Access (Optional)</label>
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter italic">Comma separated values</span>
+                                    </div>
                                     <div className="relative">
                                         <MapPin className="absolute left-4 top-4 text-slate-300" size={18} />
-                                        <input type="text" value={formData.city_access} onChange={e => setFormData({ ...formData, city_access: e.target.value })} className="w-full bg-slate-50 border border-slate-100 p-4 pl-12 rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all outline-none" placeholder="e.g. Delhi" required />
+                                        <input type="text" value={formData.city_access} onChange={e => setFormData({ ...formData, city_access: e.target.value })} className="w-full bg-slate-50 border border-slate-100 p-4 pl-12 rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all outline-none" placeholder="e.g. Indore, Bhopal" />
                                     </div>
                                 </div>
 
