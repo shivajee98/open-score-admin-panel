@@ -16,6 +16,7 @@ interface BarringRule {
     business_segment: string | null;
     rule_side: string;
     loan_plan_id: number | null;
+    day_number: number;
     min_balance: number;
     limit_type: string;
     limit_value: number;
@@ -94,6 +95,7 @@ export default function BarringSettings() {
     // New Barring Type State
     const [ruleSide, setRuleSide] = useState('SENDER'); 
     const [selectedLoanPlanId, setSelectedLoanPlanId] = useState<number | null>(null);
+    const [dayNumber, setDayNumber] = useState<string>('0');
     const [minBalance, setMinBalance] = useState<string>('0');
     const [maxReceivePerUser, setMaxReceivePerUser] = useState<string>('');
     const [loanPlans, setLoanPlans] = useState<LoanPlan[]>([]);
@@ -134,7 +136,7 @@ export default function BarringSettings() {
 
     // Tiered Capacity Rules States
     const [capacityModal, setCapacityModal] = useState(false);
-    const [tieredTiers, setTieredTiers] = useState([{ minBalance: '0', spendPercentage: '0' }]);
+    const [tieredTiers, setTieredTiers] = useState([{ dayNumber: '1', spendPercentage: '0' }]);
     const [selectedTieredLoanPlanId, setSelectedTieredLoanPlanId] = useState<any>('');
     const [selectedTargetUserIds, setSelectedTargetUserIds] = useState<number[]>([]);
     const [tieredUserCategory, setTieredUserCategory] = useState('CUSTOMER');
@@ -188,7 +190,7 @@ export default function BarringSettings() {
             const merged: any = {};
             Object.values(byTarget).forEach((group: any) => {
                 const fingerprint = group.rules
-                    .map((r: any) => `${r.rule_side}|${r.limit_type}|${r.limit_value}|${r.min_balance}|${r.business_nature}|${r.business_segment}|${r.loan_plan_id}|${r.is_total_cap}|${r.rule_name || ''}`)
+                    .map((r: any) => `${r.rule_side}|${r.limit_type}|${r.limit_value}|${r.min_balance}|${r.day_number}|${r.business_nature}|${r.business_segment}|${r.loan_plan_id}|${r.is_total_cap}|${r.rule_name || ''}`)
                     .sort()
                     .join('::');
                 
@@ -253,7 +255,17 @@ export default function BarringSettings() {
     };
 
     const addTieredTier = () => {
-        setTieredTiers([...tieredTiers, { minBalance: '', spendPercentage: '' }]);
+        const nextDay = tieredTiers.length > 0 ? (parseInt((tieredTiers[tieredTiers.length - 1] as any).dayNumber) || 0) + 1 : 1;
+        setTieredTiers([...tieredTiers, { dayNumber: String(nextDay), spendPercentage: '0' }]);
+    };
+
+    const handleOpenTieredCapacityModal = () => {
+        setTieredTiers([{ dayNumber: '1', spendPercentage: '0' }]);
+        setSelectedTieredLoanPlanId('');
+        setSelectedTargetUserIds([]);
+        setTieredUserCategory('CUSTOMER');
+        setTieredRuleName('');
+        setCapacityModal(true);
     };
 
     const removeTieredTier = (index: number) => {
@@ -269,12 +281,19 @@ export default function BarringSettings() {
     const handleSaveTieredRules = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Validate tiers
+        // Validate tiers for duplicates and valid numbers
+        const daySet = new Set();
         for (const tier of tieredTiers) {
-            if (isNaN(parseFloat(tier.minBalance)) || isNaN(parseFloat(tier.spendPercentage))) {
+            const day = parseInt(tier.dayNumber);
+            if (isNaN(day) || isNaN(parseFloat(tier.spendPercentage))) {
                 toast.error('Please enter valid numeric values for all tiers');
                 return;
             }
+            if (daySet.has(day)) {
+                toast.error(`Duplicate entry for Day ${day}. Each day must be unique.`);
+                return;
+            }
+            daySet.add(day);
         }
 
         setIsSaving(true);
@@ -282,7 +301,8 @@ export default function BarringSettings() {
             const rules = tieredTiers.map(tier => ({
                 rule_side: 'SENDER',
                 loan_plan_id: selectedTieredLoanPlanId || null,
-                min_balance: parseFloat(tier.minBalance),
+                day_number: parseInt(tier.dayNumber),
+                min_balance: 0,
                 limit_type: 'PERCENTAGE_OF_WALLET',
                 limit_value: parseFloat(tier.spendPercentage),
                 allowed_merchants: null, // Global rules for these tiers
@@ -307,7 +327,7 @@ export default function BarringSettings() {
             setCapacityModal(false);
             // Reset fields
             setSelectedTieredLoanPlanId('');
-            setTieredTiers([{ minBalance: '0', spendPercentage: '0' }]);
+            setTieredTiers([{ dayNumber: '1', spendPercentage: '0' }]);
             setSelectedTargetUserIds([]);
             setTieredRuleName('');
             fetchRules();
@@ -397,6 +417,7 @@ export default function BarringSettings() {
         setAssignedUserIds([]);
         setRuleSide('SENDER');
         setSelectedLoanPlanId(null);
+        setDayNumber('0');
         setMinBalance('0');
         setMaxReceivePerUser('');
         setSelectedProfile('MERCHANT');
@@ -424,7 +445,7 @@ export default function BarringSettings() {
         if (isTieredCapacity) {
             // Populate Tiered Modal states
             setTieredTiers(targetData.rules.map((r: any) => ({
-                minBalance: String(r.min_balance),
+                dayNumber: String(r.day_number),
                 spendPercentage: String(r.limit_value)
             })));
             setSelectedTieredLoanPlanId(targetData.rules[0].loan_plan_id || '');
@@ -457,6 +478,7 @@ export default function BarringSettings() {
             const side = firstRule.rule_side || 'SENDER';
             setRuleSide(side);
             setSelectedLoanPlanId(firstRule.loan_plan_id);
+            setDayNumber(String(firstRule.day_number || '0'));
             setMinBalance(String(firstRule.min_balance || '0'));
             setMaxReceivePerUser(String(firstRule.max_receive_per_user || ''));
             
@@ -559,7 +581,7 @@ export default function BarringSettings() {
         const firstRule = group.rules[0];
         if (!firstRule) return 'Unknown Rule';
         const isTiered = group.rules.every((r: any) => r.limit_type === 'PERCENTAGE_OF_WALLET' && !r.business_nature);
-        if (isTiered && group.rules.length > 1) return 'Tiered Capacity';
+        if (isTiered && group.rules.length > 1) return 'Day-Wise Tiered';
         if (firstRule.is_total_cap) return 'Total Volume Cap';
         if (firstRule.business_segment) return `${firstRule.business_nature} > ${firstRule.business_segment}`;
         if (firstRule.business_nature) return firstRule.business_nature;
@@ -578,7 +600,7 @@ export default function BarringSettings() {
 
         if (isTiered) {
             setTieredTiers(group.rules.map((r: any) => ({
-                minBalance: String(r.min_balance),
+                dayNumber: String(r.day_number),
                 spendPercentage: String(r.limit_value)
             })));
             setSelectedTieredLoanPlanId(group.rules[0].loan_plan_id || '');
@@ -599,6 +621,7 @@ export default function BarringSettings() {
             if (firstRule) {
                 setRuleSide(firstRule.rule_side || 'SENDER');
                 setSelectedLoanPlanId(firstRule.loan_plan_id);
+                setDayNumber(String(firstRule.day_number || '0'));
                 setMinBalance(String(firstRule.min_balance || '0'));
                 setMaxReceivePerUser(String(firstRule.max_receive_per_user || ''));
             }
@@ -656,6 +679,7 @@ export default function BarringSettings() {
                         rulesToSave.push({
                             rule_side: 'SENDER',
                             loan_plan_id: selectedLoanPlanId,
+                            day_number: parseInt(dayNumber || '0'),
                             min_balance: parseFloat(minBalance || '0'),
                             business_nature: nature === 'null' ? null : nature,
                             business_segment: segment === 'null' ? null : segment,
@@ -671,6 +695,7 @@ export default function BarringSettings() {
                     rulesToSave.push({
                         rule_side: 'SENDER',
                         loan_plan_id: selectedLoanPlanId,
+                        day_number: parseInt(dayNumber || '0'),
                         min_balance: parseFloat(minBalance || '0'),
                         limit_type: 'FLAT_AMOUNT',
                         limit_value: parseFloat(totalCapValue),
@@ -765,7 +790,7 @@ export default function BarringSettings() {
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={() => setCapacityModal(true)}
+                        onClick={handleOpenTieredCapacityModal}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition"
                     >
                         <Banknote className="w-4 h-4" /> Manage Capacity Settings
@@ -956,9 +981,21 @@ export default function BarringSettings() {
 
                                         {ruleSide === 'SENDER' && (
                                             <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Apply when Balance is below:</label>
+                                                        <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Rule Effective Day (Day 1, 2...):</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">D</span>
+                                                            <input 
+                                                                type="number"
+                                                                className="w-full p-2.5 pl-7 bg-white border border-blue-200 rounded-lg outline-none font-bold text-sm text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                                                placeholder="e.g. 1"
+                                                                value={dayNumber}
+                                                                onChange={(e) => setDayNumber(e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Apply when Balance is below (Fallback):</label>
                                                         <div className="relative">
                                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
                                                             <input 
@@ -970,7 +1007,6 @@ export default function BarringSettings() {
                                                             />
                                                         </div>
                                                     </div>
-                                                </div>
                                                 <p className="text-[10px] text-slate-400 font-medium italic">*Leave Balance as 0 and Loan as "Any" to apply globally to the selected target.</p>
                                             </div>
                                         )}
@@ -1515,9 +1551,9 @@ export default function BarringSettings() {
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
                             <div>
                                  <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
-                                     <Banknote size={22} className="text-emerald-600" /> Tiered Capacity Rules
+                                     <Clock size={22} className="text-emerald-600" /> Day-Wise Tiered Rules
                                  </h3>
-                                 <p className="text-sm text-slate-500 mt-1">Restrict spending based on loan plans and wallet balance tiers.</p>
+                                 <p className="text-sm text-slate-500 mt-1">Restrict spending based on Rule Day (Day 1 = Assignment Date) and carry-over unused limits.</p>
                             </div>
                             <button onClick={() => setCapacityModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X size={20}/></button>
                         </div>
@@ -1584,17 +1620,17 @@ export default function BarringSettings() {
                                         {tieredTiers.map((tier, idx) => (
                                             <div key={idx} className="grid grid-cols-12 gap-3 items-end animate-in slide-in-from-left-2 transition-all">
                                                 <div className="col-span-5">
-                                                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Min Wallet Balance Required</label>
+                                                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Day Number (Day 1 = Start)</label>
                                                     <div className="relative">
                                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                            <span className="text-slate-400 font-bold text-xs">₹</span>
+                                                            <span className="text-slate-400 font-bold text-xs">D</span>
                                                         </div>
                                                         <input
                                                             type="number"
-                                                            value={tier.minBalance}
-                                                            onChange={(e) => updateTieredTier(idx, 'minBalance', e.target.value)}
+                                                            value={tier.dayNumber}
+                                                            onChange={(e) => updateTieredTier(idx, 'dayNumber', e.target.value)}
                                                             className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-7 pr-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
-                                                            placeholder="e.g. 15000"
+                                                            placeholder="e.g. 1"
                                                         />
                                                     </div>
                                                 </div>

@@ -150,8 +150,8 @@ export default function GlobalSearch({ navItems }: GlobalSearchProps) {
         <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
             <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] animate-in fade-in duration-300" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white/95 rounded-[2rem] shadow-2xl z-[101] border border-white/20 overflow-hidden outline-none animate-in zoom-in-95 duration-300">
-                    <div className="relative">
+                <Dialog.Content className="fixed inset-0 z-[101] flex items-center justify-center p-4">
+                    <div className="w-full max-w-2xl bg-white/95 rounded-[2rem] shadow-2xl border border-white/20 overflow-hidden outline-none animate-in zoom-in-95 duration-300 relative">
                         <div className="flex items-center px-6 py-6 border-b border-slate-100">
                             <Search className="w-6 h-6 text-slate-400 mr-4" />
                             <input
