@@ -480,7 +480,16 @@ export default function LoanApprovals() {
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
+                                                        {loan.user?.kyc_status === 'FIELD_VERIFIED' ? (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-200">FIELD KYC VERIFIED</span>
+                                                        ) : loan.user?.kyc_status === 'FULL_VERIFIED' ? (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">FULL KYC VERIFIED</span>
+                                                        ) : (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">KYC PENDING</span>
+                                                        )}
+                                                    </div>
 
                                                     {/* Referral Info */}
                                                     {loan.agent ? (

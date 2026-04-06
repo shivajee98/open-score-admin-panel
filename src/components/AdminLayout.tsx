@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { Toaster } from 'sonner';
+import GlobalSearch from './GlobalSearch';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
     const { user, status, logout } = useAuth();
@@ -344,14 +345,31 @@ export default function AdminLayout({ children, title }: { children: React.React
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h2>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
-                            <Verified className="w-4 h-4 text-blue-600 fill-blue-100" />
-                            <span className="text-sm font-bold text-slate-700">
-                                {user?.role === 'SUB_USER' ? 'Credit Agent' : 'Administrator'}
-                            </span>
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => {
+                                    const event = new KeyboardEvent('keydown', {
+                                        key: 'i',
+                                        ctrlKey: true,
+                                        bubbles: true,
+                                        cancelable: true
+                                    });
+                                    window.dispatchEvent(event);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full border border-slate-200 transition-all group"
+                                title="Press Ctrl + I to search"
+                            >
+                                <Search className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Search</span>
+                                <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-slate-200 hidden lg:inline">CTRL+I</span>
+                            </button>
+                            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
+                                <Verified className="w-4 h-4 text-blue-600 fill-blue-100" />
+                                <span className="text-sm font-bold text-slate-700">
+                                    {user?.role === 'SUB_USER' ? 'Credit Agent' : 'Administrator'}
+                                </span>
+                            </div>
                         </div>
-                    </div>
                 </header>
 
                 <div className="p-4 md:p-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -387,6 +405,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                 </div>
             )}
             <Toaster />
+            <GlobalSearch navItems={navItems} />
         </div>
     );
 }
