@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { Toaster } from 'sonner';
 import GlobalSearch from './GlobalSearch';
+import AdminUtilsSearch from './AdminUtilsSearch';
 
 export default function AdminLayout({ children, title }: { children: React.ReactNode, title: string }) {
     const { user, status, logout } = useAuth();
@@ -376,6 +377,24 @@ export default function AdminLayout({ children, title }: { children: React.React
                                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Search</span>
                                 <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-slate-200 hidden lg:inline">CTRL+I</span>
                             </button>
+                            <button 
+                                onClick={() => {
+                                    const event = new KeyboardEvent('keydown', {
+                                        key: 's',
+                                        ctrlKey: true,
+                                        shiftKey: true,
+                                        bubbles: true,
+                                        cancelable: true
+                                    });
+                                    window.dispatchEvent(event);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full border border-indigo-200 transition-all group"
+                                title="Press Ctrl + Shift + S for Utils"
+                            >
+                                <Key className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Utils</span>
+                                <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-indigo-200 hidden lg:inline">CTRL+⇧+S</span>
+                            </button>
                             <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
                                 <Verified className="w-4 h-4 text-blue-600 fill-blue-100" />
                                 <span className="text-sm font-bold text-slate-700">
@@ -419,6 +438,7 @@ export default function AdminLayout({ children, title }: { children: React.React
             )}
             <Toaster />
             <GlobalSearch navItems={navItems} />
+            <AdminUtilsSearch />
         </div>
     );
 }
