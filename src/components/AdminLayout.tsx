@@ -88,6 +88,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         // Rewards & Incentives
         { label: 'Merchant Tiers', href: '/merchant-cashback-tiers', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
         { label: 'Onboarding Bonuses', href: '/onboarding-rewards', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
+        { label: 'Activation Rules', href: '/merchant-activation-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
         { label: 'Rewards History', href: '/cashback-logs', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },
 
         // Financial Operations
@@ -121,7 +122,19 @@ export default function AdminLayout({ children, title }: { children: React.React
         }
     }, [pathname, user]); // Re-run when pathname or user changes
 
+    const [hasModal, setHasModal] = useState(false);
     const [isAckingAlert, setIsAckingAlert] = useState(false);
+
+    // Monitor for open modals to hide the sticky header
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            const modal = document.querySelector('.fixed.inset-0.z-50') || document.querySelector('[role="dialog"]');
+            setHasModal(!!modal);
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+        return () => observer.disconnect();
+    }, []);
 
     const toggleGroup = (groupName: string) => {
         setExpandedGroups(prev => ({
@@ -333,8 +346,8 @@ export default function AdminLayout({ children, title }: { children: React.React
             )}
 
             {/* Main Content */}
-            <main className="lg:ml-72 min-h-screen">
-                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4 flex items-center justify-between">
+            <main className={`lg:ml-72 min-h-screen relative animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+                <header className={`sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4 flex items-center justify-between transition-all duration-300 ${hasModal ? 'opacity-0 -translate-y-full pointer-events-none' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsMobileMenuOpen(true)}
@@ -372,7 +385,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                         </div>
                 </header>
 
-                <div className="p-4 md:p-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="p-4 md:p-8 w-full">
                     {children}
                 </div>
             </main>

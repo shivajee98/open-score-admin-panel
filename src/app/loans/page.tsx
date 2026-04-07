@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import { useSearchParams } from 'next/navigation';
 
@@ -711,34 +711,225 @@ export default function LoanApprovals() {
             </div>
 
             {/* Preview Modal (legacy KYC preview) */}
-            {
-                previewLoan && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-                        <div className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-3xl shadow-2xl">
-                            <div className="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                                <div>
-                                    <h2 className="text-xl font-black text-slate-900">KYC Form Details</h2>
-                                    <p className="text-sm text-slate-500">Submitted on {new Date(previewLoan.updated_at).toLocaleDateString()}</p>
+            {previewLoan && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-slate-50 w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden my-auto relative">
+                        {/* Header */}
+                        <div className="bg-white p-6 sm:p-8 border-b border-slate-100 flex justify-between items-start sticky top-0 z-10 shadow-sm">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <h2 className="text-2xl font-black text-slate-900">KYC Verification Details</h2>
+                                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded-full uppercase tracking-widest">
+                                        LOAN #{previewLoan.display_id || previewLoan.id}
+                                    </span>
                                 </div>
-                                <button 
-                                    onClick={() => { setPreviewLoan(null); setReuploadFields([]); }} 
-                                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-900"
-                                >
-                                    <BadgeCheck className="w-6 h-6 rotate-45" />
-                                </button>
+                                <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                                    <Clock size={16} className="text-blue-500" />
+                                    <span>Submitted on {new Date(previewLoan.kyc_submitted_at || previewLoan.updated_at).toLocaleDateString()}</span>
+                                </div>
                             </div>
-                            <div className="p-8 space-y-8">
-                                {previewLoan.form_data ? (
-                                    <>
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                                        {Object.entries(previewLoan.form_data).map(([key, value]: [string, any]) => {
-                                            const isImageObject = value && typeof value === 'object' && value.url;
-                                            const isSelected = reuploadFields.includes(key);
-                                            return (
-                                                <div key={key} className={isImageObject ? "col-span-2 sm:col-span-1" : ""}>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{key.replace(/_/g, ' ')}</p>
-                                                        {isImageObject && (
+                            <button 
+                                onClick={() => { setPreviewLoan(null); setReuploadFields([]); }} 
+                                className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-red-500 hover:rotate-90"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 sm:p-8 space-y-8">
+                            {previewLoan.form_data ? (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Left Side: Personal & Employment */}
+                                        <div className="space-y-8">
+                                            {/* Personal Info */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                                                        <User size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Personal & Contact</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                                                    <div className="col-span-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.first_name} {previewLoan.form_data.last_name}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mobile</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.phone || previewLoan.user?.mobile_number}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                                                        <p className="text-sm font-bold text-slate-900 truncate" title={previewLoan.form_data.email}>{previewLoan.form_data.email || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">DOB</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.date_of_birth || previewLoan.form_data.birth_date || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Loan Usage</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.loan_usage || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Employment Info */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                                        <Briefcase size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Job & Identity</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN Number</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono">{previewLoan.form_data.pan_number || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Aadhar Number</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono">{previewLoan.form_data.aadhar_number || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Employment</p>
+                                                        <p className="text-sm font-bold text-slate-900 uppercase">{previewLoan.form_data.employment_type || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Monthly Income</p>
+                                                        <p className="text-sm font-bold text-emerald-600">₹{parseFloat(previewLoan.form_data.annual_income || 0).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Company/Employer</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.company_name || previewLoan.form_data.employer || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Side: Address & Bank & Pricing */}
+                                        <div className="space-y-8">
+                                            {/* Address Details (Single Div) */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                                        <MapPin size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Address Information</span>
+                                                </div>
+                                                <div className="space-y-6">
+                                                    <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Current Address</p>
+                                                        <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                            {[previewLoan.form_data.street_address, previewLoan.form_data.city, previewLoan.form_data.state, previewLoan.form_data.postal_code || previewLoan.form_data.pincode].filter(Boolean).join(', ')}
+                                                        </p>
+                                                        {previewLoan.form_data.location_url && (
+                                                            <a href={previewLoan.form_data.location_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors">
+                                                                <ExternalLink size={10} /> View on Map
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                    <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-1">Permanent Address</p>
+                                                        <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                            {previewLoan.form_data.is_permanent_same === true || previewLoan.form_data.is_address_same === true
+                                                                ? "Same as Current Address"
+                                                                : [previewLoan.form_data.permanent_street_address, previewLoan.form_data.permanent_city, previewLoan.form_data.permanent_state, previewLoan.form_data.permanent_postal_code || previewLoan.form_data.permanent_pincode].filter(Boolean).join(', ')
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Bank Info */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                                                        <Landmark size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Bank Details</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bank Name</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.bank_name || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">IFSC Code</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono uppercase">{previewLoan.form_data.ifsc_code || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Account Number</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono tracking-wider">{previewLoan.form_data.account_number || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Pricing & Fees Table */}
+                                    {previewLoan.calculations?.fee_structure && (
+                                        <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                                            <div className="px-6 py-4 bg-emerald-50/50 border-b border-slate-100 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Calculator className="w-4 h-4 text-emerald-600" />
+                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Pricing & Fee Structure</span>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Santioned Amount</p>
+                                                        <p className="text-sm font-black text-emerald-900">₹{parseFloat(previewLoan.calculations.principal).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Net Disbursal</p>
+                                                        <p className="text-sm font-black text-blue-600">₹{parseFloat(previewLoan.calculations.disbursal_amount).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="p-0 overflow-x-auto">
+                                                <table className="w-full text-left">
+                                                    <thead className="bg-slate-50/50">
+                                                        <tr>
+                                                            <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee Component</th>
+                                                            <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {previewLoan.calculations.fee_structure.map((fee: any, idx: number) => (
+                                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="px-6 py-3 text-xs font-bold text-slate-900">{fee.name}</td>
+                                                                <td className="px-6 py-3 text-xs font-black text-slate-900 text-right">₹{fee.amount.toLocaleString()}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="bg-slate-50/30">
+                                                            <td className="px-6 py-3 text-xs font-black text-slate-400 uppercase tracking-widest">Total Deductions</td>
+                                                            <td className="px-6 py-3 text-sm font-black text-rose-500 text-right">₹{previewLoan.calculations.total_deductions.toLocaleString()}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* KYC Images Grid */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                                <Camera size={18} />
+                                            </div>
+                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">KYC Documents & Photos</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            {['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'].map(key => {
+                                                const value = previewLoan.form_data[key];
+                                                if (!value || (typeof value === 'object' && !value.url)) return null;
+                                                const imgUrl = typeof value === 'string' ? value : value.url;
+                                                const isSelected = reuploadFields.includes(key);
+
+                                                return (
+                                                    <div key={key} className="space-y-2">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate">{key.replace(/_/g, ' ')}</p>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -746,71 +937,82 @@ export default function LoanApprovals() {
                                                                         prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
                                                                     );
                                                                 }}
-                                                                className={`text-[9px] font-black uppercase tracking-tighter transition-colors px-2 py-0.5 rounded-md border ${
+                                                                className={`p-1.5 rounded-lg transition-all border ${
                                                                     isSelected 
-                                                                    ? "bg-rose-500 text-white border-rose-500 hover:bg-rose-600" 
-                                                                    : "text-rose-500 border-rose-100 hover:bg-rose-50"
+                                                                    ? "bg-rose-500 text-white border-rose-500" 
+                                                                    : "text-rose-400 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
                                                                 }`}
+                                                                title="Mark for Re-upload"
                                                             >
-                                                                {isSelected ? 'Selected' : 'Select for Reupload'}
+                                                                <Shield size={12} fill={isSelected ? "currentColor" : "none"} />
                                                             </button>
-                                                        )}
-                                                    </div>
-                                                    {isImageObject ? (
-                                                        <div className={`space-y-2 p-1 rounded-2xl transition-all ${isSelected ? 'ring-2 ring-rose-500 ring-offset-2' : ''}`}>
-                                                            <a href={value.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
-                                                                <img src={value.url} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                                                                <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
-                                                                    <ChevronRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                </div>
-                                                            </a>
-                                                            {value.geo && (
-                                                                <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                    <span>Lat: {value.geo.lat?.toFixed(6)}</span>
-                                                                    <span>Lng: {value.geo.lng?.toFixed(6)}</span>
+                                                        </div>
+                                                        <div className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all ${isSelected ? 'border-rose-500 shadow-lg shadow-rose-500/20' : 'border-slate-100'}`}>
+                                                            <img src={imgUrl} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/40 transition-all">
+                                                                    <Eye size={20} />
+                                                                </a>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div className="absolute top-2 right-2 bg-rose-500 text-white p-1 rounded-lg">
+                                                                    <BadgeCheck size={12} />
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    ) : (
-                                                        <p className="text-sm font-bold text-slate-900 break-words">{String(value)}</p>
-                                                    )}
-                                                </div>
-                                        );
-                                    })}
-                                </div>
-                                {reuploadFields.length > 0 && (
-                                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                                        <button
-                                            onClick={async () => {
-                                                if (!confirm(`Ask user to re-upload ${reuploadFields.length} field(s)?`)) return;
-                                                try {
-                                                    await apiFetch(`/admin/loans/${previewLoan.id}/request-reupload`, {
-                                                        method: 'POST',
-                                                        body: JSON.stringify({ fields: reuploadFields })
-                                                    });
-                                                    alert('Re-upload request sent!');
-                                                    setPreviewLoan(null);
-                                                    setReuploadFields([]);
-                                                    loadLoans();
+                                                        {typeof value === 'object' && value.geo && (
+                                                            <div className="flex flex-col text-[8px] font-bold text-slate-400 italic">
+                                                                <span>LAT: {value.geo.lat?.toFixed(4)}</span>
+                                                                <span>LNG: {value.geo.lng?.toFixed(4)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Bulk Re-upload Action */}
+                                    {reuploadFields.length > 0 && (
+                                        <div className="mt-8 pt-8 border-t border-slate-100 flex justify-end">
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm(`Ask user to re-upload ${reuploadFields.length} field(s)?`)) return;
+                                                    try {
+                                                        await apiFetch(`/admin/loans/${previewLoan.id}/request-reupload`, {
+                                                            method: 'POST',
+                                                            body: JSON.stringify({ fields: reuploadFields })
+                                                        });
+                                                        alert('Re-upload request sent!');
+                                                        setPreviewLoan(null);
+                                                        setReuploadFields([]);
+                                                        loadLoans();
                                                     } catch (err) {
                                                         alert('Failed to send request');
                                                     }
                                                 }}
-                                                className="px-6 py-3 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all font-mono"
+                                                className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/30 transition-all flex items-center gap-3 active:scale-95"
                                             >
-                                                Submit Re-upload Request ({reuploadFields.length})
+                                                <Shield size={16} />
+                                                Request Re-upload ({reuploadFields.length} Items)
                                             </button>
                                         </div>
                                     )}
                                 </>
-                        ) : (
-                                    <p className="text-slate-500 italic">No form data submitted.</p>
-                                )}
-                            </div>
+                            ) : (
+                                <div className="p-24 text-center">
+                                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                        <FileText className="w-10 h-10 text-slate-300" />
+                                    </div>
+                                    <h4 className="text-lg font-black text-slate-900 mb-1">No data submitted</h4>
+                                    <p className="text-slate-400 font-medium">Applicant has not completed the form yet.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
+
 
 
 
