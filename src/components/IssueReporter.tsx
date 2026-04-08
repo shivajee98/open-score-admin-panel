@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import { toast } from 'sonner';
+import { convertHeicToJpeg } from '@/lib/heic-utils';
 
 interface Message {
     id: number;
@@ -109,15 +110,27 @@ const IssueReporter: React.FC<IssueReporterProps> = ({ appName }) => {
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) {
+            let fileToUpload = e.target.files[0];
+            
+            fileToUpload = await convertHeicToJpeg(fileToUpload);
+
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+            const isImage = fileToUpload && (allowedTypes.includes(fileToUpload.type) || allowedExtensions.some(ext => fileToUpload.name.toLowerCase().endsWith(ext)));
+
+            if (!isImage) {
+                toast.error("Format not supported. Use JPEG, PNG, HEIC, or WebP.");
+                return;
+            }
+
+            if (fileToUpload.size > 5 * 1024 * 1024) {
                 toast.error('File size too large. Max 5MB allowed.');
                 return;
             }
-            setScreenshot(file);
-            setPreviewUrl(URL.createObjectURL(file));
+            setScreenshot(fileToUpload);
+            setPreviewUrl(URL.createObjectURL(fileToUpload));
         }
     };
 
@@ -355,7 +368,7 @@ const IssueReporter: React.FC<IssueReporterProps> = ({ appName }) => {
                                                 </>
                                             )}
                                         </div>
-                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/jpeg,image/png,image/heic,image/heif,image/webp" onChange={handleFileChange} />
                                     </div>
 
                                     <button

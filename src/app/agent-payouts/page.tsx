@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { Banknote, Users, CheckCircle, XCircle, Search, Upload, Clock, FileText, ChevronRight, AlertCircle, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { convertHeicToJpeg } from '@/lib/heic-utils';
 
 interface PayoutRequest {
     id: number;
@@ -55,7 +56,6 @@ export default function AgentPayoutsPage() {
             setLoading(false);
         }
     };
-
     const handleApprove = async () => {
         if (!selectedPayout) return;
         if (!adminMessage) {
@@ -67,8 +67,27 @@ export default function AgentPayoutsPage() {
         try {
             const formData = new FormData();
             formData.append('admin_message', adminMessage);
+            
             if (proofFile) {
-                formData.append('proof_image', proofFile);
+                const processedFile = await convertHeicToJpeg(proofFile);
+                
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+                const isImage = allowedTypes.includes(processedFile.type) || allowedExtensions.some(ext => processedFile.name.toLowerCase().endsWith(ext));
+
+                if (!isImage) {
+                    toast.error("Format not supported. Use JPEG, PNG, HEIC, or WebP.");
+                    setActionLoading(false);
+                    return;
+                }
+                
+                if (processedFile.size > 10 * 1024 * 1024) {
+                    toast.error("Image too large. Max 10MB allowed.");
+                    setActionLoading(false);
+                    return;
+                }
+
+                formData.append('proof_image', processedFile);
             }
 
             // Since apiFetch is JSON biased, let's use fetch directly for FormData or configure apiFetch
@@ -387,7 +406,7 @@ export default function AgentPayoutsPage() {
                                             <label className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer transition-colors border border-slate-200 text-sm font-bold text-slate-600">
                                                 <Upload size={16} />
                                                 Choose Image
-                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
+                                                <input type="file" className="hidden" accept="image/jpeg,image/png,image/heic,image/heif,image/webp" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
                                             </label>
                                             {proofFile && (
                                                 <span className="text-xs font-medium text-slate-600 truncate max-w-[200px] bg-blue-50 px-2 py-1 rounded-lg text-blue-600 border border-blue-100">
