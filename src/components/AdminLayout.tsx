@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -106,6 +106,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Maintenance Mode', href: '/maintenance-settings', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Monitoring Alerts', href: '/monitoring', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'Broadcasts', href: '/broadcast-notifications', icon: <Megaphone className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Dynamic Buttons', href: '/dynamic-buttons', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'My Profile', href: '/profile', icon: <User className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
     ];
