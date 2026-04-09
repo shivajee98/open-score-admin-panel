@@ -251,9 +251,11 @@ export default function BroadcastPage() {
                     
                     {/* Left: Create Form - Sticky on desktop */}
                     <div className={`lg:col-span-5 space-y-6 ${isCreateModalOpen ? 'block' : 'hidden lg:block'}`}>
-                        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 p-8 md:p-10 relative overflow-hidden">
-                            {/* Decorative Background */}
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 p-8 md:p-10 relative">
+                            {/* Decorative Background Container */}
+                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                            </div>
                             
                             <form onSubmit={handleSubmit} className="space-y-8 relative">
                                 <div className="space-y-6">
@@ -332,28 +334,38 @@ export default function BroadcastPage() {
                                                 )}
                                             </div>
 
-                                            {/* Search Results Dropdown */}
-                                            {userSearchResults.length > 0 && (
-                                                <div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-100 shadow-2xl p-2 max-h-60 overflow-y-auto">
-                                                    {userSearchResults.map(user => (
-                                                        <button
-                                                            key={user.id}
-                                                            type="button"
-                                                            onClick={() => handleAddUser(user)}
-                                                            className="w-full flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-all group"
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
-                                                                    {user.name.charAt(0)}
+                                             {/* Search Results Dropdown */}
+                                             {userSearchResults.length > 0 && (
+                                                <div className="absolute z-[100] left-0 right-0 mt-3 bg-white rounded-3xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 max-h-72 overflow-y-auto animate-in slide-in-from-top-2 duration-300">
+                                                    <div className="px-3 pb-2 mb-2 border-b border-slate-50">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Matched Personnel</span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {userSearchResults.map(user => (
+                                                            <button
+                                                                key={user.id}
+                                                                type="button"
+                                                                onClick={() => handleAddUser(user)}
+                                                                className="w-full flex items-center justify-between p-3 hover:bg-slate-50 text-slate-900 rounded-2xl transition-all group border border-transparent hover:border-slate-100"
+                                                            >
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-xs font-black text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                                                        {user.name.charAt(0)}
+                                                                    </div>
+                                                                    <div className="text-left">
+                                                                        <p className="text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{user.name}</p>
+                                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                                            <span className="text-[10px] font-bold text-slate-400">+{user.mobile_number}</span>
+                                                                            <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-bold uppercase">{user.role}</span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="text-left">
-                                                                    <p className="text-xs font-black text-slate-900">{user.name}</p>
-                                                                    <p className="text-[10px] font-bold text-slate-400">{user.mobile_number}</p>
+                                                                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-500 opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all">
+                                                                    <Plus className="w-4 h-4" />
                                                                 </div>
-                                                            </div>
-                                                            <Plus className="w-4 h-4 text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
-                                                        </button>
-                                                    ))}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

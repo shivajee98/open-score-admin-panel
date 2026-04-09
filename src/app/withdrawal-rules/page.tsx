@@ -421,7 +421,7 @@ export default function WithdrawalRulesPage() {
                                                 <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-3">Chargeable Range (Paid Tier)</p>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Min Amount (₹)</label>
+                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Min Amount</label>
                                                         <input
                                                             type="number"
                                                             value={formData.min_charge_amount}
@@ -431,7 +431,7 @@ export default function WithdrawalRulesPage() {
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Max Amount (₹)</label>
+                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Max Amount</label>
                                                         <input
                                                             type="number"
                                                             value={formData.max_charge_amount}
