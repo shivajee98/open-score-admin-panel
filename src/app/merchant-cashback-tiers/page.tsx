@@ -139,7 +139,7 @@ export default function MerchantCashbackTiersPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Min Tx Bound (₹)</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Min Balance Bound (₹)</label>
                             <input
                                 type="number"
                                 name="min_turnover"
@@ -152,7 +152,7 @@ export default function MerchantCashbackTiersPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Max Tx Bound (₹)</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Max Balance Bound (₹)</label>
                             <input
                                 type="number"
                                 name="max_turnover"
@@ -202,7 +202,7 @@ export default function MerchantCashbackTiersPage() {
                     </form>
                     <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
-                        New tier's min bound must be greater than previous tier's max. Choose either Flat (₹ amount) or Percentage (% of daily turnover). One type per tier.
+                        New tier's min bound must be greater than previous tier's max. Choose either Flat (₹ amount) or Percentage (% of wallet balance). One type per tier.
                     </p>
                 </div>
 
@@ -226,7 +226,7 @@ export default function MerchantCashbackTiersPage() {
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                         <th className="px-6 py-4">Tier Name</th>
-                                        <th className="px-6 py-4">Turnover Range (₹)</th>
+                                        <th className="px-6 py-4">Qualifying Balance Range (₹)</th>
                                         <th className="px-6 py-4">Type</th>
                                         <th className="px-6 py-4">Cashback</th>
                                         <th className="px-6 py-4">Status</th>

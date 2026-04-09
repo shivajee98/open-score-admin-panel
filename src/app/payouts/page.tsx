@@ -290,10 +290,18 @@ export default function PayoutsAdminPage() {
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-base font-black text-slate-900 italic">₹{payout.amount?.toLocaleString('en-IN')}</span>
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-base font-black text-slate-900 italic">₹{(payout.net_amount || payout.amount)?.toLocaleString('en-IN')}</span>
+                                                                {payout.charge_amount > 0 && (
+                                                                    <span className="text-[10px] font-bold text-rose-500 whitespace-nowrap">(-₹{payout.charge_amount})</span>
+                                                                )}
+                                                            </div>
+                                                            {payout.charge_amount > 0 && (
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Gross: ₹{payout.amount?.toLocaleString('en-IN')}</p>
+                                                            )}
                                                             {payout.type === 'BANK_TRANSFER' && payout.recipient_count && (
-                                                                <span className="text-[9px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full">
+                                                                <span className="text-[9px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full inline-block">
                                                                     {payout.recipient_count} recipients
                                                                 </span>
                                                             )}
@@ -414,9 +422,19 @@ export default function PayoutsAdminPage() {
                                     <span className="font-bold text-slate-400 uppercase text-[10px]">User</span>
                                     <span className="font-black text-slate-900">{selectedPayout.user?.name}</span>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="font-bold text-slate-400 uppercase text-[10px]">Total Amount</span>
-                                    <span className="text-lg font-black text-emerald-600">₹{selectedPayout.amount?.toLocaleString('en-IN')}</span>
+                                <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                                    <span className="font-bold text-slate-400 uppercase text-[10px]">Gross Amount</span>
+                                    <span className={`font-black ${selectedPayout.charge_amount > 0 ? 'text-slate-400 line-through' : 'text-slate-900'}`}>₹{selectedPayout.amount?.toLocaleString('en-IN')}</span>
+                                </div>
+                                {selectedPayout.charge_amount > 0 && (
+                                    <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                                        <span className="font-bold text-slate-400 uppercase text-[10px]">System Charges ({((selectedPayout.charge_amount / selectedPayout.amount) * 100).toFixed(1)}%)</span>
+                                        <span className="font-black text-rose-600">-₹{selectedPayout.charge_amount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center text-sm pt-2">
+                                    <span className="font-bold text-slate-400 uppercase text-[10px]">Net Payable (Admin Pays)</span>
+                                    <span className="text-xl font-black text-emerald-600">₹{(selectedPayout.net_amount || selectedPayout.amount)?.toLocaleString('en-IN')}</span>
                                 </div>
 
                                 {selectedPayout.type === 'BANK_TRANSFER' && selectedPayout.recipients && (

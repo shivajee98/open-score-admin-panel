@@ -35,7 +35,13 @@ export default function WithdrawalRulesPage() {
         daily_txn_limit: '',
         target_mode: 'ALL', // ALL | SPECIFIC
         target_users_input: '', // Comma separated IDs for now
-        is_active: true
+        is_active: true,
+        is_charge_enabled: false,
+        charge_threshold: '',
+        charge_percent: '',
+        min_charge_amount: '',
+        max_charge_amount: '',
+        monthly_free_count: ''
     });
 
     const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -123,7 +129,13 @@ export default function WithdrawalRulesPage() {
                 min_txn_count: parseInt(formData.min_txn_count || '0'),
                 daily_txn_limit: formData.daily_txn_limit ? parseInt(formData.daily_txn_limit) : null,
                 target_users: formData.target_mode === 'ALL' ? ['*'] : formData.target_users_input.split(',').map(s => s.trim()).filter(Boolean),
-                is_active: formData.is_active
+                is_active: formData.is_active,
+                is_charge_enabled: formData.is_charge_enabled,
+                charge_threshold: parseFloat(formData.charge_threshold || '0'),
+                charge_percent: parseFloat(formData.charge_percent || '0'),
+                min_charge_amount: parseFloat(formData.min_charge_amount || '0'),
+                max_charge_amount: parseFloat(formData.max_charge_amount || '0'),
+                monthly_free_count: parseInt(formData.monthly_free_count || '0')
             };
 
             const url = editingId ? `/admin/withdrawal-rules/${editingId}` : '/admin/withdrawal-rules';
@@ -148,7 +160,13 @@ export default function WithdrawalRulesPage() {
                 daily_txn_limit: '',
                 target_mode: 'ALL',
                 target_users_input: '',
-                is_active: true
+                is_active: true,
+                is_charge_enabled: false,
+                charge_threshold: '',
+                charge_percent: '',
+                min_charge_amount: '',
+                max_charge_amount: '',
+                monthly_free_count: ''
             });
         } catch (err: any) {
             toast.error(err.message || "Failed to create rule");
@@ -166,7 +184,13 @@ export default function WithdrawalRulesPage() {
             daily_txn_limit: rule.daily_txn_limit?.toString() || '',
             target_mode: rule.target_users?.includes('*') ? 'ALL' : 'SPECIFIC',
             target_users_input: rule.target_users?.includes('*') ? '' : rule.target_users.join(','),
-            is_active: !!rule.is_active
+            is_active: !!rule.is_active,
+            is_charge_enabled: !!rule.is_charge_enabled,
+            charge_threshold: rule.charge_threshold?.toString() || '',
+            charge_percent: rule.charge_percent?.toString() || '',
+            min_charge_amount: rule.min_charge_amount?.toString() || '',
+            max_charge_amount: rule.max_charge_amount?.toString() || '',
+            monthly_free_count: rule.monthly_free_count?.toString() || ''
         });
         setIsModalOpen(true);
     };
@@ -347,6 +371,82 @@ export default function WithdrawalRulesPage() {
                                         placeholder="e.g. 1"
                                         className="w-full p-4 bg-indigo-50 text-indigo-900 rounded-2xl text-sm font-bold focus:outline-none placeholder:text-indigo-300"
                                     />
+                                </div>
+
+                                <div className="p-6 bg-slate-900 rounded-[2rem] space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${formData.is_charge_enabled ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-500'}`}>
+                                                <Activity className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-white uppercase tracking-widest">Transfer Charge</p>
+                                                <p className="text-[9px] font-bold text-slate-400">Charge fee based on threshold</p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setFormData({ ...formData, is_charge_enabled: !formData.is_charge_enabled })}
+                                            className={`w-12 h-6 rounded-full transition-all relative ${formData.is_charge_enabled ? 'bg-amber-500' : 'bg-slate-700'}`}
+                                        >
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.is_charge_enabled ? 'right-1' : 'left-1'}`}></div>
+                                        </button>
+                                    </div>
+
+                                    {formData.is_charge_enabled && (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Free Monthly Count</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.monthly_free_count}
+                                                        onChange={(e) => setFormData({ ...formData, monthly_free_count: e.target.value })}
+                                                        placeholder="e.g. 5"
+                                                        className="w-full p-3 bg-slate-800 border-none text-white rounded-xl text-xs font-bold focus:ring-1 focus:ring-amber-500/50 outline-none"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Charge (%)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.charge_percent}
+                                                        onChange={(e) => setFormData({ ...formData, charge_percent: e.target.value })}
+                                                        placeholder="e.g. 4"
+                                                        className="w-full p-3 bg-slate-800 border-none text-white rounded-xl text-xs font-bold focus:ring-1 focus:ring-amber-500/50 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+                                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-3">Chargeable Range (Paid Tier)</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Min Amount (₹)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={formData.min_charge_amount}
+                                                            onChange={(e) => setFormData({ ...formData, min_charge_amount: e.target.value })}
+                                                            placeholder="0"
+                                                            className="w-full p-3 bg-slate-800 border-none text-white rounded-xl text-xs font-bold focus:ring-1 focus:ring-amber-500/50 outline-none"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-1 block">Max Amount (₹)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={formData.max_charge_amount}
+                                                            onChange={(e) => setFormData({ ...formData, max_charge_amount: e.target.value })}
+                                                            placeholder="0"
+                                                            className="w-full p-3 bg-slate-800 border-none text-white rounded-xl text-xs font-bold focus:ring-1 focus:ring-amber-500/50 outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <p className="text-[8px] font-bold text-slate-500 italic mt-3 px-1">
+                                                    * Allows withdrawal below standard min if within ₹{formData.min_charge_amount || '0'} - ₹{formData.max_charge_amount || '0'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
