@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -154,6 +154,28 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             alert(e.message || 'Error transferring cashback');
         } finally {
             setIsTransferringCashback(false);
+        }
+    };
+
+    const handleUnlinkQR = async () => {
+        if (!confirm(`WARNING: This will reset the QR mapping for ${user.name}. The QR code will be freed, and any agent bonuses/milestones for this mapping will be removed. Are you sure?`)) return;
+        
+        setIsSaving(true);
+        try {
+            await apiFetch('/admin/qr/unlink', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    merchant_id: user.id,
+                    qr_code: user.mapped_qr_code
+                })
+            });
+            alert('Merchant QR unlinked and agent data reset successfully!');
+            reloadUsers();
+        } catch (e: any) {
+            alert(e.message || 'Error unlinking QR');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -373,9 +395,19 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                         {user.is_qr_mapped ? (
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-white font-black shadow-lg shadow-emerald-200 animate-in zoom-in duration-300">
-                                Y
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-white font-black shadow-lg shadow-emerald-200 animate-in zoom-in duration-300">
+                                    Y
+                                </span>
+                                <button
+                                    onClick={handleUnlinkQR}
+                                    disabled={isSaving}
+                                    className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md transition-colors border border-rose-100"
+                                    title="Unlink & Reset QR Mapping (Debug Tool)"
+                                >
+                                    <Unlink size={12} />
+                                </button>
+                            </div>
                         ) : (
                             <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500 text-white font-black shadow-lg shadow-rose-200 animate-in zoom-in duration-300">
                                 N
