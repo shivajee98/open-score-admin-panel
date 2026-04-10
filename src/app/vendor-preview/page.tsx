@@ -3,30 +3,33 @@
 import { useState, useEffect, useRef } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { apiFetch } from '@/lib/api';
-import { Search, User, Smartphone, Monitor, ChevronRight, Loader2, ArrowLeft, RefreshCw, LogOut, ShieldCheck, History, CreditCard, Activity } from 'lucide-react';
+import { Search, User, Smartphone, Monitor, ChevronRight, Loader2, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Activity, Users, Building2, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface UserData {
+interface SubUserData {
     id: number;
     name: string;
     mobile_number: string;
-    role: string;
-    status: string;
-    profile_image?: string;
-    business_name?: string;
+    referral_code: string;
+    is_active: boolean;
+    credit_balance: number;
+    credit_limit: number;
+    vendors_count?: number;
+    agents_count?: number;
 }
 
-export default function UserPreviewPage() {
+export default function VendorPreviewPage() {
     const [search, setSearch] = useState('');
-    const [userType, setUserType] = useState('ALL');
-    const [searchResults, setSearchResults] = useState<UserData[]>([]);
+    const [searchResults, setSearchResults] = useState<SubUserData[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
 
-    const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+    const [selectedUser, setSelectedUser] = useState<SubUserData | null>(null);
     const [loading, setLoading] = useState(false);
     const [impersonateToken, setImpersonateToken] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState(false);
+
+    const [deviceView, setDeviceView] = useState<'MOBILE' | 'DESKTOP'>('MOBILE');
 
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +44,7 @@ export default function UserPreviewPage() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Debounced search
+    // Debounced search for sub-users (agents/vendors)
     useEffect(() => {
         const fetchResults = async () => {
             if (search.length < 3) {
@@ -52,8 +55,8 @@ export default function UserPreviewPage() {
 
             setIsSearching(true);
             try {
-                const typeParam = userType === 'ALL' ? 'customer,agent,merchant,student' : userType.toLowerCase();
-                const data = await apiFetch(`/admin/users?search=${search}&type=${typeParam}`);
+                // Use the existing sub-users listing endpoint which supports search
+                const data = await apiFetch(`/admin/sub-users?search=${search}&per_page=10`);
                 setSearchResults(data.data || []);
                 setShowDropdown(true);
             } catch (error) {
@@ -65,9 +68,9 @@ export default function UserPreviewPage() {
 
         const timer = setTimeout(fetchResults, 400);
         return () => clearTimeout(timer);
-    }, [search, userType]);
+    }, [search]);
 
-    const handleSelectUser = (user: UserData) => {
+    const handleSelectUser = (user: SubUserData) => {
         setSelectedUser(user);
         setSearch(user.mobile_number);
         setShowDropdown(false);
@@ -79,7 +82,7 @@ export default function UserPreviewPage() {
 
         setLoading(true);
         try {
-            const data = await apiFetch(`/admin/users/${selectedUser.id}/impersonate`);
+            const data = await apiFetch(`/admin/sub-users/${selectedUser.id}/impersonate`);
             if (data.access_token) {
                 setImpersonateToken(data.access_token);
                 setViewMode(true);
@@ -92,12 +95,15 @@ export default function UserPreviewPage() {
         }
     };
 
-    const frontendUrl = process.env.NEXT_PUBLIC_CUSTOMER_APP_URL || 'https://openscore.msmeloan.sbs';
-    const previewUrl = impersonateToken ? `${frontendUrl}?token=${impersonateToken}&admin_preview=true` : '';
+    const agentPortalUrl = 'https://agent.msmeloan.sbs';
+    // const agentPortalUrl = 'http://localhost:3001'; // For local testing if needed
+    
+    // Construct the preview URL with the bridge token and admin_preview flag
+    const previewUrl = impersonateToken ? `${agentPortalUrl}/?token=${impersonateToken}&admin_preview=true` : '';
 
     if (viewMode && previewUrl) {
         return (
-            <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col md:flex-row font-sans selection:bg-indigo-500/30">
+            <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col md:flex-row font-sans selection:bg-emerald-500/30">
                 {/* Asymmetric Control Bar */}
                 <div className="bg-[#0f172a] w-full md:w-[340px] border-b md:border-b-0 md:border-r border-slate-800/60 p-6 flex flex-col justify-between overflow-y-auto">
                     <div className="space-y-10">
@@ -109,36 +115,50 @@ export default function UserPreviewPage() {
                                 >
                                     <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
                                 </button>
-                                <h1 className="font-black text-xl text-white tracking-tight">Lens View</h1>
+                                <h1 className="font-black text-xl text-white tracking-tight">Vendor Lens</h1>
                             </div>
-                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" title="Secure Link Active" />
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Secure Link Active" />
+                        </div>
+
+                        {/* View Switcher */}
+                        <div className="bg-slate-900/50 p-1.5 rounded-2xl flex border border-slate-800/50">
+                            <button
+                                onClick={() => setDeviceView('MOBILE')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${deviceView === 'MOBILE'
+                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'
+                                    : 'text-slate-500 hover:text-slate-300'
+                                    }`}
+                            >
+                                <Smartphone className="w-4 h-4" />
+                                Mobile
+                            </button>
+                            <button
+                                onClick={() => setDeviceView('DESKTOP')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${deviceView === 'DESKTOP'
+                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'
+                                    : 'text-slate-500 hover:text-slate-300'
+                                    }`}
+                            >
+                                <Monitor className="w-4 h-4" />
+                                Desktop
+                            </button>
                         </div>
 
                         {/* Profile Summary Card */}
                         <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
+                            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
                             <div className="relative bg-[#020617]/80 backdrop-blur-xl rounded-3xl p-5 border border-slate-800/50 space-y-4">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-inner">
-                                        <User className="w-7 h-7" />
+                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-inner">
+                                        <Building2 className="w-7 h-7" />
                                     </div>
                                     <div className="flex-1 pt-1">
                                         <p className="font-black text-white text-base leading-tight">{selectedUser?.name}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{selectedUser?.role}</p>
+                                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{selectedUser?.referral_code}</p>
                                             <div className="w-1 h-1 rounded-full bg-slate-700" />
-                                            <p className="text-[10px] font-bold text-slate-500">{selectedUser?.status}</p>
+                                            <p className="text-[10px] font-bold text-slate-500">{selectedUser?.is_active ? 'ACTIVE' : 'INACTIVE'}</p>
                                         </div>
-                                    </div>
-                                </div>
-                                <div className="pt-2 grid grid-cols-2 gap-3 border-t border-slate-800/50">
-                                    <div className="space-y-0.5">
-                                        <p className="text-[9px] font-black text-slate-600 uppercase">Identity</p>
-                                        <p className="text-xs font-bold text-slate-300">ID #{selectedUser?.id}</p>
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[9px] font-black text-slate-600 uppercase">Platform</p>
-                                        <p className="text-xs font-bold text-slate-300 truncate">{process.env.NEXT_PUBLIC_SITE_NAME || 'OpenScore'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -160,8 +180,19 @@ export default function UserPreviewPage() {
                                     className="w-full flex items-center justify-between p-4 bg-slate-800/30 hover:bg-slate-800/60 rounded-2xl text-slate-300 hover:text-white transition-all group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <RefreshCw className="w-4 h-4 text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
-                                        <b className="text-sm font-bold">Synchronize</b>
+                                        <RefreshCw className="w-4 h-4 text-emerald-400 group-hover:rotate-180 transition-transform duration-500" />
+                                        <b className="text-sm font-bold">Refresh View</b>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-slate-600" />
+                                </button>
+
+                                <button
+                                    onClick={() => window.open(previewUrl, '_blank')}
+                                    className="w-full flex items-center justify-between p-4 bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/10 rounded-2xl text-indigo-400 hover:text-indigo-300 transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Smartphone className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                                        <b className="text-sm font-bold">Open Full Portal</b>
                                     </div>
                                     <ChevronRight className="w-4 h-4 text-slate-600" />
                                 </button>
@@ -184,8 +215,8 @@ export default function UserPreviewPage() {
                             <div className="flex items-center gap-3">
                                 <ShieldCheck className="w-5 h-5 text-emerald-500/60" />
                                 <div className="flex-1">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Status</p>
-                                    <p className="text-[11px] font-bold text-slate-400 mt-1">Encrypted Admin Overlay</p>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Security</p>
+                                    <p className="text-[11px] font-bold text-slate-400 mt-1">Read-Only Agent Access</p>
                                 </div>
                             </div>
                         </div>
@@ -193,40 +224,68 @@ export default function UserPreviewPage() {
                 </div>
 
                 {/* Main View Container */}
-                <div className="flex-1 bg-[#020617] flex items-center justify-center p-6 relative overflow-hidden">
+                <div className="flex-1 bg-[#020617] flex items-center justify-center p-6 lg:p-12 relative overflow-hidden transition-all duration-500">
                     {/* Abstract background elements */}
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/5 rounded-full blur-[120px]" />
-                    <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[160px]" />
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-600/5 rounded-full blur-[120px]" />
+                    <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-teal-600/5 rounded-full blur-[160px]" />
 
-                    <div className="relative z-10 scale-[0.85] lg:scale-100 transition-transform duration-500">
-                        {/* Realistic Mockup Frame */}
-                        <div className="w-[375px] h-[812px] bg-black rounded-[60px] border-[12px] border-[#1e293b] shadow-[0_0_80px_rgba(0,0,0,0.5)] relative overflow-hidden">
-                            {/* Notch */}
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-[#1e293b] rounded-b-3xl z-20 flex items-center justify-center">
-                                <div className="w-12 h-1 bg-black/40 rounded-full" />
+                    <div className={`relative z-10 w-full h-full flex items-center justify-center transition-all duration-700 ${deviceView === 'DESKTOP' ? 'scale-100' : 'scale-[0.85] lg:scale-100'}`}>
+                        {deviceView === 'MOBILE' ? (
+                            /* Realistic Mobile Mockup Frame */
+                            <div className="w-[375px] h-[812px] bg-black rounded-[60px] border-[12px] border-[#1e293b] shadow-[0_0_80px_rgba(0,0,0,0.5)] relative overflow-hidden animate-in zoom-in-95 duration-500">
+                                {/* Notch */}
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-[#1e293b] rounded-b-3xl z-20 flex items-center justify-center">
+                                    <div className="w-12 h-1 bg-black/40 rounded-full" />
+                                </div>
+
+                                <iframe
+                                    id="preview-iframe"
+                                    src={previewUrl}
+                                    className="w-full h-full border-none bg-white font-sans"
+                                    title="Vendor Portal Preview"
+                                />
+
+                                {/* Home Indicator */}
+                                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-black/20 rounded-full z-20" />
                             </div>
+                        ) : (
+                            /* Realistic Desktop Mockup Frame */
+                            <div className="w-full h-full max-w-[1400px] max-h-[900px] bg-[#1e293b] rounded-[32px] p-1 shadow-[0_0_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-500">
+                                {/* Window Controls */}
+                                <div className="h-10 px-6 flex items-center gap-2 bg-[#0f172a] border-b border-slate-800/50">
+                                    <div className="flex gap-1.5">
+                                        <div className="w-3 h-3 rounded-full bg-rose-500/80" />
+                                        <div className="w-3 h-3 rounded-full bg-amber-500/80" />
+                                        <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+                                    </div>
+                                    <div className="flex-1 flex justify-center">
+                                        <div className="bg-[#020617] px-4 py-1.5 rounded-lg text-[9px] font-bold text-slate-500 flex items-center gap-2 border border-slate-800/50">
+                                            <ShieldCheck className="w-3 h-3" />
+                                            {agentPortalUrl}
+                                        </div>
+                                    </div>
+                                </div>
+                                <iframe
+                                    id="preview-iframe"
+                                    src={previewUrl}
+                                    className="flex-1 w-full border-none bg-white font-sans"
+                                    title="Vendor Portal Desktop Preview"
+                                />
+                            </div>
+                        )}
 
-                            <iframe
-                                id="preview-iframe"
-                                src={previewUrl}
-                                className="w-full h-full border-none bg-white"
-                                title="Admin Mobile Preview"
-                            />
-
-                            {/* Home Indicator */}
-                            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-black/20 rounded-full z-20" />
-                        </div>
-
-                        {/* Data HUD */}
-                        <div className="absolute -left-32 top-10 flex flex-col gap-4">
-                            <div className="p-4 bg-[#0f172a]/80 backdrop-blur border border-slate-800 rounded-3xl shadow-2xl">
-                                <Activity className="w-5 h-5 text-indigo-400 mb-2" />
-                                <div className="space-y-1">
-                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Stream</p>
-                                    <p className="text-[10px] font-bold text-slate-300">Live 60fps</p>
+                        {/* Data HUD (only for mobile view to reduce clutter) */}
+                        {deviceView === 'MOBILE' && (
+                            <div className="absolute -left-32 top-10 flex flex-col gap-4">
+                                <div className="p-4 bg-[#0f172a]/80 backdrop-blur border border-slate-800 rounded-3xl shadow-2xl">
+                                    <Activity className="w-5 h-5 text-emerald-400 mb-2" />
+                                    <div className="space-y-1">
+                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Status</p>
+                                        <p className="text-[10px] font-bold text-slate-300">Bypassing Guards</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -234,57 +293,42 @@ export default function UserPreviewPage() {
     }
 
     return (
-        <AdminLayout title="System Insight">
+        <AdminLayout title="Vendor Oversight">
             <div className="max-w-6xl mx-auto space-y-12 pb-20 px-4">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pt-6">
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-1 bg-indigo-500 rounded-full" />
-                            <p className="text-xs font-black uppercase tracking-[0.4em] text-indigo-500">Preview Engine</p>
+                            <div className="w-12 h-1 bg-emerald-500 rounded-full" />
+                            <p className="text-xs font-black uppercase tracking-[0.4em] text-emerald-500">Agent Network Preview</p>
                         </div>
-                        <h1 className="text-5xl font-black text-slate-900 tracking-tight leading-none">Select <br className="hidden md:block" /> Target User</h1>
+                        <h1 className="text-5xl font-black text-slate-900 tracking-tight leading-none">Select <br className="hidden md:block" /> Target Vendor</h1>
                     </div>
 
                     <div className="flex-1 max-w-xl space-y-4">
-                        <div className="bg-slate-100/50 p-1.5 rounded-2xl flex">
-                            {['ALL', 'CUSTOMER', 'MERCHANT', 'AGENT'].map((type) => (
-                                <button
-                                    key={type}
-                                    onClick={() => setUserType(type)}
-                                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${userType === type
-                                            ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50'
-                                            : 'text-slate-400 hover:text-slate-600'
-                                        }`}
-                                >
-                                    {type}
-                                </button>
-                            ))}
-                        </div>
-
                         {/* Integrated Search Bar with Autocomplete */}
                         <div className="relative" ref={dropdownRef}>
                             <div className="relative group">
-                                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur opacity-0 group-focus-within:opacity-10 transition-opacity duration-300"></div>
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl blur opacity-0 group-focus-within:opacity-10 transition-opacity duration-300"></div>
                                 <div className="relative flex items-center">
-                                    <Search className="absolute left-5 text-slate-400 transition-colors group-focus-within:text-indigo-500" size={20} />
+                                    <Search className="absolute left-5 text-slate-400 transition-colors group-focus-within:text-emerald-500" size={20} />
                                     <input
                                         type="tel"
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
-                                        className="w-full bg-white border border-slate-200 rounded-2xl py-5 pl-14 pr-16 font-bold text-slate-900 text-lg shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 placeholder:text-slate-300"
-                                        placeholder="Search name or mobile..."
+                                        className="w-full bg-white border border-slate-200 rounded-2xl py-5 pl-14 pr-16 font-bold text-slate-900 text-lg shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 placeholder:text-slate-300"
+                                        placeholder="Search vendor name, code or mobile..."
                                     />
                                     {isSearching && (
                                         <div className="absolute right-5">
-                                            <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                                            <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Dropdown Results - Redesigned with Spacing */}
+                            {/* Dropdown Results */}
                             {showDropdown && searchResults.length > 0 && (
                                 <div className="absolute top-full left-0 right-0 mt-3 p-2 bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 z-[60] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
                                     <div className="max-h-[360px] overflow-y-auto px-1 custom-scrollbar">
@@ -294,23 +338,23 @@ export default function UserPreviewPage() {
                                                 onClick={() => handleSelectUser(user)}
                                                 className="w-full flex items-center gap-4 p-4 rounded-[24px] hover:bg-slate-50 transition-all text-left mb-2 group last:mb-0"
                                             >
-                                                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:shadow-sm border border-transparent group-hover:border-slate-100 transition-all shrink-0">
-                                                    <User size={22} strokeWidth={2.5} />
+                                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-400 group-hover:bg-white group-hover:shadow-sm border border-transparent group-hover:border-slate-100 transition-all shrink-0">
+                                                    <Building2 size={22} strokeWidth={2.5} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <b className="block font-black text-slate-900 text-base leading-tight truncate">{user.name}</b>
                                                     <div className="flex items-center gap-3 mt-1">
-                                                        <b className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{user.role}</b>
+                                                        <b className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{user.referral_code}</b>
                                                         <div className="w-1 h-1 rounded-full bg-slate-300" />
                                                         <p className="text-xs font-bold text-slate-400 truncate">{user.mobile_number}</p>
                                                     </div>
                                                 </div>
-                                                <ChevronRight className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" size={20} />
+                                                <ChevronRight className="text-slate-200 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" size={20} />
                                             </button>
                                         ))}
                                     </div>
                                     <div className="bg-slate-50 p-4 border-t border-slate-100 mt-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Results for "{search}"</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Found {searchResults.length} Potential Agents</p>
                                     </div>
                                 </div>
                             )}
@@ -318,61 +362,57 @@ export default function UserPreviewPage() {
                     </div>
                 </div>
 
-                {/* Content Layout - Asymmetric */}
+                {/* Content Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    {/* Left Stats/Context (4 cols) */}
+                    {/* Left Context */}
                     <div className="lg:col-span-4 space-y-6">
                         <div className="p-8 bg-[#0f172a] rounded-[40px] text-white space-y-6 shadow-2xl relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <ShieldCheck size={120} />
                             </div>
                             <div className="relative">
-                                <p className="text-xs font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Security Protocol</p>
-                                <h2 className="text-2xl font-black leading-snug">Impersonation <br /> Framework</h2>
+                                <p className="text-xs font-black text-emerald-400 uppercase tracking-[0.4em] mb-4">Diagnostic Tool</p>
+                                <h2 className="text-2xl font-black leading-snug">Agent Portal <br /> Impersonation</h2>
                                 <p className="text-slate-400 text-sm mt-4 font-medium leading-relaxed">
-                                    Access user interfaces exactly as they see them. This tool creates a temporary authenticated bridge for diagnostic purposes.
+                                    Instantly audit vendor and agent dashboards. This creates a secure, read-only session to bypass PIN and onboarding screens.
                                 </p>
                             </div>
                             <div className="pt-4 grid grid-cols-2 gap-4 border-t border-slate-800">
                                 <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-slate-500 uppercase">Audit Status</p>
-                                    <p className="text-[11px] font-bold text-emerald-400">LOGGED</p>
+                                    <p className="text-[9px] font-black text-slate-500 uppercase">Mode</p>
+                                    <p className="text-[11px] font-bold text-emerald-400">READ-ONLY</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-slate-500 uppercase">Access Level</p>
-                                    <p className="text-[11px] font-bold text-indigo-400">ELEVATED</p>
+                                    <p className="text-[9px] font-black text-slate-500 uppercase">Auth Type</p>
+                                    <p className="text-[11px] font-bold text-indigo-400">BRIDGE JWT</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                                <Smartphone className="text-indigo-500 mb-4" size={24} />
-                                <b className="block text-2xl font-black text-slate-900">9:16</b>
-                                <p className="text-[10px] font-black text-slate-400 uppercase mt-1">Mobile Ratio</p>
+                                <Smartphone className="text-emerald-500 mb-4" size={24} />
+                                <b className="block text-2xl font-black text-slate-900">Agent</b>
+                                <p className="text-[10px] font-black text-slate-400 uppercase mt-1">Portal Type</p>
                             </div>
                             <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                                <Activity className="text-purple-500 mb-4" size={24} />
-                                <b className="block text-2xl font-black text-slate-900">Live</b>
-                                <p className="text-[10px] font-black text-slate-400 uppercase mt-1">Interactions</p>
+                                <Activity className="text-teal-500 mb-4" size={24} />
+                                <b className="block text-2xl font-black text-slate-900">Secure</b>
+                                <p className="text-[10px] font-black text-slate-400 uppercase mt-1">Audit Mode</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Details/Selection (8 cols) */}
+                    {/* Right Target Selection */}
                     <div className="lg:col-span-8">
                         {selectedUser ? (
                             <div className="bg-white rounded-[40px] p-10 shadow-sm border border-slate-100 animate-in slide-in-from-right-8 duration-500">
                                 <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
                                     <div className="relative shrink-0">
                                         <div className="w-32 h-32 rounded-[40px] bg-slate-50 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-slate-200">
-                                            {selectedUser.profile_image ? (
-                                                <img src={selectedUser.profile_image} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <User size={64} strokeWidth={1} />
-                                            )}
+                                            <Users size={64} strokeWidth={1} />
                                         </div>
-                                        <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white border-4 border-white shadow-lg">
+                                        <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-white border-4 border-white shadow-lg">
                                             <ShieldCheck size={18} />
                                         </div>
                                     </div>
@@ -380,8 +420,8 @@ export default function UserPreviewPage() {
                                     <div className="flex-1 text-center md:text-left space-y-6">
                                         <div className="space-y-2">
                                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                                                <b className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-full uppercase tracking-widest">{selectedUser.role}</b>
-                                                <b className={`px-3 py-1 ${selectedUser.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} text-[10px] font-black rounded-full uppercase tracking-widest`}>{selectedUser.status}</b>
+                                                <b className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-widest">{selectedUser.referral_code}</b>
+                                                <b className={`px-3 py-1 ${selectedUser.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} text-[10px] font-black rounded-full uppercase tracking-widest`}>{selectedUser.is_active ? 'ACTIVE' : 'INACTIVE'}</b>
                                             </div>
                                             <h3 className="text-4xl font-black text-slate-900 tracking-tight">{selectedUser.name}</h3>
                                             <p className="text-slate-400 font-bold text-lg">{selectedUser.mobile_number}</p>
@@ -391,10 +431,10 @@ export default function UserPreviewPage() {
                                             <button
                                                 onClick={handleImpersonate}
                                                 disabled={loading}
-                                                className="w-full sm:w-auto px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl shadow-slate-300 transition-all active:scale-[0.98] flex items-center justify-center gap-4 group"
+                                                className="w-full sm:w-auto px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-3xl font-black uppercase tracking-widest shadow-2xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-4 group"
                                             >
                                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform" />}
-                                                Open Interface
+                                                Open Agent Portal
                                                 <ChevronRight className="w-5 h-5 opacity-50" />
                                             </button>
 
@@ -410,19 +450,19 @@ export default function UserPreviewPage() {
 
                                 <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-10 border-t border-slate-50">
                                     <div className="p-4 bg-slate-50/50 rounded-2xl">
+                                        <Wallet className="w-4 h-4 text-slate-400 mb-2" />
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Wallet Balance</p>
+                                        <p className="text-sm font-bold text-slate-900">₹{selectedUser.credit_balance.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 bg-slate-50/50 rounded-2xl">
+                                        <Users className="w-4 h-4 text-slate-400 mb-2" />
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Sub-Vendors</p>
+                                        <p className="text-sm font-bold text-slate-900">{selectedUser.vendors_count || 0}</p>
+                                    </div>
+                                    <div className="p-4 bg-slate-50/50 rounded-2xl">
                                         <Activity className="w-4 h-4 text-slate-400 mb-2" />
-                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Last Online</p>
-                                        <p className="text-sm font-bold text-slate-900">Recent session detected</p>
-                                    </div>
-                                    <div className="p-4 bg-slate-50/50 rounded-2xl">
-                                        <History className="w-4 h-4 text-slate-400 mb-2" />
-                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Account Age</p>
-                                        <p className="text-sm font-bold text-slate-900">Verified identity</p>
-                                    </div>
-                                    <div className="p-4 bg-slate-50/50 rounded-2xl">
-                                        <CreditCard className="w-4 h-4 text-slate-400 mb-2" />
-                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Wallet Linked</p>
-                                        <p className="text-sm font-bold text-slate-900">Authenticated node</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Direct Agents</p>
+                                        <p className="text-sm font-bold text-slate-900">{selectedUser.agents_count || 0}</p>
                                     </div>
                                 </div>
                             </div>
@@ -432,9 +472,9 @@ export default function UserPreviewPage() {
                                     <Monitor size={48} strokeWidth={1} />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-black text-slate-900">No Target Specified</h3>
+                                    <h3 className="text-2xl font-black text-slate-900">Select Audit Target</h3>
                                     <p className="text-slate-400 font-medium max-w-sm mx-auto">
-                                        Use the persistent search bar above to look up identity records via Name or Mobile Number.
+                                        Use the search bar above to find an agent or vendor record. You can search by name, mobile, or referral code.
                                     </p>
                                 </div>
                                 <div className="pt-4 flex items-center justify-center gap-2">

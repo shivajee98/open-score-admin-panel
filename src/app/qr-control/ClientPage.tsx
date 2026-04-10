@@ -241,38 +241,36 @@ export default function QRControlClient() {
         const finalTarget = targetId || targetBatchId;
         if (!selectedIds.size || !finalTarget) return;
 
-        const qrIds = Array.from(selectedIds).filter(id => {
-            const item = fileSystem.find(i => i.id === id);
-            return item && item.type === 'file';
-        });
-
-        if (qrIds.length === 0) {
-            toast.error("Only QR codes can be moved to batches.");
-            return;
-        }
-
-        const cleanBatchId = finalTarget.replace('batch_', '');
-        if (!cleanBatchId || isNaN(Number(cleanBatchId))) {
-            toast.error("Invalid target batch.");
-            return;
-        }
-
         setLoading(true);
         try {
-            await apiFetch('/admin/qr/move', {
+            const qrIds: string[] = [];
+            const folderIds: string[] = [];
+
+            for (const id of Array.from(selectedIds)) {
+                const item = fileSystem.find(i => i.id === id);
+                if (!item) continue;
+                if (item.type === 'file') qrIds.push(id);
+                else if (item.type === 'folder') folderIds.push(id);
+            }
+
+            const dbTarget = (finalTarget === 'f_batches' || finalTarget === 'root') ? null : finalTarget;
+
+            await apiFetch('/admin/qr/bulk-move', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     qr_ids: qrIds,
-                    batch_id: cleanBatchId
+                    folder_ids: folderIds,
+                    target_id: dbTarget
                 }),
             });
-            toast.success(`Moved ${qrIds.length} items successfully`);
+
+            toast.success(`Successfully migrated ${selectedIds.size} assets`);
             fetchData();
             setSelectedIds(new Set());
             setIsMoveModalOpen(false);
         } catch (e: any) {
-            toast.error(e.message || "Failed to move items");
+            toast.error(e.message || "Failed to complete asset migration");
         } finally {
             setLoading(false);
         }
@@ -297,45 +295,34 @@ export default function QRControlClient() {
         e.preventDefault();
         setDragOverFolderId(null);
 
-        if (!draggedItemId || !targetFolderId) return;
+        if (!draggedItemId) return;
         if (targetFolderId === draggedItemId) return;
 
         const itemToMove = fileSystem.find(i => i.id === draggedItemId);
         if (!itemToMove) return;
 
-        if (targetFolderId.startsWith('batch_')) {
-            const batchId = targetFolderId.replace('batch_', '');
-            let qrIds: string[] = [];
-
-            if (itemToMove.type === 'file') {
-                qrIds = [itemToMove.id];
-            } else if (itemToMove.type === 'folder') {
-                qrIds = fileSystem.filter(i => i.type === 'file' && i.parentId === itemToMove.id).map(i => i.id);
-                if (qrIds.length === 0) {
-                    toast.info("Folder is empty");
-                    return;
-                }
-            }
-
-            setLoading(true);
-            try {
-                await apiFetch('/admin/qr/move', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        qr_ids: qrIds,
-                        batch_id: batchId
-                    }),
-                });
-                toast.success(`Moved ${qrIds.length} items to "${fileSystem.find(f => f.id === targetFolderId)?.name}"`);
-                fetchData();
-            } catch (e: any) {
-                toast.error(e.message || "Failed to move assets");
-            } finally {
-                setLoading(false);
-            }
+        setLoading(true);
+        try {
+            const dbTarget = (targetFolderId === null || targetFolderId === 'f_batches') ? null : targetFolderId;
+            
+            await apiFetch('/admin/qr/bulk-move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    qr_ids: itemToMove.type === 'file' ? [itemToMove.id] : [],
+                    folder_ids: itemToMove.type === 'folder' ? [itemToMove.id] : [],
+                    target_id: dbTarget
+                }),
+            });
+            
+            toast.success("Asset migration successful");
+            fetchData();
+        } catch (e: any) {
+            toast.error(e.message || "Migration failed");
+        } finally {
+            setLoading(false);
+            setDraggedItemId(null);
         }
-        setDraggedItemId(null);
     };
 
     // --- Context Menu ---
@@ -642,9 +629,12 @@ export default function QRControlClient() {
                             <div>
                                 <button
                                     onClick={() => setCurrentFolderId(null)}
+                                    onDragOver={(e) => onDragOver(e, null)}
+                                    onDrop={(e) => onDrop(e, null)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 rounded-[1.5rem] transition-all font-bold text-[15px]",
-                                        currentFolderId === null ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-105" : "text-slate-500 hover:bg-slate-50"
+                                        currentFolderId === null ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-105" : "text-slate-500 hover:bg-slate-50",
+                                        dragOverFolderId === null && draggedItemId ? "bg-indigo-100 ring-2 ring-indigo-500/20" : ""
                                     )}
                                 >
                                     <Home size={18} /> Root Volume
@@ -788,7 +778,15 @@ export default function QRControlClient() {
                                 {/* Breadcrumbs Control */}
                         <div className="flex flex-col md:flex-row items-center justify-between px-8 py-3 bg-white border border-slate-100/50 rounded-[1.8rem] shadow-2xl shadow-blue-900/5 gap-3">
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full">
-                                <button onClick={() => setCurrentFolderId(null)} className="p-2.5 bg-slate-50 rounded-xl text-slate-400 hover:bg-indigo-600 hover:text-white transition-all shrink-0 border border-slate-100">
+                                <button
+                                    onClick={() => setCurrentFolderId(null)}
+                                    onDragOver={(e) => onDragOver(e, null)}
+                                    onDrop={(e) => onDrop(e, null)}
+                                    className={cn(
+                                        "p-2.5 rounded-xl text-slate-400 transition-all shrink-0 border border-slate-100",
+                                        dragOverFolderId === null && draggedItemId ? "bg-indigo-600 text-white shadow-lg" : "bg-slate-50 hover:bg-indigo-600 hover:text-white"
+                                    )}
+                                >
                                     <Home size={18} />
                                 </button>
                                 {crumbs.map((folder, idx) => (

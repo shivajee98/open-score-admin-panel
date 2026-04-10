@@ -108,6 +108,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Broadcasts', href: '/broadcast-notifications', icon: <Megaphone className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'User Preview', href: '/user-preview', icon: <Smartphone className="w-5 h-5 text-indigo-400" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
+        { label: 'Vendor Preview', href: '/vendor-preview', icon: <Search className="w-5 h-5 text-emerald-400" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Dynamic Buttons', href: '/dynamic-buttons', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'My Profile', href: '/profile', icon: <User className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
     ];
