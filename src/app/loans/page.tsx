@@ -215,6 +215,7 @@ export default function LoanApprovals() {
                     'Mobile': user.mobile_number || '',
                     'Email': user.email || formData.email || '',
                     'Amount': loan.amount,
+                    'Desired Amount': formData.desired_amount || '',
                     'Referral Code': loan.agent
                         ? `${loan.agent.name} (${loan.agent.referral_code})`
                         : loan.referrer
@@ -241,6 +242,7 @@ export default function LoanApprovals() {
                     'Current City': formData.city || user.city || '',
                     'Current State': formData.state || user.state || '',
                     'Current PIN Code': formData.postal_code || formData.pincode || user.pincode || '',
+                    'Address Duration': formData.address_duration || '',
                     'Is Permanent Same?': (formData.is_permanent_same === true || user.is_permanent_same === true) ? 'Yes' : 'No',
                     'Permanent Street Address': formData.permanent_street_address || user.permanent_street_address || '',
                     'Permanent City': formData.permanent_city || user.permanent_city || '',
@@ -258,7 +260,12 @@ export default function LoanApprovals() {
                     'Gross Monthly Income': formData.gross_monthly_income || '',
                     'Annual Income': formData.annual_income || '',
                     'Rent/Mortgage': formData.rent_mortgage || '',
+                    'Down Payment': formData.down_payment || '',
                     'Loan Usage': formData.loan_usage || '',
+                    'Aadhaar Number': formData.aadhar_number || '',
+                    'PAN Number': formData.pan_number || '',
+                    'Comments': formData.comments || '',
+                    'Bank References': formData.bank_references || '',
                     // Bank Details (from user model)
                     'Bank Name': user.bank_name || formData.bank_name || '',
                     'IFSC Code': user.ifsc_code || formData.ifsc_code || '',
@@ -269,10 +276,11 @@ export default function LoanApprovals() {
                     'Aadhaar Back': getStorageUrl(formData.aadhar_back?.url || formData.aadhar_back || ''),
                     'PAN Front': getStorageUrl(formData.pan_front?.url || formData.pan_front || ''),
                     'Applicant Selfie': getStorageUrl(formData.applicant_selfie?.url || formData.applicant_selfie || formData.selfie?.url || formData.selfie || ''),
-                    'Selfie with Agent': getStorageUrl(formData.agent_selfie?.url || formData.agent_selfie || ''),
+                    'Selfie with Agent': getStorageUrl(formData.agent_selfie?.url || formData.agent_selfie || formData.selfie_with_agent?.url || formData.selfie_with_agent || ''),
                     'Property Photo 1': getStorageUrl(formData.prop_1?.url || formData.prop_1 || ''),
                     'Property Photo 2': getStorageUrl(formData.prop_2?.url || formData.prop_2 || ''),
                     'Property Photo 3': getStorageUrl(formData.prop_3?.url || formData.prop_3 || ''),
+                    'Address Photo': getStorageUrl(formData.address_photo?.url || formData.address_photo || ''),
                     'Location URL': formData.location_url || user.location_url || '',
                 };
             });

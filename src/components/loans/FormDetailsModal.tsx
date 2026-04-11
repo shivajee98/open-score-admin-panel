@@ -94,7 +94,7 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
         'auto_approved', 'auto_approved_at'
     ];
 
-    const photoFields = ['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'];
+    const photoFields = ['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'agent_selfie', 'prop_1', 'prop_2', 'prop_3'];
     const bankFields = ['bank_name', 'ifsc_code', 'account_holder_name', 'account_number', 'location_url'];
 
     // Extract data categories
@@ -108,7 +108,7 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
     // Personal fields
     const personalKeys = ['first_name', 'last_name', 'birth_month', 'birth_day', 'birth_year', 'marital_status', 'aadhar_number', 'pan_number'];
     const contactKeys = ['email', 'phone', 'street_address', 'street_address_2', 'city', 'state', 'postal_code', 'permanent_street_address', 'permanent_city', 'permanent_state', 'permanent_postal_code', 'is_permanent_same'];
-    const employmentKeys = ['employer', 'occupation', 'experience_years', 'gross_monthly_income', 'annual_income', 'rent_mortgage', 'down_payment'];
+    const employmentKeys = ['employer', 'occupation', 'experience_years', 'gross_monthly_income', 'annual_income', 'employment_type', 'business_type', 'business_location', 'company_name', 'job_role', 'company_location', 'rent_mortgage', 'down_payment'];
     const loanKeys = ['desired_amount', 'loan_usage', 'comments', 'bank_references'];
 
     Object.entries(formData).forEach(([key, value]) => {
