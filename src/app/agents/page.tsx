@@ -200,6 +200,16 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, 
                     <div>
                         <p className="font-bold text-slate-900">{user.name || 'Unknown Agent'}</p>
                         <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
+                        {(user.kyc_verification?.aadhar_number || user.kyc_verification?.pan_number) && (
+                            <div className="flex gap-2 mt-1">
+                                {user.kyc_verification?.aadhar_number && (
+                                    <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">A: {user.kyc_verification.aadhar_number}</span>
+                                )}
+                                {user.kyc_verification?.pan_number && (
+                                    <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">P: {user.kyc_verification.pan_number}</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </td>

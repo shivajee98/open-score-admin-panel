@@ -23,6 +23,7 @@ import {
     Edit2,
     Move,
     QrCode,
+    MapPin,
     Search,
     Grid,
     List as ListIcon,
@@ -66,6 +67,9 @@ interface FileItem {
     status?: string;
     merchant_name?: string;
     merchant_mobile?: string;
+    address?: string;
+    city?: string;
+    state?: string;
 }
 
 export default function QRControlClient() {
@@ -131,7 +135,10 @@ export default function QRControlClient() {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.size && item.size.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (item.merchant_name && item.merchant_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (item.merchant_mobile && item.merchant_mobile.includes(searchTerm));
+            (item.merchant_mobile && item.merchant_mobile.includes(searchTerm)) ||
+            (item.address && item.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.city && item.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.state && item.state.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchesFilter = filterStatus === 'all' || item.type === 'folder' || item.status === filterStatus;
 
@@ -758,7 +765,7 @@ export default function QRControlClient() {
                                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="Execute Global Search Strategy (Name, Hash, Merchant...)"
+                                    placeholder="Execute Global Search Strategy (Name, Merchant, Address, City...)"
                                     className="w-full pl-16 pr-10 py-3.5 bg-white border border-slate-100 rounded-[1.2rem] font-bold text-slate-800 shadow-xl shadow-blue-900/5 outline-none focus:ring-4 focus:ring-indigo-100 transition-all text-sm"
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -861,9 +868,19 @@ export default function QRControlClient() {
                                             </div>
                                             <div className={cn("min-w-0 flex-1", viewMode === 'grid' ? "w-full mt-6" : "mr-auto")}>
                                                 <h4 className="font-black text-xs uppercase tracking-tight text-slate-800 truncate px-4">{item.merchant_name || item.name}</h4>
-                                                <div className="flex items-center justify-center gap-2 mt-2 opacity-40">
-                                                    <Monitor size={10} />
-                                                    <p className="font-mono text-[9px] font-black uppercase tracking-widest truncate">{item.type === 'folder' ? item.size : 'S-NODE: ' + item.url?.slice(-8)}</p>
+                                                <div className="flex flex-col items-center justify-center gap-1.5 mt-2 opacity-40">
+                                                    <div className="flex items-center gap-2">
+                                                        <Monitor size={10} />
+                                                        <p className="font-mono text-[9px] font-black uppercase tracking-widest truncate">{item.type === 'folder' ? item.size : 'S-NODE: ' + item.url?.slice(-8)}</p>
+                                                    </div>
+                                                    {(item.city || item.state) && (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <MapPin size={9} />
+                                                            <p className="font-bold text-[8px] uppercase tracking-[0.1em] truncate max-w-[120px]">
+                                                                {[item.city, item.state].filter(Boolean).join(', ')}
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className={cn("absolute top-6 right-6 p-2 rounded-xl transition-all border-2", isSelected ? "bg-blue-600 border-blue-600 scale-100" : "bg-white border-slate-100 opacity-0 group-hover:opacity-100 scale-75")}>

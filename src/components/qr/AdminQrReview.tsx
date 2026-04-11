@@ -339,14 +339,41 @@ export default function AdminQrReview({ searchTerm = '' }: AdminQrReviewProps) {
                                             <span className="text-slate-400 text-[9px] font-black">Address:</span> 
                                             <span className="text-slate-800 ml-1">{address}</span>
                                         </p>
-                                        <p className="mt-0.5">
-                                            <span className="text-slate-400 text-[9px] font-black">City:</span> 
-                                            <span className="text-slate-800 ml-1">{item.city}</span>
-                                            <span className="text-slate-300 mx-1">|</span>
-                                            <span className="text-slate-400 text-[9px] font-black">State:</span> 
-                                            <span className="text-slate-800 ml-1">{item.state}</span>
-                                        </p>
-                                        <p className="mt-0.5">
+                                        {(item.city || item.state) && (
+                                            <p className="mt-0.5">
+                                                <span className="text-slate-400 text-[9px] font-black">City:</span> 
+                                                <span className="text-slate-800 ml-1">{item.city || 'N/A'}</span>
+                                                <span className="text-slate-300 mx-1">|</span>
+                                                <span className="text-slate-400 text-[9px] font-black">State:</span> 
+                                                <span className="text-slate-800 ml-1">{item.state || 'N/A'}</span>
+                                            </p>
+                                        )}
+                                        
+                                        {/* Configuration Payload */}
+                                        {item.payload && (
+                                            <div className="mt-3 p-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100/50 flex items-center justify-between">
+                                                {(() => {
+                                                    try {
+                                                        const p = typeof item.payload === 'string' ? JSON.parse(item.payload) : item.payload;
+                                                        return (
+                                                            <>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest">Configuration</span>
+                                                                    <span className="text-[10px] font-black text-indigo-900 uppercase">{p.package_name || 'Standard'}</span>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest">Content</span>
+                                                                    <p className="text-[10px] font-black text-indigo-900 uppercase">{p.description || 'N/A'}</p>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    } catch (e) {
+                                                        return <span className="text-[9px] text-slate-400 font-bold uppercase">Legacy Booking Data</span>;
+                                                    }
+                                                })()}
+                                            </div>
+                                        )}
+                                        <p className="mt-1.5">
                                             <span className="text-slate-400 text-[9px] font-black">PIN Code:</span> 
                                             <span className="text-slate-800 ml-1">{item.pin_code}</span>
                                             {item.landmark && (
