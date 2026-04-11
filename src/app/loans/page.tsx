@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, History as HistoryIcon, Database } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import { useSearchParams } from 'next/navigation';
-import MultiStepDeleteModal from '@/components/ui/MultiStepDeleteModal';
-import { cn } from '@/lib/utils';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
 const isPlatformFeePaid = (loan: any): boolean => {
@@ -34,7 +32,7 @@ export default function LoanApprovals() {
     const searchParams = useSearchParams();
     const [loans, setLoans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'requests' | 'history' | 'archived'>('requests');
+    const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
     const [selectedLoan, setSelectedLoan] = useState<any>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -49,11 +47,6 @@ export default function LoanApprovals() {
     const [itemsPerPage, setItemsPerPage] = useState(20);
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
 
-    // Archiving Modal State
-    const [archiveModalOpen, setArchiveModalOpen] = useState(false);
-    const [archivingLoan, setArchivingLoan] = useState<any>(null);
-    const [archiveBatchOpen, setArchiveBatchOpen] = useState(false);
-
     // Initial query param setup
     useEffect(() => {
         const urlSearch = searchParams.get('search');
@@ -66,10 +59,7 @@ export default function LoanApprovals() {
         setLoading(true);
         setSelectedLoanIds([]);
         try {
-            let endpoint = '/admin/loans';
-            if (activeTab === 'history') endpoint = '/admin/loans/history';
-            if (activeTab === 'archived') endpoint = '/admin/loans/archived';
-            
+            const endpoint = activeTab === 'requests' ? '/admin/loans' : '/admin/loans/history';
             const query = new URLSearchParams({
                 search: search,
                 status: statusFilter,
@@ -99,26 +89,18 @@ export default function LoanApprovals() {
     }, [activeTab, search, statusFilter, page, itemsPerPage]);
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
-        if (method === 'DELETE' || endpoint === '/delete') {
-            // Protected ID logic (Sunil Kumar Malviya ID 154)
-            if (id === 154) {
-               alert("CRITICAL ERROR: Access Denied. Entry ID 154 (Sunil Kumar Malviya) is globally protected and cannot be archived or deleted.");
-               return;
-            }
-            setArchivingLoan(loans.find(l => l.id === id));
-            setArchiveModalOpen(true);
-            return;
-        }
-
         if (!confirm('Are you sure you want to perform this action?')) return;
 
         setActionLoading(`${id}-${endpoint}`);
         try {
+            // Normalize path
             const path = endpoint ? (endpoint.startsWith('/') ? endpoint : `/${endpoint}`) : '';
             const response = await apiFetch(`/admin/loans/${id}${path}`, { method });
 
-            if (response && (response.data?.kyc_link || response.kyc_link)) {
-                prompt("KYC Link generated (Copy below):", response.data?.kyc_link || response.kyc_link);
+            if (response && response.data && response.data.kyc_link) {
+                prompt("KYC Link generated (Copy below):", response.data.kyc_link);
+            } else if (response && response.kyc_link) {
+                prompt("KYC Link generated (Copy below):", response.kyc_link);
             } else {
                 alert(successMsg);
             }
@@ -161,51 +143,33 @@ export default function LoanApprovals() {
         }
     };
 
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (selectedLoanIds.length === 0) return;
-        // Check if any protected ID is in selection
-        if (selectedLoanIds.includes(154)) {
-            alert("PROTECTION ALERT: Selection contains ID 154 (Sunil Kumar Malviya), which is globally protected. Please unselect it to proceed with bulk archive.");
-            return;
-        }
-        setArchiveBatchOpen(true);
-    };
+        if (!confirm(`Are you sure you want to delete ${selectedLoanIds.length} selected loans and all their history? This is permanent.`)) return;
 
-    const executeArchive = async (id: number) => {
-        setActionLoading(`${id}-delete`);
+        setActionLoading('bulk-delete');
         try {
-            await apiFetch(`/admin/loans/${id}`, { method: 'DELETE' });
-            setArchiveModalOpen(false);
-            setArchivingLoan(null);
-            loadLoans();
-        } catch (e) {
-            alert('Archiving failed');
-        } finally {
-            setActionLoading(null);
-        }
-    };
-
-    const executeBulkArchive = async () => {
-        setActionLoading('bulk-archive');
-        try {
-            await apiFetch('/admin/loans/bulk-delete', {
+            const response = await apiFetch('/admin/loans/bulk-delete', {
                 method: 'POST',
                 body: JSON.stringify({ ids: selectedLoanIds })
             });
-            setArchiveBatchOpen(false);
+            alert(response.message || 'Bulk delete successful');
             setSelectedLoanIds([]);
             loadLoans();
         } catch (e) {
-            alert('Bulk archive failed');
+            console.error(e);
+            alert('Bulk action failed');
         } finally {
             setActionLoading(null);
         }
     };
-
     const handleExportExcel = async () => {
         setExporting(true);
         try {
+            // Dynamically import xlsx
             const XLSX = await import('xlsx');
+
+            // Fetch ALL loans (not paginated) for export
             const endpoint = activeTab === 'requests' ? '/admin/loans' : '/admin/loans/history';
             const query = new URLSearchParams({
                 search: search,
@@ -216,6 +180,7 @@ export default function LoanApprovals() {
             const response = await apiFetch(`${endpoint}?${query}`);
             let allLoans = response?.data || response || [];
 
+            // 🟢 NEW: If there are selected IDs, filter the list to ONLY those.
             if (selectedLoanIds.length > 0) {
                 allLoans = allLoans.filter((l: any) => selectedLoanIds.includes(l.id));
             }
@@ -229,23 +194,101 @@ export default function LoanApprovals() {
             const rows = allLoans.map((loan: any) => {
                 const formData = loan.form_data || {};
                 const user = loan.user || {};
+
+                // Extract any available geo data
+                let latitude = '';
+                let longitude = '';
+                const photoKeys = ['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'];
+                for (const key of photoKeys) {
+                    if (formData[key]?.geo?.lat && formData[key]?.geo?.lng) {
+                        latitude = formData[key].geo.lat;
+                        longitude = formData[key].geo.lng;
+                        break;
+                    }
+                }
+
                 return {
                     'Loan ID': loan.id,
                     'Display ID': loan.display_id || loan.id,
                     'Status': loan.status,
                     'Applicant Name': user.name || '',
                     'Mobile': user.mobile_number || '',
+                    'Email': user.email || formData.email || '',
                     'Amount': loan.amount,
+                    'Referral Code': loan.agent
+                        ? `${loan.agent.name} (${loan.agent.referral_code})`
+                        : loan.referrer
+                            ? `${loan.referrer.name} (${loan.referrer.my_referral_code})`
+                            : 'Direct',
                     'Tenure': loan.tenure,
                     'Payout Frequency': loan.payout_frequency,
                     'Application Date': loan.created_at ? new Date(loan.created_at).toLocaleDateString() : '',
+                    'Approved Date': loan.approved_at ? new Date(loan.approved_at).toLocaleDateString() : '',
+                    'Disbursed Date': loan.disbursed_at ? new Date(loan.disbursed_at).toLocaleDateString() : '',
+                    'Paid Amount': loan.paid_amount || 0,
+                    // GPS Data
+                    'Latitude': latitude,
+                    'Longitude': longitude,
+                    'Google Maps Link': latitude && longitude ? `https://www.google.com/maps?q=${latitude},${longitude}` : '',
+                    // KYC Form Fields
+                    'First Name': formData.first_name || '',
+                    'Last Name': formData.last_name || '',
+                    'Date of Birth': formData.birth_day && formData.birth_month && formData.birth_year
+                        ? `${formData.birth_day}/${formData.birth_month}/${formData.birth_year}` : '',
+                    'Marital Status': formData.marital_status || '',
+                    'Phone': formData.phone || '',
+                    'Current Street Address': formData.street_address || user.street_address || '',
+                    'Current City': formData.city || user.city || '',
+                    'Current State': formData.state || user.state || '',
+                    'Current PIN Code': formData.postal_code || formData.pincode || user.pincode || '',
+                    'Is Permanent Same?': (formData.is_permanent_same === true || user.is_permanent_same === true) ? 'Yes' : 'No',
+                    'Permanent Street Address': formData.permanent_street_address || user.permanent_street_address || '',
+                    'Permanent City': formData.permanent_city || user.permanent_city || '',
+                    'Permanent State': formData.permanent_state || user.permanent_state || '',
+                    'Permanent PIN Code': formData.permanent_postal_code || formData.permanent_pincode || user.permanent_pincode || '',
+                    'Employment Type': formData.employment_type || '',
+                    'Business Type': formData.business_type || 'N/A',
+                    'Business Location': formData.business_location || 'N/A',
+                    'Company Name': formData.company_name || 'N/A',
+                    'Job Role': formData.job_role || 'N/A',
+                    'Company Location': formData.company_location || 'N/A',
+                    'Employer': formData.employer || '',
+                    'Occupation': formData.occupation || '',
+                    'Experience (Years)': formData.experience_years || '',
+                    'Gross Monthly Income': formData.gross_monthly_income || '',
+                    'Annual Income': formData.annual_income || '',
+                    'Rent/Mortgage': formData.rent_mortgage || '',
+                    'Loan Usage': formData.loan_usage || '',
+                    // Bank Details (from user model)
+                    'Bank Name': user.bank_name || formData.bank_name || '',
+                    'IFSC Code': user.ifsc_code || formData.ifsc_code || '',
+                    'Account Holder': user.account_holder_name || formData.account_holder_name || '',
+                    'Account Number': user.account_number || formData.account_number || '',
+                    // KYC Photo URLs
+                    'Aadhaar Front': getStorageUrl(formData.aadhar_front?.url || formData.aadhar_front || ''),
+                    'Aadhaar Back': getStorageUrl(formData.aadhar_back?.url || formData.aadhar_back || ''),
+                    'PAN Front': getStorageUrl(formData.pan_front?.url || formData.pan_front || ''),
+                    'Applicant Selfie': getStorageUrl(formData.applicant_selfie?.url || formData.applicant_selfie || formData.selfie?.url || formData.selfie || ''),
+                    'Selfie with Agent': getStorageUrl(formData.agent_selfie?.url || formData.agent_selfie || ''),
+                    'Property Photo 1': getStorageUrl(formData.prop_1?.url || formData.prop_1 || ''),
+                    'Property Photo 2': getStorageUrl(formData.prop_2?.url || formData.prop_2 || ''),
+                    'Property Photo 3': getStorageUrl(formData.prop_3?.url || formData.prop_3 || ''),
+                    'Location URL': formData.location_url || user.location_url || '',
                 };
             });
 
             const ws = XLSX.utils.json_to_sheet(rows);
+
+            // Auto-size columns
+            const colWidths = Object.keys(rows[0]).map(key => ({
+                wch: Math.max(key.length + 2, ...rows.map((r: any) => String(r[key] || '').length).slice(0, 20))
+            }));
+            ws['!cols'] = colWidths;
+
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, activeTab === 'requests' ? 'Pending Loans' : 'Loan History');
-            const fileName = `openscore_loans_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+            const fileName = `openscore_${activeTab === 'requests' ? 'pending_loans' : 'loan_history'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, fileName);
         } catch (err) {
             console.error('Export failed', err);
@@ -256,32 +299,27 @@ export default function LoanApprovals() {
     };
 
     return (
-        <AdminLayout title="Loan Control & Archiving">
-            <title>Loan Approvals | OpenScore</title>
+        <AdminLayout title="Loan Approvals">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
-                    {[
-                        { id: 'requests', label: 'Live Pipeline', icon: Clock, count: counts.loans },
-                        { id: 'history', label: 'History', icon: HistoryIcon, count: 0 },
-                        { id: 'archived', label: 'Archived Storage', icon: Trash2, count: 0 },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => { setActiveTab(tab.id as any); setStatusFilter('ALL'); setPage(1); }}
-                            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === tab.id
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
-                                }`}
-                        >
-                            <tab.icon size={16} />
-                            {tab.label}
-                            {tab.count > 0 && (
-                                <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-[10px]">
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                    <button
+                        onClick={() => { setActiveTab('requests'); setStatusFilter('ALL'); setPage(1); }}
+                        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'requests'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                    >
+                        Pending Requests
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('history'); setStatusFilter('ALL'); setPage(1); }}
+                        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'history'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                    >
+                        Loan History
+                    </button>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -295,8 +333,12 @@ export default function LoanApprovals() {
                             <option value="ALL">All Status</option>
                             {activeTab === 'requests' ? (
                                 <>
-                                    <option value="PENDING">Pending</option>
-                                    <option value="APPLIED">Applied</option>
+                                    <option value="PENDING">Pending (Intake)</option>
+                                    <option value="APPLIED">Applied (Intake)</option>
+                                    <option value="PROCEEDED">Proceeded (Vetting)</option>
+                                    <option value="VETTING">Vetting (Vetting)</option>
+                                    <option value="KYC_SENT">KYC Sent</option>
+                                    <option value="FORM_SUBMITTED">Form Submitted</option>
                                     <option value="KYC_SUBMITTED">KYC Submitted</option>
                                     <option value="APPROVED">Approved</option>
                                 </>
@@ -305,116 +347,336 @@ export default function LoanApprovals() {
                                     <option value="DISBURSED">Disbursed</option>
                                     <option value="CLOSED">Closed</option>
                                     <option value="REJECTED">Rejected</option>
+                                    <option value="CANCELLED">Cancelled</option>
                                 </>
                             )}
                         </select>
                     </div>
 
+                    <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-400 mr-2 whitespace-nowrap">Rows:</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setPage(1); }}
+                            className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none cursor-pointer"
+                        >
+                            <option value={12}>12</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
                     <div className="relative flex-1 md:flex-none">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <input
                             type="text"
-                            placeholder="Search records..."
+                            placeholder="Search by ID, Name or Mobile..."
                             className="pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-medium w-full md:w-64 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         />
                     </div>
 
+                    {/* Download Excel Button */}
                     <button
                         onClick={handleExportExcel}
                         disabled={exporting || loans.length === 0}
-                        className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 shadow-lg transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Download size={16} />
-                        {exporting ? '...' : 'Excel'}
+                        {exporting ? 'Exporting...' : selectedLoanIds.length > 0 ? `Download (${selectedLoanIds.length})` : 'Excel'}
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+            {/* Pipeline Card - Full width with 8px margin */}
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden -mx-[8px] md:-mx-[24px]">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                     <div>
-                        <h3 className="text-xl font-black text-slate-900 uppercase">
-                            {activeTab === 'requests' ? 'Active Pipeline' : activeTab === 'history' ? 'Loan Records' : 'Archive Repository'}
+                        <h3 className="text-xl font-black text-slate-900">
+                            {activeTab === 'requests' ? 'Live Loan Pipeline' : 'Archived Loan Records'}
                         </h3>
                         <p className="text-slate-500 font-medium text-sm mt-1">
-                            {activeTab === 'archived' ? 'Non-destructive historical storage for deleted data.' : 'Manage live applications and vetted records.'}
+                            {activeTab === 'requests'
+                                ? 'Review applicant details, manage KYC and approve disbursals.'
+                                : 'Comprehensive history of closed, cancelled or rejected requests.'}
                         </p>
                     </div>
-                    {activeTab !== 'archived' && selectedLoanIds.length > 0 && (
-                        <button
-                            onClick={handleBulkDelete}
-                            className="px-6 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100"
-                        >
-                            Archive Selected ({selectedLoanIds.length})
-                        </button>
-                    )}
                 </div>
 
-                {loading ? (
-                    <div className="p-24 text-center">
-                        <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing Data...</p>
+                {activeTab === 'history' && selectedLoanIds.length > 0 && (
+                    <div className="mx-8 mb-4 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-red-900">{selectedLoanIds.length} Loans Selected</p>
+                                <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Caution: Deletion is permanent</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleBulkDelete}
+                            disabled={actionLoading === 'bulk-delete'}
+                            className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all font-mono"
+                        >
+                            {actionLoading === 'bulk-delete' ? 'Deleting...' : 'Delete Selected Records'}
+                        </button>
                     </div>
-                ) : loans.length === 0 ? (
+                )}
+
+                {loans.length === 0 && !loading ? (
                     <div className="p-24 text-center">
-                        <Database className="w-12 h-12 text-slate-100 mx-auto mb-4" />
-                        <h4 className="text-lg font-black text-slate-900 mb-1 uppercase">Vault Empty</h4>
-                        <p className="text-slate-400 font-medium text-sm">No records found matching current criteria.</p>
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                            <BadgeCheck className="w-10 h-10 text-slate-300" />
+                        </div>
+                        <h4 className="text-lg font-black text-slate-900 mb-1">No applications found</h4>
+                        <p className="text-slate-400 font-medium">Try adjusting your filters or search query.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left order-collapse">
                             <thead className="bg-slate-50/50">
                                 <tr>
-                                    {activeTab !== 'archived' && (
-                                        <th className="p-6 pl-8 w-10">
-                                            <input type="checkbox" checked={selectedLoanIds.length === loans.length} onChange={toggleAllOnPage} className="w-4 h-4 text-blue-600 rounded" />
-                                        </th>
-                                    )}
-                                    <th className={`p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest ${activeTab === 'archived' ? 'pl-8' : 'pl-2'}`}>Applicant / ID</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount / Details</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">{activeTab === 'archived' ? 'Archived At' : 'Timeline'}</th>
+                                    <th className="p-6 pl-8 w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={loans.length > 0 && selectedLoanIds.length === loans.length}
+                                            onChange={toggleAllOnPage}
+                                            className="w-4 h-4 text-blue-600 rounded"
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Applicant & Loan ID</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Details</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loans.map((loan: any) => (
-                                    <tr key={loan.id} className="hover:bg-slate-50/80 transition-all group cursor-pointer" onClick={() => setSelectedLoan(loan.id)}>
-                                        {activeTab !== 'archived' && (
-                                            <td className="p-6 pl-8" onClick={(e) => e.stopPropagation()}>
-                                                <input type="checkbox" checked={selectedLoanIds.includes(loan.id)} onChange={(e) => toggleSelection(e, loan.id)} className="w-4 h-4 text-blue-600 rounded" />
-                                            </td>
-                                        )}
-                                        <td className={`p-6 ${activeTab === 'archived' ? 'pl-8' : 'pl-2'}`}>
-                                            <div className="flex flex-col">
-                                                <span className="font-black text-slate-900">{loan.user?.name || 'Unknown'}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</span>
+                                    <tr
+                                        key={loan.id}
+                                        className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                                        onClick={() => setSelectedLoan(loan.id)}
+                                    >
+                                        <td className="p-6 pl-8" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedLoanIds.includes(loan.id)}
+                                                onChange={(e) => toggleSelection(e, loan.id)}
+                                                className="w-4 h-4 text-blue-600 rounded"
+                                            />
+                                        </td>
+                                        <td className="p-6 pl-2">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                                        {loan.user?.name?.[0] || 'U'}
+                                                    </div>
+                                                    {(loan.status === 'APPLIED' || loan.status === 'KYC_SUBMITTED' || loan.status === 'FORM_SUBMITTED') && (
+                                                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
+                                                        {loan.user?.kyc_status === 'FIELD_VERIFIED' ? (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-200">FIELD KYC VERIFIED</span>
+                                                        ) : loan.user?.kyc_status === 'FULL_VERIFIED' ? (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">FULL KYC VERIFIED</span>
+                                                        ) : (
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">KYC PENDING</span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Referral Info */}
+                                                    {loan.agent ? (
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
+                                                                AGENT: {loan.agent.name}
+                                                            </span>
+                                                            <span className="text-[9px] font-mono font-bold text-slate-400">
+                                                                {loan.agent.referral_code}
+                                                            </span>
+                                                        </div>
+                                                    ) : loan.referrer ? (
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 border border-violet-100 shadow-sm">
+                                                                REF: {loan.referrer.name}
+                                                            </span>
+                                                            <span className="text-[9px] font-mono font-bold text-slate-400">
+                                                                {loan.referrer.my_referral_code}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-1">
+                                                            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 border border-slate-100">
+                                                                DIRECT
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Approval Info */}
+                                                    {loan.sub_user_approver ? (
+                                                        <p className="text-[10px] font-bold text-emerald-600 mt-0.5">
+                                                            Approved by Agent: {loan.sub_user_approver.name}
+                                                        </p>
+                                                    ) : loan.approver ? (
+                                                        <p className="text-[10px] font-bold text-blue-600 mt-0.5">
+                                                            Approved by Support: {loan.approver.name}
+                                                        </p>
+                                                    ) : null}
+
+                                                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${loan.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                            loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                                (loan.status === 'KYC_SENT' || loan.status === 'FORM_SUBMITTED' || loan.status === 'KYC_SUBMITTED') ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                                    (loan.status === 'REJECTED' || loan.status === 'CANCELLED') ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                                        'bg-slate-50 text-slate-500 border-slate-100'
+                                                            }`}>{loan.status}</span>
+                                                        {/* Platform Fee Status Indicator */}
+                                                        {loan.status === 'APPROVED' && hasPlatformFee(loan) && (
+                                                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${isPlatformFeePaid(loan)
+                                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                                }`}>
+                                                                {isPlatformFeePaid(loan) ? ' Fee Paid' : ' Fee Pending'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {/* Quick KYC Access */}
+                                                    {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setSelectedLoan(loan.id); }}
+                                                            className="mt-1 text-[9px] font-bold text-purple-500 hover:text-purple-700 flex items-center gap-0.5 transition-colors"
+                                                        >
+                                                            <FileText size={10} /> View KYC
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-6">
-                                            <div className="flex flex-col">
-                                                <span className="font-black text-slate-900 text-lg">₹{parseFloat(loan.amount).toLocaleString()}</span>
-                                                <span className="text-[10px] font-black text-blue-500 uppercase">{loan.status}</span>
+                                            <div className="flex items-center gap-2">
+                                                <IndianRupee size={16} className="text-slate-300" />
+                                                <span className="font-black text-slate-900 text-xl tracking-tighter">
+                                                    {parseFloat(loan.amount).toLocaleString('en-IN')}
+                                                </span>
                                             </div>
+                                            <p className="text-[10px] font-bold text-slate-400 mt-0.5">Application Date: {new Date(loan.created_at).toLocaleDateString()}</p>
                                         </td>
                                         <td className="p-6">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-slate-600">{new Date(loan.archived_at || loan.created_at).toLocaleDateString()}</span>
-                                                <span className="text-[10px] font-medium text-slate-400">{new Date(loan.archived_at || loan.created_at).toLocaleTimeString()}</span>
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-2 text-[11px] font-black text-slate-600">
+                                                    <Clock size={12} className="text-slate-400" />
+                                                    {loan.tenure} {loan.tenure > 6 ? 'Days' : 'Months'} Tenure
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg w-fit border border-blue-100 shadow-sm">
+                                                    <Calculator size={12} />
+                                                    {loan.payout_frequency} Payout
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-6 pr-8 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {activeTab === 'archived' ? (
-                                                    <span className="text-[9px] font-black text-slate-300 italic uppercase tracking-widest">Read Only Vault</span>
-                                                ) : (
-                                                    <>
-                                                        <button onClick={(e) => { e.stopPropagation(); setSelectedLoan(loan.id); }} className="p-2.5 text-blue-500 hover:bg-blue-50 rounded-xl transition-all" title="View Details"><Eye size={18} /></button>
-                                                        <button onClick={(e) => { e.stopPropagation(); handleAction(loan.id, '', 'Archived!', 'DELETE'); }} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Archive"><Trash2 size={18} /></button>
-                                                    </>
+                                            <div className="flex justify-end items-center gap-2">
+                                                {['PENDING', 'APPLIED'].includes(loan.status) && (
+                                                    <button
+                                                        disabled={!!actionLoading}
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'proceed', 'Loan Proceeded!'); }}
+                                                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-mono"
+                                                    >
+                                                        Proceed
+                                                    </button>
                                                 )}
+
+                                                {['PROCEEDED', 'VETTING'].includes(loan.status) && (
+                                                    <button
+                                                        disabled={!!actionLoading}
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'send-kyc', 'KYC Link Sent!'); }}
+                                                        className="px-5 py-2.5 bg-amber-400 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 shadow-xl shadow-amber-500/20 transition-all font-mono"
+                                                    >
+                                                        Send KYC
+                                                    </button>
+                                                )}
+
+                                                {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
+                                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setPreviewLoan(loan); }}
+                                                            className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
+                                                            title="Preview KYC"
+                                                        >
+                                                            <Search size={18} />
+                                                        </button>
+                                                        <button
+                                                            disabled={!!actionLoading}
+                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'approve', 'Loan Approved!'); }}
+                                                            className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all font-mono"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {loan.status === 'APPROVED' && (
+                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        {getPendingPlatformFee(loan) && (
+                                                            <button
+                                                                disabled={!!actionLoading}
+                                                                onClick={(e) => handleApproveFee(e, getPendingPlatformFee(loan).id)}
+                                                                className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 transition-all font-mono"
+                                                            >
+                                                                {actionLoading === `approve-fee-${getPendingPlatformFee(loan).id}` ? '...' : 'Confirm Fee'}
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan))}
+                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'release', 'Funds Released!'); }}
+                                                            className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all font-mono ${hasPlatformFee(loan) && !isPlatformFeePaid(loan)
+                                                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                                                : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/30'
+                                                                }`}
+                                                            title={hasPlatformFee(loan) && !isPlatformFeePaid(loan) ? 'Platform fee must be paid before disbursal' : 'Release funds to customer'}
+                                                        >
+                                                            Disburse
+                                                        </button>
+                                                        {hasPlatformFee(loan) && !isPlatformFeePaid(loan) && (
+                                                            <span className="text-[9px] font-bold text-orange-500 max-w-[100px] leading-tight">
+                                                                {getPendingPlatformFee(loan) ? 'Awaiting Approval' : 'Fee unpaid'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* View Full Details Button (Combined View) */}
+                                                <button
+                                                    onClick={() => setSelectedLoan(loan.id)}
+                                                    className="p-2.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                    title="View Full Details"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+
+                                                <div className="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity ml-4 border-l pl-4 border-slate-100" onClick={(e) => e.stopPropagation()}>
+                                                    {['DISBURSED'].includes(loan.status) && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'close', 'Loan Closed Manually!', 'POST'); }}
+                                                            className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                                                            title="Close Loan"
+                                                        >
+                                                            <XCircle size={18} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, '', 'Loan Deleted!', 'DELETE'); }}
+                                                        className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                        title="Delete Record"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -424,33 +686,348 @@ export default function LoanApprovals() {
                     </div>
                 )}
 
+                {/* Pagination */}
                 <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page {page} of {totalPages}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Page {page} of {totalPages}
+                    </p>
                     <div className="flex items-center gap-3">
-                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm"><ChevronLeft size={20} /></button>
-                        <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm"><ChevronRight size={20} /></button>
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {selectedLoan && (
-                <LoanDetailModal loanId={selectedLoan} onClose={() => setSelectedLoan(null)} onUpdate={() => loadLoans()} />
+            {/* Preview Modal (legacy KYC preview) */}
+            {previewLoan && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-slate-50 w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden my-auto relative">
+                        {/* Header */}
+                        <div className="bg-white p-6 sm:p-8 border-b border-slate-100 flex justify-between items-start sticky top-0 z-10 shadow-sm">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <h2 className="text-2xl font-black text-slate-900">KYC Verification Details</h2>
+                                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded-full uppercase tracking-widest">
+                                        LOAN #{previewLoan.display_id || previewLoan.id}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                                    <Clock size={16} className="text-blue-500" />
+                                    <span>Submitted on {new Date(previewLoan.kyc_submitted_at || previewLoan.updated_at).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => { setPreviewLoan(null); setReuploadFields([]); }} 
+                                className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-red-500 hover:rotate-90"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 sm:p-8 space-y-8">
+                            {previewLoan.form_data ? (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Left Side: Personal & Employment */}
+                                        <div className="space-y-8">
+                                            {/* Personal Info */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                                                        <User size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Personal & Contact</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                                                    <div className="col-span-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.first_name} {previewLoan.form_data.last_name}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mobile</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.phone || previewLoan.user?.mobile_number}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                                                        <p className="text-sm font-bold text-slate-900 truncate" title={previewLoan.form_data.email}>{previewLoan.form_data.email || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">DOB</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.date_of_birth || previewLoan.form_data.birth_date || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Loan Usage</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.loan_usage || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Employment Info */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                                        <Briefcase size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Job & Identity</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">PAN Number</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono">{previewLoan.form_data.pan_number || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Aadhar Number</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono">{previewLoan.form_data.aadhar_number || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Employment</p>
+                                                        <p className="text-sm font-bold text-slate-900 uppercase">{previewLoan.form_data.employment_type || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Monthly Income</p>
+                                                        <p className="text-sm font-bold text-emerald-600">₹{parseFloat(previewLoan.form_data.annual_income || 0).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Company/Employer</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.company_name || previewLoan.form_data.employer || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Side: Address & Bank & Pricing */}
+                                        <div className="space-y-8">
+                                            {/* Address Details (Single Div) */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                                        <MapPin size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Address Information</span>
+                                                </div>
+                                                <div className="space-y-6">
+                                                    <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Current Address</p>
+                                                        <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                            {[previewLoan.form_data.street_address, previewLoan.form_data.city, previewLoan.form_data.state, previewLoan.form_data.postal_code || previewLoan.form_data.pincode].filter(Boolean).join(', ')}
+                                                        </p>
+                                                        {previewLoan.form_data.location_url && (
+                                                            <a href={previewLoan.form_data.location_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors">
+                                                                <ExternalLink size={10} /> View on Map
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                    <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-1">Permanent Address</p>
+                                                        <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                                                            {previewLoan.form_data.is_permanent_same === true || previewLoan.form_data.is_address_same === true
+                                                                ? "Same as Current Address"
+                                                                : [previewLoan.form_data.permanent_street_address, previewLoan.form_data.permanent_city, previewLoan.form_data.permanent_state, previewLoan.form_data.permanent_postal_code || previewLoan.form_data.permanent_pincode].filter(Boolean).join(', ')
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Bank Info */}
+                                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                                                        <Landmark size={18} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Bank Details</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bank Name</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.bank_name || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">IFSC Code</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono uppercase">{previewLoan.form_data.ifsc_code || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Account Number</p>
+                                                        <p className="text-sm font-black text-slate-900 font-mono tracking-wider">{previewLoan.form_data.account_number || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Pricing & Fees Table */}
+                                    {previewLoan.calculations?.fee_structure && (
+                                        <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                                            <div className="px-6 py-4 bg-emerald-50/50 border-b border-slate-100 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Calculator className="w-4 h-4 text-emerald-600" />
+                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Pricing & Fee Structure</span>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Santioned Amount</p>
+                                                        <p className="text-sm font-black text-emerald-900">₹{parseFloat(previewLoan.calculations.principal).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Net Disbursal</p>
+                                                        <p className="text-sm font-black text-blue-600">₹{parseFloat(previewLoan.calculations.disbursal_amount).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="p-0 overflow-x-auto">
+                                                <table className="w-full text-left">
+                                                    <thead className="bg-slate-50/50">
+                                                        <tr>
+                                                            <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee Component</th>
+                                                            <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {previewLoan.calculations.fee_structure.map((fee: any, idx: number) => (
+                                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="px-6 py-3 text-xs font-bold text-slate-900">{fee.name}</td>
+                                                                <td className="px-6 py-3 text-xs font-black text-slate-900 text-right">₹{fee.amount.toLocaleString()}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="bg-slate-50/30">
+                                                            <td className="px-6 py-3 text-xs font-black text-slate-400 uppercase tracking-widest">Total Deductions</td>
+                                                            <td className="px-6 py-3 text-sm font-black text-rose-500 text-right">₹{previewLoan.calculations.total_deductions.toLocaleString()}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* KYC Images Grid */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                                <Camera size={18} />
+                                            </div>
+                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">KYC Documents & Photos</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            {['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'].map(key => {
+                                                const value = previewLoan.form_data[key];
+                                                if (!value || (typeof value === 'object' && !value.url)) return null;
+                                                const imgUrl = typeof value === 'string' ? value : value.url;
+                                                const isSelected = reuploadFields.includes(key);
+
+                                                return (
+                                                    <div key={key} className="space-y-2">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate">{key.replace(/_/g, ' ')}</p>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setReuploadFields(prev => 
+                                                                        prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                                                    );
+                                                                }}
+                                                                className={`p-1.5 rounded-lg transition-all border ${
+                                                                    isSelected 
+                                                                    ? "bg-rose-500 text-white border-rose-500" 
+                                                                    : "text-rose-400 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                                }`}
+                                                                title="Mark for Re-upload"
+                                                            >
+                                                                <Shield size={12} fill={isSelected ? "currentColor" : "none"} />
+                                                            </button>
+                                                        </div>
+                                                        <div className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all ${isSelected ? 'border-rose-500 shadow-lg shadow-rose-500/20' : 'border-slate-100'}`}>
+                                                            <img src={imgUrl} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/40 transition-all">
+                                                                    <Eye size={20} />
+                                                                </a>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div className="absolute top-2 right-2 bg-rose-500 text-white p-1 rounded-lg">
+                                                                    <BadgeCheck size={12} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {typeof value === 'object' && value.geo && (
+                                                            <div className="flex flex-col text-[8px] font-bold text-slate-400 italic">
+                                                                <span>LAT: {value.geo.lat?.toFixed(4)}</span>
+                                                                <span>LNG: {value.geo.lng?.toFixed(4)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Bulk Re-upload Action */}
+                                    {reuploadFields.length > 0 && (
+                                        <div className="mt-8 pt-8 border-t border-slate-100 flex justify-end">
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm(`Ask user to re-upload ${reuploadFields.length} field(s)?`)) return;
+                                                    try {
+                                                        await apiFetch(`/admin/loans/${previewLoan.id}/request-reupload`, {
+                                                            method: 'POST',
+                                                            body: JSON.stringify({ fields: reuploadFields })
+                                                        });
+                                                        alert('Re-upload request sent!');
+                                                        setPreviewLoan(null);
+                                                        setReuploadFields([]);
+                                                        loadLoans();
+                                                    } catch (err) {
+                                                        alert('Failed to send request');
+                                                    }
+                                                }}
+                                                className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/30 transition-all flex items-center gap-3 active:scale-95"
+                                            >
+                                                <Shield size={16} />
+                                                Request Re-upload ({reuploadFields.length} Items)
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="p-24 text-center">
+                                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                        <FileText className="w-10 h-10 text-slate-300" />
+                                    </div>
+                                    <h4 className="text-lg font-black text-slate-900 mb-1">No data submitted</h4>
+                                    <p className="text-slate-400 font-medium">Applicant has not completed the form yet.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
-            <MultiStepDeleteModal
-                isOpen={archiveModalOpen}
-                onClose={() => { setArchiveModalOpen(false); setArchivingLoan(null); }}
-                onConfirm={() => archivingLoan && executeArchive(archivingLoan.id)}
-                title="Archive Loan Entry"
-                itemDescription={archivingLoan ? `Loan ID: ${archivingLoan.display_id || archivingLoan.id} - ${archivingLoan.user?.name}` : undefined}
-            />
-            <MultiStepDeleteModal
-                isOpen={archiveBatchOpen}
-                onClose={() => setArchiveBatchOpen(false)}
-                onConfirm={executeBulkArchive}
-                title="Bulk Archive Loans"
-                itemDescription={`${selectedLoanIds.length} selected loans will be moved to the archive storage.`}
-            />
-        </AdminLayout>
+
+
+
+            {/* Repayment Schedule Modal */}
+            {
+                selectedLoan && (
+                    <LoanDetailModal
+                        loanId={selectedLoan}
+                        onClose={() => setSelectedLoan(null)}
+                        onUpdate={() => {
+                            loadLoans();
+                        }}
+                    />
+                )
+            }
+        </AdminLayout >
     );
 }
