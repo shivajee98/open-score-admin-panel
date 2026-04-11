@@ -95,6 +95,33 @@ export default function KycReviewModal({ agent, kyc, onClose, onSuccess }: KycRe
                 </div>
 
                 <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+                    <div className="bg-white p-5 border border-slate-200 rounded-2xl mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">KYC Full Name</p>
+                            <p className="text-sm font-black text-slate-900 mt-1">{kyc.full_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Business Section</p>
+                            <p className="text-sm font-black text-slate-900 mt-1 capitalize">{kyc.section || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Company Name</p>
+                            <p className="text-sm font-black text-slate-900 mt-1">{kyc.company_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Business Num</p>
+                            <p className="text-sm font-black text-slate-900 mt-1">{kyc.business_number || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Aadhar Number</p>
+                            <p className="text-sm font-black text-slate-900 mt-1">{kyc.aadhar_number || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">PAN Card</p>
+                            <p className="text-sm font-black text-slate-900 mt-1 uppercase">{kyc.pan_number || 'N/A'}</p>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                         <DocumentViewer label="Live Selfie" path={kyc.live_selfie} />
                         <DocumentViewer label="PAN Card" path={kyc.pan_card} />
@@ -102,6 +129,7 @@ export default function KycReviewModal({ agent, kyc, onClose, onSuccess }: KycRe
                         <DocumentViewer label="Aadhar Back" path={kyc.aadhar_back} />
                         <DocumentViewer label="Qualification Doc" path={kyc.qualification_doc} />
                     </div>
+
 
                     <div className="bg-white p-5 border border-slate-200 rounded-2xl">
                         <label className="block text-sm font-bold text-slate-700 mb-2">Review Notes / Rejection Reason</label>

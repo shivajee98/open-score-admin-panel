@@ -154,6 +154,18 @@ export default function SubUserDetailPage() {
                             <p className="text-slate-500 font-bold mt-1 uppercase tracking-widest text-xs">
                                 Global Referral ID: <span className="text-indigo-600 font-black">{data.sub_user?.referral_code}</span> • {data.sub_user?.mobile_number}
                             </p>
+                            {data.sub_user?.kyc_verification && (
+                                <div className="flex items-center gap-4 mt-2">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Aadhaar</span>
+                                        <span className="text-[10px] font-black text-slate-700 tabular-nums">{data.sub_user.kyc_verification.aadhar_number || 'PENDING'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PAN Card</span>
+                                        <span className="text-[10px] font-black text-slate-700 uppercase tabular-nums">{data.sub_user.kyc_verification.pan_number || 'PENDING'}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

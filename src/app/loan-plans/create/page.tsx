@@ -18,6 +18,8 @@ interface TenureConfig {
     fees: FeeConfig[];
     allowed_frequencies: string[];
     cashback: Record<string, number>;
+    overcharge_amount: Record<string, number>;
+    overcharge_interval_days: Record<string, number>;
     gst_rate?: number; // Legacy
     other_fees_rate?: number;
 }
@@ -105,6 +107,8 @@ export default function CreateLoanPlan() {
                     ],
                     allowed_frequencies: ['MONTHLY'],
                     cashback: {},
+                    overcharge_amount: {},
+                    overcharge_interval_days: {},
                     other_fees_rate: 18 // Default 18%
                 }
             ]
@@ -293,6 +297,12 @@ export default function CreateLoanPlan() {
                         interest_rate: Number(c.interest_rate || 0),
                         interest_rates: Object.fromEntries(
                             Object.entries(c.interest_rates || {}).map(([k, v]) => [k, Number(v)])
+                        ),
+                        overcharge_amount: Object.fromEntries(
+                            Object.entries(c.overcharge_amount || {}).map(([k, v]) => [k, Number(v)])
+                        ),
+                        overcharge_interval_days: Object.fromEntries(
+                            Object.entries(c.overcharge_interval_days || {}).map(([k, v]) => [k, Number(v)])
                         ),
                         fees: (c.fees || []).map(f => ({ ...f, amount: Number(f.amount) }))
                     })),
@@ -549,6 +559,32 @@ export default function CreateLoanPlan() {
                                                                             updateConfig(idx, 'cashback', newCb);
                                                                         }}
                                                                         className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-indigo-500 font-bold"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[10px] uppercase font-bold text-rose-400 block tracking-tight">Late Fine (₹)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="0"
+                                                                        value={config.overcharge_amount[freq] || 0}
+                                                                        onChange={(e) => {
+                                                                            const newVal = { ...config.overcharge_amount, [freq]: parseFloat(e.target.value) };
+                                                                            updateConfig(idx, 'overcharge_amount', newVal);
+                                                                        }}
+                                                                        className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-rose-500 font-bold text-rose-600"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[10px] uppercase font-bold text-rose-400 block tracking-tight">Fine Every (Days)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="3"
+                                                                        value={config.overcharge_interval_days[freq] || 0}
+                                                                        onChange={(e) => {
+                                                                            const newVal = { ...config.overcharge_interval_days, [freq]: parseInt(e.target.value) };
+                                                                            updateConfig(idx, 'overcharge_interval_days', newVal);
+                                                                        }}
+                                                                        className="w-full px-2 py-1 text-sm border-b border-slate-300 bg-transparent focus:outline-none focus:border-rose-500 font-bold text-rose-600"
                                                                     />
                                                                 </div>
                                                             </div>

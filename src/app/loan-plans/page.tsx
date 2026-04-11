@@ -131,6 +131,11 @@ export default function LoanPlansList() {
                                             <span className="text-xs font-bold text-slate-700">
                                                 {(plan.configurations || []).length} Tenure Options
                                             </span>
+                                            {plan.configurations?.some((c: any) => Object.keys(c.overcharge_amount || {}).length > 0) && (
+                                                <span className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1">
+                                                    <AlertCircle size={10} /> Late Fine Applied
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="p-6">
