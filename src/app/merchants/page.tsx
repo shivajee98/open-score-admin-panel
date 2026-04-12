@@ -6,12 +6,13 @@ import AdminLayout from '@/components/AdminLayout';
 import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
+import VaultConfigModal from '@/components/VaultConfigModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import MerchantKycModal from '@/components/MerchantKycModal';
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onReviewKyc }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onReviewKyc, onVaultConfig }: any) => {
     const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage ?? '');
     const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount ?? '');
     const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
@@ -533,6 +534,16 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             <ArrowRightLeft className="w-5 h-5" />
                         </button>
                     )}
+
+                    {isAdmin && (
+                        <button
+                            onClick={() => onVaultConfig(user)}
+                            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                            title="Configure Vault"
+                        >
+                            <ShieldAlert className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
             </td>
         </tr>
@@ -578,6 +589,8 @@ export default function MerchantsPage() {
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
     const [isKycModalOpen, setIsKycModalOpen] = useState(false);
     const [selectedUserForKyc, setSelectedUserForKyc] = useState<any>(null);
+    const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
+    const [selectedUserForVault, setSelectedUserForVault] = useState<any>(null);
 
     const handleKycReview = (user: any) => {
         setSelectedUserForKyc(user);
@@ -1056,6 +1069,7 @@ export default function MerchantsPage() {
                                     reloadUsers={loadUsers}
                                     currentUser={currentUser}
                                     onReviewKyc={handleKycReview}
+                                    onVaultConfig={(u: any) => { setSelectedUserForVault(u); setIsVaultModalOpen(true); }}
                                 />
                             ))}
                         </tbody>
@@ -1293,6 +1307,12 @@ export default function MerchantsPage() {
                 onClose={() => setIsKycModalOpen(false)}
                 merchant={selectedUserForKyc}
                 isAdmin={currentUser?.role === 'ADMIN'}
+                onSuccess={loadUsers}
+            />
+            <VaultConfigModal
+                isOpen={isVaultModalOpen}
+                onClose={() => setIsVaultModalOpen(false)}
+                user={selectedUserForVault}
                 onSuccess={loadUsers}
             />
         </AdminLayout>

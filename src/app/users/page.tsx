@@ -6,11 +6,12 @@ import AdminLayout from '@/components/AdminLayout';
 import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck, MessageSquare, Send, FileText, Wallet, IndianRupee } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
+import VaultConfigModal from '@/components/VaultConfigModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onVaultConfig }: any) => {
     const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage ?? '');
     const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount ?? '');
     const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
@@ -338,6 +339,16 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             <Trash2 className="w-5 h-5" />
                         </button>
                     )}
+
+                    {isAdmin && (
+                        <button
+                            onClick={() => onVaultConfig(user)}
+                            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                            title="Configure Vault"
+                        >
+                            <ShieldAlert className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
             </td>
         </tr>
@@ -384,6 +395,8 @@ export default function UsersPage() {
     const [creditType, setCreditType] = useState('WALLET_TOPUP');
     const [description, setDescription] = useState('');
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
+    const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
+    const [selectedUserForVault, setSelectedUserForVault] = useState<any>(null);
 
     // Bulk Cashback States
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -1135,6 +1148,7 @@ export default function UsersPage() {
                                     setIsCreditsModalOpen={setIsCreditsModalOpen}
                                     reloadUsers={loadUsers}
                                     currentUser={currentUser}
+                                    onVaultConfig={(u: any) => { setSelectedUserForVault(u); setIsVaultModalOpen(true); }}
                                 />
                             ))}
                         </tbody>
@@ -1526,6 +1540,12 @@ export default function UsersPage() {
                     <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Help Center</a>
                 </div>
             </footer>
+            <VaultConfigModal
+                isOpen={isVaultModalOpen}
+                onClose={() => setIsVaultModalOpen(false)}
+                user={selectedUserForVault}
+                onSuccess={loadUsers}
+            />
         </AdminLayout>
     );
 }

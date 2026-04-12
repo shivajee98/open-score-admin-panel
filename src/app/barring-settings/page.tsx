@@ -85,6 +85,7 @@ export default function BarringSettings() {
     const [wizardStep, setWizardStep] = useState(1);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     // Target Selection State
     const [targetType, setTargetType] = useState('ALL_USERS');
@@ -190,7 +191,7 @@ export default function BarringSettings() {
             const merged: any = {};
             Object.values(byTarget).forEach((group: any) => {
                 const fingerprint = group.rules
-                    .map((r: any) => `${r.rule_side}|${r.limit_type}|${r.limit_value}|${r.min_balance}|${r.day_number}|${r.business_nature}|${r.business_segment}|${r.loan_plan_id}|${r.is_total_cap}|${r.rule_name || ''}`)
+                    .map((r: any) => `${r.rule_side}|${r.limit_type}|${r.limit_value}|${r.min_balance}|${r.day_number}|${r.business_nature}|${r.business_segment}|${r.loan_plan_id}|${r.is_total_cap}|${r.rule_name || ''}|${JSON.stringify(r.allowed_merchants || [])}`)
                     .sort()
                     .join('::');
                 
@@ -428,6 +429,7 @@ export default function BarringSettings() {
         setWizardStep(1);
         setSaveSuccess(false);
         setRuleName('');
+        setSaveError(null);
         setIsWizardOpen(true);
     };
 
@@ -484,20 +486,24 @@ export default function BarringSettings() {
             
             if (side === 'RECEIVER') {
                 const initialRSR: any = {};
-                const targetKey = targetData.target_type === 'ALL_USERS' 
-                    ? `ALL_${targetData.user_category}` 
-                    : `USER_${targetData.target_user_ids?.[0]}`;
-                
                 const globalRule = targetData.rules.find((r: any) => !r.allowed_merchants || r.allowed_merchants.length === 0);
                 const senderRules = targetData.rules.filter((r: any) => r.allowed_merchants && r.allowed_merchants.length > 0);
                 
-                initialRSR[targetKey] = {
+                const ruleConfig = {
                     globalLimit: globalRule ? String(globalRule.max_receive_per_user || '') : '',
                     senderLimits: senderRules.map((r: any) => ({
                         senderId: r.allowed_merchants[0],
                         amount: String(r.max_receive_per_user || '')
                     }))
                 };
+
+                (targetData.target_user_ids || []).forEach((id: number) => {
+                    initialRSR[`USER_${id}`] = ruleConfig;
+                });
+                if (targetData.target_type === 'ALL_USERS') {
+                    initialRSR[`ALL_${targetData.user_category}`] = ruleConfig;
+                }
+                
                 setReceiverSenderRules(initialRSR);
             } else {
                 // Find if there's a total cap rule
@@ -665,6 +671,7 @@ export default function BarringSettings() {
         } else if (Object.keys(ruleForms).length === 0) {
             initEmptyRules();
         }
+        setSaveError(null);
         setWizardStep(2);
     };
 
@@ -724,26 +731,38 @@ export default function BarringSettings() {
                     body: JSON.stringify(payload)
                 });
             } else {
-                // RECEIVER RULES - Granular processing per target
+                // RECEIVER RULES - Refined group processing
                 const targets = Object.keys(receiverSenderRules);
+                const isSpecificUser = targetType === 'SPECIFIC_USER';
                 
-                for (const targetKey of targets) {
-                    const ruleSet = receiverSenderRules[targetKey];
+                if (isSpecificUser) {
+                    // For Specific Users, we apply the same rule set to ALL selected users in one batch
+                    // We take the rule configuration from the first selected user in receiverSenderRules
+                    const firstTargetKey = targets[0];
+                    if (!firstTargetKey) return;
+                    
+                    const ruleSet = receiverSenderRules[firstTargetKey];
                     const targetRules: any[] = [];
                     
                     if (ruleSet.globalLimit) {
                         targetRules.push({
                             rule_side: 'RECEIVER',
+                            loan_plan_id: selectedLoanPlanId,
+                            day_number: parseInt(dayNumber || '0'),
+                            min_balance: parseFloat(minBalance || '0'),
                             max_receive_per_user: parseFloat(ruleSet.globalLimit),
                             allowed_merchants: null,
                             is_active: true
                         });
                     }
                     
-                    ruleSet.senderLimits.forEach((sl: any) => {
+                    (ruleSet.senderLimits || []).forEach((sl: any) => {
                         if (sl.amount) {
                             targetRules.push({
                                 rule_side: 'RECEIVER',
+                                loan_plan_id: selectedLoanPlanId,
+                                day_number: parseInt(dayNumber || '0'),
+                                min_balance: parseFloat(minBalance || '0'),
                                 max_receive_per_user: parseFloat(sl.amount),
                                 allowed_merchants: [sl.senderId],
                                 is_active: true
@@ -751,30 +770,79 @@ export default function BarringSettings() {
                         }
                     });
 
-                    if (targetRules.length === 0) continue;
+                    if (targetRules.length > 0) {
+                        const payload = {
+                            rule_name: ruleName || null,
+                            target_type: 'SPECIFIC_USER',
+                            target_user_ids: assignedUserIds,
+                            user_category: null,
+                            rules: targetRules
+                        };
 
-                    const individualPayload = {
-                        target_type: targetKey.startsWith('USER_') ? 'SPECIFIC_USER' : 'ALL_USERS',
-                        target_user_id: targetKey.startsWith('USER_') ? targetKey.replace('USER_', '') : null,
-                        user_category: targetKey.startsWith('ALL_') ? targetKey.replace('ALL_', '') : null,
-                        rules: targetRules
-                    };
+                        await apiFetch('/admin/barring-rules', {
+                            method: 'POST',
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                } else {
+                    // For Category Targets, loop through each category (usually just one)
+                    for (const targetKey of targets) {
+                        const ruleSet = receiverSenderRules[targetKey];
+                        const targetRules: any[] = [];
+                        
+                        if (ruleSet.globalLimit) {
+                            targetRules.push({
+                                rule_side: 'RECEIVER',
+                                loan_plan_id: selectedLoanPlanId,
+                                day_number: parseInt(dayNumber || '0'),
+                                min_balance: parseFloat(minBalance || '0'),
+                                max_receive_per_user: parseFloat(ruleSet.globalLimit),
+                                allowed_merchants: null,
+                                is_active: true
+                            });
+                        }
+                        
+                        (ruleSet.senderLimits || []).forEach((sl: any) => {
+                            if (sl.amount) {
+                                targetRules.push({
+                                    rule_side: 'RECEIVER',
+                                    loan_plan_id: selectedLoanPlanId,
+                                    day_number: parseInt(dayNumber || '0'),
+                                    min_balance: parseFloat(minBalance || '0'),
+                                    max_receive_per_user: parseFloat(sl.amount),
+                                    allowed_merchants: [sl.senderId],
+                                    is_active: true
+                                });
+                            }
+                        });
 
-                    await apiFetch('/admin/barring-rules', {
-                        method: 'POST',
-                        body: JSON.stringify(individualPayload)
-                    });
+                        if (targetRules.length === 0) continue;
+
+                        const payload = {
+                            rule_name: ruleName || null,
+                            target_type: 'ALL_USERS',
+                            user_category: targetKey.replace('ALL_', ''),
+                            rules: targetRules
+                        };
+
+                        await apiFetch('/admin/barring-rules', {
+                            method: 'POST',
+                            body: JSON.stringify(payload)
+                        });
+                    }
                 }
             }
 
             toast.success("Barring rules saved successfully!");
             setSaveSuccess(true);
+            setSaveError(null);
             setTimeout(() => {
                 setIsWizardOpen(false);
                 fetchRules();
             }, 1000);
         } catch (error: any) {
             console.error("Save error:", error);
+            setSaveError(error.message || "Failed to save rules");
             toast.error(error.message || "Failed to save rules");
         } finally {
             setIsSaving(false);
@@ -1428,11 +1496,15 @@ export default function BarringSettings() {
                                                                                     type="number"
                                                                                     className="p-2.5 pl-7 bg-white border border-slate-200 rounded-xl text-sm font-black outline-none focus:ring-2 focus:ring-emerald-500 w-32"
                                                                                     placeholder="Limit"
-                                                                                    value={ruleSet.globalLimit}
                                                                                     onChange={(e) => {
-                                                                                        const updated = { ...receiverSenderRules };
-                                                                                        updated[key].globalLimit = e.target.value;
-                                                                                        setReceiverSenderRules(updated);
+                                                                                        const val = e.target.value;
+                                                                                        setReceiverSenderRules((prev: any) => {
+                                                                                            const current = prev[key] || { globalLimit: '', senderLimits: [] };
+                                                                                            return {
+                                                                                                ...prev,
+                                                                                                [key]: { ...current, globalLimit: val }
+                                                                                            };
+                                                                                        });
                                                                                     }}
                                                                                 />
                                                                             </div>
@@ -1481,17 +1553,29 @@ export default function BarringSettings() {
                                                                                                     className="p-1.5 pl-5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 w-20"
                                                                                                     value={sr.amount}
                                                                                                     onChange={(e) => {
-                                                                                                        const updated = { ...receiverSenderRules };
-                                                                                                        updated[key].senderLimits[idx].amount = e.target.value;
-                                                                                                        setReceiverSenderRules(updated);
+                                                                                                        const val = e.target.value;
+                                                                                                        setReceiverSenderRules((prev: any) => {
+                                                                                                            const currentRuleSet = prev[key] || { globalLimit: '', senderLimits: [] };
+                                                                                                            const updatedLimits = [...(currentRuleSet.senderLimits || [])];
+                                                                                                            updatedLimits[idx] = { ...updatedLimits[idx], amount: val };
+                                                                                                            return {
+                                                                                                                ...prev,
+                                                                                                                [key]: { ...currentRuleSet, senderLimits: updatedLimits }
+                                                                                                            };
+                                                                                                        });
                                                                                                     }}
                                                                                                 />
                                                                                             </div>
                                                                                             <button 
                                                                                                 onClick={() => {
-                                                                                                    const updated = { ...receiverSenderRules };
-                                                                                                    updated[key].senderLimits.splice(idx, 1);
-                                                                                                    setReceiverSenderRules(updated);
+                                                                                                    setReceiverSenderRules((prev: any) => {
+                                                                                                        const currentRuleSet = prev[key] || { globalLimit: '', senderLimits: [] };
+                                                                                                        const updatedLimits = (currentRuleSet.senderLimits || []).filter((_: any, i: number) => i !== idx);
+                                                                                                        return {
+                                                                                                            ...prev,
+                                                                                                            [key]: { ...currentRuleSet, senderLimits: updatedLimits }
+                                                                                                        };
+                                                                                                    });
                                                                                                 }}
                                                                                                 className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                                                                                             >
@@ -1526,19 +1610,26 @@ export default function BarringSettings() {
                                     </button>
                                 )}
                                 
-                                {wizardStep === 1 ? (
-                                    <button onClick={handleNextStep} className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-blue-700 shadow-md shadow-blue-500/30 transition">
-                                        Continue <ArrowRight className="w-4 h-4" />
-                                    </button>
-                                ) : (
-                                    <button 
-                                        onClick={handleSaveRules} 
-                                        disabled={isSaving}
-                                        className="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-green-700 shadow-lg border border-green-500 transition disabled:opacity-50"
-                                    >
-                                        {isSaving ? 'Saving...' : 'Save All Rules'}
-                                    </button>
-                                )}
+                                <div className="flex flex-col items-end gap-3">
+                                    {saveError && (
+                                        <div className="text-red-500 text-xs font-bold bg-red-50 border border-red-100 px-4 py-2 rounded-xl flex items-center gap-2 animate-in slide-in-from-right-2">
+                                            <AlertCircle className="w-4 h-4" /> {saveError}
+                                        </div>
+                                    )}
+                                    {wizardStep === 1 ? (
+                                        <button onClick={handleNextStep} className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-blue-700 shadow-md shadow-blue-500/30 transition">
+                                            Continue <ArrowRight className="w-4 h-4" />
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={handleSaveRules} 
+                                            disabled={isSaving}
+                                            className="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-green-700 shadow-lg border border-green-500 transition disabled:opacity-50"
+                                        >
+                                            {isSaving ? 'Saving...' : 'Save All Rules'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1821,15 +1912,22 @@ export default function BarringSettings() {
                                 <div className="flex gap-3">
                                     <button 
                                         onClick={() => {
-                                            const updated = { ...receiverSenderRules };
-                                            const currentLimits = [...updated[activeReceiverForSender].senderLimits];
-                                            filteredSendersList.forEach(u => {
-                                                if (!currentLimits.find(sl => sl.senderId === u.id)) {
-                                                    currentLimits.push({ senderId: u.id, amount: '' });
-                                                }
+                                            if (!activeReceiverForSender) return;
+                                            setReceiverSenderRules((prev: any) => {
+                                                const currentRuleSet = prev[activeReceiverForSender];
+                                                const currentLimits = [...currentRuleSet.senderLimits];
+                                                
+                                                filteredSendersList.forEach(u => {
+                                                    if (!currentLimits.find(sl => sl.senderId === u.id)) {
+                                                        currentLimits.push({ senderId: u.id, amount: '' });
+                                                    }
+                                                });
+                                                
+                                                return {
+                                                    ...prev,
+                                                    [activeReceiverForSender]: { ...currentRuleSet, senderLimits: currentLimits }
+                                                };
                                             });
-                                            updated[activeReceiverForSender].senderLimits = currentLimits;
-                                            setReceiverSenderRules(updated);
                                         }}
                                         className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
                                     >
@@ -1837,12 +1935,18 @@ export default function BarringSettings() {
                                     </button>
                                     <button 
                                         onClick={() => {
-                                            const updated = { ...receiverSenderRules };
-                                            const filteredIds = filteredSendersList.map(u => u.id);
-                                            updated[activeReceiverForSender].senderLimits = updated[activeReceiverForSender].senderLimits.filter(
-                                                (sl: any) => !filteredIds.includes(sl.senderId)
-                                            );
-                                            setReceiverSenderRules(updated);
+                                            if (!activeReceiverForSender) return;
+                                            setReceiverSenderRules((prev: any) => {
+                                                const currentRuleSet = prev[activeReceiverForSender];
+                                                const filteredIds = filteredSendersList.map(u => u.id);
+                                                const updatedLimits = currentRuleSet.senderLimits.filter(
+                                                    (sl: any) => !filteredIds.includes(sl.senderId)
+                                                );
+                                                return {
+                                                    ...prev,
+                                                    [activeReceiverForSender]: { ...currentRuleSet, senderLimits: updatedLimits }
+                                                };
+                                            });
                                         }}
                                         className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:underline"
                                     >
@@ -1856,22 +1960,29 @@ export default function BarringSettings() {
                         <div className="flex-1 overflow-y-auto p-2 bg-slate-50/30 space-y-1">
                             {filteredSendersList.length > 0 ? (
                                 filteredSendersList.map(user => {
-                                    const isSelected = receiverSenderRules[activeReceiverForSender]?.senderLimits.some((sl: any) => sl.senderId === user.id);
+                                    const isSelected = activeReceiverForSender && receiverSenderRules[activeReceiverForSender]?.senderLimits?.some((sl: any) => sl.senderId === user.id);
                                     
                                     return (
                                         <div 
                                             key={user.id} 
                                             onClick={() => {
-                                                const updated = { ...receiverSenderRules };
-                                                const currentLimits = updated[activeReceiverForSender].senderLimits;
-                                                const exists = currentLimits.find((sl: any) => sl.senderId === user.id);
-                                                
-                                                if (exists) {
-                                                    updated[activeReceiverForSender].senderLimits = currentLimits.filter((sl: any) => sl.senderId !== user.id);
-                                                } else {
-                                                    updated[activeReceiverForSender].senderLimits = [...currentLimits, { senderId: user.id, amount: '' }];
-                                                }
-                                                setReceiverSenderRules(updated);
+                                                if (!activeReceiverForSender) return;
+                                                setReceiverSenderRules((prev: any) => {
+                                                    const currentRuleSet = prev[activeReceiverForSender];
+                                                    const exists = currentRuleSet.senderLimits.find((sl: any) => sl.senderId === user.id);
+                                                    
+                                                    let updatedLimits;
+                                                    if (exists) {
+                                                        updatedLimits = currentRuleSet.senderLimits.filter((sl: any) => sl.senderId !== user.id);
+                                                    } else {
+                                                        updatedLimits = [...currentRuleSet.senderLimits, { senderId: user.id, amount: '' }];
+                                                    }
+
+                                                    return {
+                                                        ...prev,
+                                                        [activeReceiverForSender]: { ...currentRuleSet, senderLimits: updatedLimits }
+                                                    };
+                                                });
                                             }}
                                             className={`p-3 flex items-center justify-between cursor-pointer rounded-xl transition-all border ${isSelected ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100/50' : 'hover:bg-white bg-transparent border-transparent'}`}
                                         >
@@ -1900,7 +2011,7 @@ export default function BarringSettings() {
                         {/* Footer */}
                         <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                {receiverSenderRules[activeReceiverForSender]?.senderLimits.length || 0} Selected
+                                {activeReceiverForSender && receiverSenderRules[activeReceiverForSender]?.senderLimits ? receiverSenderRules[activeReceiverForSender].senderLimits.length : 0} Selected
                             </span>
                             <button 
                                 onClick={() => setIsSenderSelectionOpen(false)}
