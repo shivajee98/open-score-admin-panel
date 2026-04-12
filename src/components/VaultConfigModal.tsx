@@ -241,7 +241,6 @@ export default function VaultConfigModal({ isOpen, onClose, user, onSuccess }: V
                                                         <div>
                                                             <span className="text-[10px] font-bold text-rose-500">
                                                                 {rate.penalty_flat > 0 ? `₹${rate.penalty_flat} flat` : ''}
-                                                                {rate.penalty_flat > 0 && rate.penalty_rate > 0 ? ' + ' : ''}
                                                                 {rate.penalty_rate > 0 ? `${rate.penalty_rate}%` : ''}
                                                                 {rate.penalty_flat == 0 && rate.penalty_rate == 0 ? 'No Penalty' : ''}
                                                             </span>
@@ -281,13 +280,23 @@ export default function VaultConfigModal({ isOpen, onClose, user, onSuccess }: V
                                     <div className="grid grid-cols-3 gap-3 mb-3">
                                         <div>
                                             <label className="block text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Penalty Flat (₹)</label>
-                                            <input type="number" step="0.01" min="0" value={newPenaltyFlat} onChange={(e) => setNewPenaltyFlat(e.target.value)}
-                                                className="w-full px-3 py-2.5 bg-white border border-rose-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-rose-200" placeholder="0" />
+                                            <input type="number" step="0.01" min="0" value={newPenaltyFlat}
+                                                onChange={(e) => { setNewPenaltyFlat(e.target.value); if (parseFloat(e.target.value) > 0) setNewPenaltyRate(''); }}
+                                                disabled={parseFloat(newPenaltyRate) > 0}
+                                                className={cn(
+                                                    "w-full px-3 py-2.5 bg-white border border-rose-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-rose-200",
+                                                    parseFloat(newPenaltyRate) > 0 && "opacity-40 cursor-not-allowed bg-slate-50"
+                                                )} placeholder="0" />
                                         </div>
                                         <div>
                                             <label className="block text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Penalty Rate (%)</label>
-                                            <input type="number" step="0.01" min="0" max="100" value={newPenaltyRate} onChange={(e) => setNewPenaltyRate(e.target.value)}
-                                                className="w-full px-3 py-2.5 bg-white border border-rose-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-rose-200" placeholder="0" />
+                                            <input type="number" step="0.01" min="0" max="100" value={newPenaltyRate}
+                                                onChange={(e) => { setNewPenaltyRate(e.target.value); if (parseFloat(e.target.value) > 0) setNewPenaltyFlat(''); }}
+                                                disabled={parseFloat(newPenaltyFlat) > 0}
+                                                className={cn(
+                                                    "w-full px-3 py-2.5 bg-white border border-rose-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-rose-200",
+                                                    parseFloat(newPenaltyFlat) > 0 && "opacity-40 cursor-not-allowed bg-slate-50"
+                                                )} placeholder="0" />
                                         </div>
                                         <div className="flex items-end">
                                             <button
