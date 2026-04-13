@@ -115,7 +115,7 @@ export default function PayoutsAdminPage() {
             p.batch_id?.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
-        const matchesType = typeFilter === 'ALL' || p.type === typeFilter;
+        const matchesType = typeFilter === 'ALL' || p.type === typeFilter || (typeFilter === 'VAULT' && p.source === 'VAULT');
 
         return matchesSearch && matchesStatus && matchesType;
     });
@@ -205,6 +205,7 @@ export default function PayoutsAdminPage() {
                             >
                                 <option value="ALL">All Types</option>
                                 <option value="WITHDRAWAL">Withdrawals</option>
+                                <option value="VAULT">Vault Withdrawals</option>
                                 <option value="BANK_TRANSFER">Bank Transfers</option>
                             </select>
                         </div>
@@ -259,10 +260,14 @@ export default function PayoutsAdminPage() {
                                                     <td className="px-8 py-6">
                                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wide ${payout.type === 'BANK_TRANSFER'
                                                             ? 'bg-violet-50 text-violet-600 border border-violet-100'
-                                                            : 'bg-slate-50 text-slate-600 border border-slate-100'
+                                                            : payout.source === 'VAULT'
+                                                                ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                                                                : 'bg-slate-50 text-slate-600 border border-slate-100'
                                                             }`}>
                                                             {payout.type === 'BANK_TRANSFER' ? (
                                                                 <><ArrowRightLeft className="w-3 h-3" /> Bulk Pay</>
+                                                            ) : payout.source === 'VAULT' ? (
+                                                                <><Landmark className="w-3 h-3" /> Vault</>
                                                             ) : (
                                                                 <><Landmark className="w-3 h-3" /> Withdrawal</>
                                                             )}

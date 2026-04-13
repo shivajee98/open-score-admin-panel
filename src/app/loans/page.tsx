@@ -90,6 +90,7 @@ export default function LoanApprovals() {
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
         if (!confirm('Are you sure you want to perform this action?')) return;
+        if (method === 'DELETE' && !confirm('CRITICAL: This will permanently delete the loan and its history. This cannot be undone. Are you absolutely sure?')) return;
 
         setActionLoading(`${id}-${endpoint}`);
         try {
@@ -146,6 +147,7 @@ export default function LoanApprovals() {
     const handleBulkDelete = async () => {
         if (selectedLoanIds.length === 0) return;
         if (!confirm(`Are you sure you want to delete ${selectedLoanIds.length} selected loans and all their history? This is permanent.`)) return;
+        if (!confirm('FINAL WARNING: This action cannot be reversed. Delete all selected records now?')) return;
 
         setActionLoading('bulk-delete');
         try {
