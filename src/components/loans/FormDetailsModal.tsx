@@ -69,8 +69,8 @@ function ImageField({ label, data }: { label: string; data: any }) {
             </a>
             {data.geo && (
                 <div className="flex gap-3 mt-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                    <span className="flex items-center gap-1"><MapPin size={10} /> Lat: {data.geo.lat?.toFixed(6)}</span>
-                    <span>Lng: {data.geo.lng?.toFixed(6)}</span>
+                    <span className="flex items-center gap-1"><MapPin size={10} /> Lat: {typeof data.geo.lat === 'number' ? data.geo.lat.toFixed(6) : (data.geo.lat || 'N/A')}</span>
+                    <span>Lng: {typeof data.geo.lng === 'number' ? data.geo.lng.toFixed(6) : (data.geo.lng || 'N/A')}</span>
                 </div>
             )}
         </div>

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
+import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
 import { useSearchParams } from 'next/navigation';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
@@ -46,6 +47,57 @@ export default function LoanApprovals() {
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
+
+    // Group loans by location clashes
+    const locationClusters = useMemo(() => {
+        const clusters: Record<string, any[]> = {};
+        
+        loans.forEach(loan => {
+            if (!loan.form_data) return;
+            
+            // Collect all unique coordinates for this loan
+            const coords = new Set<string>();
+            Object.values(loan.form_data).forEach((val: any) => {
+                // Handle both older format (string geo) and newer format (object geo)
+                if (val && typeof val === 'object' && val.geo) {
+                    let lat = null, lng = null;
+                    if (typeof val.geo === 'object') {
+                        lat = val.geo.lat;
+                        lng = val.geo.lng;
+                    } else if (typeof val.geo === 'string' && val.geo.includes(',')) {
+                        [lat, lng] = val.geo.split(',').map((s: string) => s.trim());
+                    }
+
+                    if (lat && lng) {
+                        const key = `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
+                        coords.add(key);
+                    }
+                }
+            });
+
+            coords.forEach(coord => {
+                if (!clusters[coord]) clusters[coord] = [];
+                clusters[coord].push({
+                    id: loan.id,
+                    display_id: loan.display_id,
+                    name: loan.user?.name || 'Unknown',
+                    mobile: loan.user?.mobile_number,
+                    status: loan.status
+                });
+            });
+        });
+
+        // Only return clusters with more than one unique loan
+        return Object.entries(clusters)
+            .filter(([_, memberLoans]) => {
+                const uniqueIds = new Set(memberLoans.map(l => l.id));
+                return uniqueIds.size > 1;
+            })
+            .map(([coord, memberLoans]) => ({
+                coord,
+                loans: Array.from(new Map(memberLoans.map(l => [l.id, l])).values()) // unique by ID
+            }));
+    }, [loans]);
 
     // Initial query param setup
     useEffect(() => {
@@ -310,6 +362,10 @@ export default function LoanApprovals() {
 
     return (
         <AdminLayout title="Loan Approvals">
+            <div className="flex flex-col lg:flex-row gap-8">
+                {/* Main Content Area */}
+                <div className="flex-1 min-w-0">
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
                     <button
@@ -718,7 +774,76 @@ export default function LoanApprovals() {
                         </button>
                     </div>
                 </div>
-            </div>
+                </div>
+                </div>
+
+                {/* Verification & Risk Sidebars */}
+                <div className="w-full lg:w-96 shrink-0 space-y-8">
+                    <KycVerificationSidebar />
+
+                    {/* Risk Sidebar (Location Clashes) */}
+                    {locationClusters.length > 0 && (
+                        <aside className="w-full space-y-6 animate-in slide-in-from-right duration-500">
+                        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 sticky top-8">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-12 h-12 rounded-[1.25rem] bg-orange-50 text-orange-500 flex items-center justify-center shadow-inner">
+                                    <Shield size={24} className="stroke-[2.5]" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Risk Alerts</h4>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Location Similarity</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                {locationClusters.map((cluster, i) => (
+                                    <div key={i} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-orange-200 transition-colors group/box">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                                                    <MapPin size={12} className="text-orange-500" />
+                                                </div>
+                                                <span className="text-[10px] font-black font-mono text-slate-500 tracking-tighter">{cluster.coord}</span>
+                                            </div>
+                                            <span className="px-2.5 py-1 bg-white text-orange-600 text-[9px] font-black rounded-lg shadow-sm">
+                                                {cluster.loans.length}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {cluster.loans.map(l => (
+                                                <button 
+                                                    key={l.id} 
+                                                    onClick={() => setSelectedLoan(l.id)}
+                                                    className="w-full text-left flex items-center justify-between group/item p-2 -m-2 hover:bg-white rounded-xl transition-all"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] font-black text-slate-800 truncate group-hover/item:text-blue-600">
+                                                            #{l.display_id || l.id} {l.name}
+                                                        </p>
+                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{l.status}</p>
+                                                    </div>
+                                                    <ChevronRight size={14} className="text-slate-300 group-hover/item:text-blue-500 transition-transform group-hover/item:translate-x-1" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 pt-6 border-t border-slate-100">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                    <Info size={14} />
+                                    <p className="text-[9px] font-bold leading-relaxed">
+                                        Multiple applications from the same location may indicate organized fraud or related accounts.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                )}
+                </div> {/* End sidebars wrapper */}
+            </div> {/* End main flex container */}
+
 
             {/* Preview Modal (legacy KYC preview) */}
             {previewLoan && (
@@ -1086,8 +1211,8 @@ export default function LoanApprovals() {
                                                         </div>
                                                         {typeof value === 'object' && value.geo && (
                                                             <div className="flex flex-col text-[8px] font-bold text-slate-400 italic">
-                                                                <span>LAT: {value.geo.lat?.toFixed(4)}</span>
-                                                                <span>LNG: {value.geo.lng?.toFixed(4)}</span>
+                                                                <span>LAT: {typeof value.geo.lat === 'number' ? value.geo.lat.toFixed(4) : (value.geo.lat || 'N/A')}</span>
+                                                                <span>LNG: {typeof value.geo.lng === 'number' ? value.geo.lng.toFixed(4) : (value.geo.lng || 'N/A')}</span>
                                                             </div>
                                                         )}
                                                     </div>

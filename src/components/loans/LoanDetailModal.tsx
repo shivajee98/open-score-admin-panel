@@ -414,8 +414,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                     </a>
                                                     {file.geo && (
                                                         <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center">
-                                                            <span>LAT: {file.geo.lat?.toFixed(4)}</span>
-                                                            <span>LNG: {file.geo.lng?.toFixed(4)}</span>
+                                                            <span>LAT: {typeof file.geo.lat === 'number' ? file.geo.lat.toFixed(4) : (file.geo.lat || 'N/A')}</span>
+                                                            <span>LNG: {typeof file.geo.lng === 'number' ? file.geo.lng.toFixed(4) : (file.geo.lng || 'N/A')}</span>
                                                         </div>
                                                     )}
                                                 </div>
