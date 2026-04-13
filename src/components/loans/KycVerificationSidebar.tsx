@@ -2,12 +2,16 @@
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Shield, Fingerprint, CreditCard, ChevronRight, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Shield, Fingerprint, CreditCard, ChevronRight, Loader2, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 type Tab = 'PAN' | 'AADHAAR';
 
-export default function KycVerificationSidebar() {
+interface KycVerificationSidebarProps {
+    onClose?: () => void;
+}
+
+export default function KycVerificationSidebar({ onClose }: KycVerificationSidebarProps) {
     const [activeTab, setActiveTab] = useState<Tab>('PAN');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
@@ -91,14 +95,25 @@ export default function KycVerificationSidebar() {
     return (
         <aside className="w-full lg:w-96 shrink-0 space-y-6">
             <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 sticky top-8">
-                <div className="flex items-center gap-3 mb-8">
-                    <div className="w-12 h-12 rounded-[1.25rem] bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                        <Shield size={24} className="stroke-[2.5]" />
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-[1.25rem] bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                            <Shield size={24} className="stroke-[2.5]" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Identity Center <span className='text-red-500'>(Insufficient Credits)</span></h4>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sandbox Verification</p>
+                        </div>
                     </div>
-                    <div>
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Identity Center</h4>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sandbox Verification</p>
-                    </div>
+                    {onClose && (
+                        <button 
+                            onClick={onClose}
+                            className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-red-500 transition-all"
+                            title="Close Verification Center"
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
                 </div>
 
                 {/* Tabs */}
@@ -137,7 +152,7 @@ export default function KycVerificationSidebar() {
                                 <Input
                                     value={panData.name}
                                     onChange={e => setPanData({ ...panData, name: e.target.value.toUpperCase() })}
-                                    placeholder="SHIVAJEE"
+                                    placeholder="Enter Name"
                                     className="rounded-2xl border-slate-200 h-12 font-bold uppercase"
                                     required
                                 />

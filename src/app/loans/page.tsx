@@ -7,6 +7,8 @@ import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
+import MerchantPincodeAnalysis from './MerchantPincodeAnalysis';
+import { Sparkles } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
@@ -47,6 +49,9 @@ export default function LoanApprovals() {
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
+    const [showKycSidebar, setShowKycSidebar] = useState(false);
+    const [showRiskSidebar, setShowRiskSidebar] = useState(false);
+    const [showPincodeModal, setShowPincodeModal] = useState(false);
 
     // Group loans by location clashes
     const locationClusters = useMemo(() => {
@@ -443,6 +448,43 @@ export default function LoanApprovals() {
                         />
                     </div>
 
+                    <button
+                        onClick={() => setShowKycSidebar(!showKycSidebar)}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${
+                            showKycSidebar 
+                                ? 'bg-blue-600 text-white shadow-blue-500/20' 
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-200 shadow-slate-200/50'
+                        }`}
+                    >
+                        <Shield size={16} className={showKycSidebar ? 'text-white' : 'text-blue-500'} />
+                        <span className="hidden sm:inline">{showKycSidebar ? 'Close Identity' : 'Identity Center'}</span>
+                    </button>
+
+                    <button
+                        onClick={() => setShowPincodeModal(true)}
+                        className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-all shadow-lg shadow-indigo-100/50 group/pin"
+                    >
+                        <MapPin size={16} className="text-indigo-500 group-hover/pin:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Pin Analysis</span>
+                    </button>
+
+                    <button
+                        onClick={() => setShowRiskSidebar(!showRiskSidebar)}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg relative ${
+                            showRiskSidebar 
+                                ? 'bg-orange-600 text-white shadow-orange-500/20' 
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-orange-200 shadow-slate-200/50'
+                        }`}
+                    >
+                        <Shield size={16} className={showRiskSidebar ? 'text-white' : 'text-orange-500'} />
+                        <span className="hidden sm:inline">{showRiskSidebar ? 'Close Risk' : 'Risk Alerts'}</span>
+                        {locationClusters.length > 0 && !showRiskSidebar && (
+                            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-lg border-2 border-white animate-bounce">
+                                {locationClusters.length}
+                            </span>
+                        )}
+                    </button>
+
                     {/* Download Excel Button */}
                     <button
                         onClick={handleExportExcel}
@@ -778,70 +820,83 @@ export default function LoanApprovals() {
                 </div>
 
                 {/* Verification & Risk Sidebars */}
-                <div className="w-full lg:w-96 shrink-0 space-y-8">
-                    <KycVerificationSidebar />
+                {(showKycSidebar || (locationClusters.length > 0 && showRiskSidebar)) && (
+                    <div className="w-full lg:w-96 shrink-0 space-y-8 animate-in slide-in-from-right duration-300">
+                        {showKycSidebar && (
+                            <KycVerificationSidebar onClose={() => setShowKycSidebar(false)} />
+                        )}
 
-                    {/* Risk Sidebar (Location Clashes) */}
-                    {locationClusters.length > 0 && (
-                        <aside className="w-full space-y-6 animate-in slide-in-from-right duration-500">
-                        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 sticky top-8">
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="w-12 h-12 rounded-[1.25rem] bg-orange-50 text-orange-500 flex items-center justify-center shadow-inner">
-                                    <Shield size={24} className="stroke-[2.5]" />
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Risk Alerts</h4>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Location Similarity</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                {locationClusters.map((cluster, i) => (
-                                    <div key={i} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-orange-200 transition-colors group/box">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center shadow-sm">
-                                                    <MapPin size={12} className="text-orange-500" />
-                                                </div>
-                                                <span className="text-[10px] font-black font-mono text-slate-500 tracking-tighter">{cluster.coord}</span>
+                        {/* Risk Sidebar (Location Clashes) */}
+                        {locationClusters.length > 0 && showRiskSidebar && (
+                            <aside className="w-full space-y-6">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 sticky top-8">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-[1.25rem] bg-orange-50 text-orange-500 flex items-center justify-center shadow-inner">
+                                                <Shield size={24} className="stroke-[2.5]" />
                                             </div>
-                                            <span className="px-2.5 py-1 bg-white text-orange-600 text-[9px] font-black rounded-lg shadow-sm">
-                                                {cluster.loans.length}
-                                            </span>
+                                            <div>
+                                                <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Risk Alerts</h4>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Location Similarity</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            {cluster.loans.map(l => (
-                                                <button 
-                                                    key={l.id} 
-                                                    onClick={() => setSelectedLoan(l.id)}
-                                                    className="w-full text-left flex items-center justify-between group/item p-2 -m-2 hover:bg-white rounded-xl transition-all"
-                                                >
-                                                    <div className="min-w-0">
-                                                        <p className="text-[10px] font-black text-slate-800 truncate group-hover/item:text-blue-600">
-                                                            #{l.display_id || l.id} {l.name}
-                                                        </p>
-                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{l.status}</p>
+                                        <button 
+                                            onClick={() => setShowRiskSidebar(false)}
+                                            className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-red-500 transition-all font-black"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        {locationClusters.map((cluster, i) => (
+                                            <div key={i} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-orange-200 transition-colors group/box">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                                                            <MapPin size={12} className="text-orange-500" />
+                                                        </div>
+                                                        <span className="text-[10px] font-black font-mono text-slate-500 tracking-tighter">{cluster.coord}</span>
                                                     </div>
-                                                    <ChevronRight size={14} className="text-slate-300 group-hover/item:text-blue-500 transition-transform group-hover/item:translate-x-1" />
-                                                </button>
-                                            ))}
+                                                    <span className="px-2.5 py-1 bg-white text-orange-600 text-[9px] font-black rounded-lg shadow-sm">
+                                                        {cluster.loans.length}
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {cluster.loans.map(l => (
+                                                        <button 
+                                                            key={l.id} 
+                                                            onClick={() => setSelectedLoan(l.id)}
+                                                            className="w-full text-left flex items-center justify-between group/item p-2 -m-2 hover:bg-white rounded-xl transition-all"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="text-[10px] font-black text-slate-800 truncate group-hover/item:text-blue-600">
+                                                                    #{l.display_id || l.id} {l.name}
+                                                                </p>
+                                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{l.status}</p>
+                                                            </div>
+                                                            <ChevronRight size={14} className="text-slate-300 group-hover/item:text-blue-500 transition-transform group-hover/item:translate-x-1" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8 pt-6 border-t border-slate-100">
+                                        <div className="flex items-center gap-2 text-slate-400">
+                                            <Info size={14} />
+                                            <p className="text-[9px] font-bold leading-relaxed">
+                                                Multiple applications from the same location may indicate organized fraud or related accounts.
+                                            </p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-8 pt-6 border-t border-slate-100">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Info size={14} />
-                                    <p className="text-[9px] font-bold leading-relaxed">
-                                        Multiple applications from the same location may indicate organized fraud or related accounts.
-                                    </p>
                                 </div>
-                            </div>
-                        </div>
-                    </aside>
+                            </aside>
+                        )}                    </div>
                 )}
-                </div> {/* End sidebars wrapper */}
             </div> {/* End main flex container */}
 
 
@@ -1277,6 +1332,9 @@ export default function LoanApprovals() {
                     />
                 )
             }
+            {showPincodeModal && (
+                <MerchantPincodeAnalysis onClose={() => setShowPincodeModal(false)} />
+            )}
         </AdminLayout >
     );
 }

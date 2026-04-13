@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Unrolling Manuscript</title>
+    <style>
+        :root {
+            --paper-base: #dcb37b;
+            --paper-light: #e8c89a;
+            --wood-dark: #3a1e08;
+            --wood-mid: #8b5a2b;
+            --wood-light: #c1925a;
+            --burn-dark: rgba(45, 20, 0, 0.85);
+            --burn-mid: rgba(90, 45, 10, 0.5);
+            --text-ink: #312114;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #1a1a1a;
+            background-image: radial-gradient(circle at center, #2a2a2a 0%, #111 100%);
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+            overflow-x: hidden;
+        }
+
+        /* Container to center and set perspective */
+        .scroll-scene {
+            perspective: 1200px;
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* The Rollers (Top and Bottom) */
+        .roller {
+            width: 100%;
+            height: 65px;
+            position: relative;
+            z-index: 10;
+            border-radius: 8px;
+            box-shadow: 
+                0 15px 25px rgba(0,0,0,0.8),
+                inset 0 0 10px rgba(0,0,0,0.5);
+            /* Complex gradient to simulate a rolled cylinder */
+            background: 
+                /* Simulated paper layers wrapped around */
+                repeating-linear-gradient(to bottom, rgba(255,255,255,0) 0px, rgba(255,255,255,0) 3px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 5px),
+                /* Lighting on cylinder */
+                linear-gradient(to bottom, 
+                    var(--wood-dark) 0%, 
+                    var(--wood-mid) 15%, 
+                    var(--paper-light) 40%, 
+                    var(--wood-light) 65%, 
+                    var(--wood-dark) 95%,
+                    #111 100%);
+            background-size: 100% 12px, 100% 100%;
+            transition: transform 0.3s ease;
+        }
+
+        /* Simulated curled ends of the rollers protruding slightly */
+        .roller::before, .roller::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            width: 25px;
+            background: linear-gradient(to right, #221105, #553311, #221105);
+            border-radius: 50%;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+            z-index: -1;
+        }
+        .roller::before { left: -12px; }
+        .roller::after { right: -12px; }
+
+        .roller.top {
+            border-bottom: 2px solid rgba(0,0,0,0.6);
+        }
+
+        .roller.bottom {
+            border-top: 2px solid rgba(0,0,0,0.6);
+            /* Add shadow underneath to ground it */
+            filter: drop-shadow(0 20px 15px rgba(0,0,0,0.7));
+        }
+
+        /* The Expanding Paper Area */
+        .paper-wrapper {
+            width: 95%; /* Slightly narrower than rollers */
+            height: 0px; /* Starts closed */
+            margin: -5px auto; /* Overlap rollers to hide seam */
+            overflow: hidden;
+            position: relative;
+            z-index: 5;
+            transition: height 1.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+            
+            /* The actual parchment texture */
+            background-color: var(--paper-base);
+            background-image: 
+                /* SVG Noise for grain */
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E"),
+                /* Stains and variations */
+                radial-gradient(circle at 20% 30%, rgba(0,0,0,0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(139,69,19,0.1) 0%, transparent 50%);
+            
+            /* Heavy inset shadows to create the burnt/aged edge effect */
+            box-shadow: 
+                inset 0 0 80px rgba(0,0,0,0.4), /* Overall darkening */
+                inset 25px 0 35px var(--burn-mid), /* Left dark burn */
+                inset -25px 0 35px var(--burn-mid), /* Right dark burn */
+                inset 8px 0 10px var(--burn-dark),  /* Left inner hard edge */
+                inset -8px 0 10px var(--burn-dark); /* Right inner hard edge */
+        }
+
+        /* Inner content container to control fading */
+        .paper-content {
+            padding: 50px 40px;
+            min-height: 500px; /* Target height to unroll to */
+            box-sizing: border-box;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 1s ease-in-out, transform 1s ease-out;
+            transition-delay: 0s;
+            position: relative;
+        }
+
+        /* Text Styling */
+        h1 {
+            text-align: center;
+            color: var(--text-ink);
+            font-size: 2.2rem;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            border-bottom: 1px solid rgba(49, 33, 20, 0.3);
+            padding-bottom: 15px;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.2);
+        }
+
+        p {
+            color: var(--text-ink);
+            font-size: 1.1rem;
+            line-height: 1.8;
+            text-align: justify;
+            text-indent: 30px;
+            text-shadow: 0px 1px 0px rgba(255,255,255,0.1);
+        }
+
+        /* Shamrock Decoration matching the image */
+        .shamrock {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            opacity: 0.9;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4));
+        }
+
+        /* --- OPEN STATE ANIMATIONS --- */
+        
+        .scroll-scene.is-open .paper-wrapper {
+            height: 600px; /* Unrolled height */
+        }
+
+        .scroll-scene.is-open .paper-content {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.6s; /* Wait for unroll to start before showing text */
+        }
+
+        /* Simulate the bottom roller turning as it unrolls */
+        .scroll-scene.is-open .roller.bottom {
+            animation: unroll-spin 1.8s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+        }
+
+        /* Reverse spin for closing */
+        .scroll-scene:not(.is-open) .roller.bottom {
+            animation: roll-spin 1.8s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+        }
+
+        @keyframes unroll-spin {
+            0% { background-position: 0 0, 0 0; }
+            100% { background-position: 0 150px, 0 0; } /* Shifts the lines down to look like spinning */
+        }
+
+        @keyframes roll-spin {
+            0% { background-position: 0 150px, 0 0; }
+            100% { background-position: 0 0, 0 0; }
+        }
+
+        /* UI Hint */
+        .hint {
+            margin-top: 30px;
+            color: #888;
+            font-family: sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        /* Hover effect */
+        .scroll-scene:hover .roller {
+            filter: brightness(1.1);
+        }
+
+        @media (max-width: 600px) {
+            .paper-wrapper { width: 92%; }
+            .paper-content { padding: 40px 25px; }
+            h1 { font-size: 1.8rem; }
+            .shamrock { bottom: 20px; right: 20px; width: 60px; height: 60px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scroll-scene" id="manuscript" onclick="toggleScroll()">
+        
+        <!-- Top Rolled Part -->
+        <div class="roller top"></div>
+
+        <!-- Unrolling Paper Area -->
+        <div class="paper-wrapper">
+            <div class="paper-content">
+                <h1>Ancient Folklore</h1>
+                <p>
+                    Long ago, nestled deep within the emerald valleys, a legend spoke of the hidden glades where the light dances upon dew-kissed leaves. It is said that those who carry a true heart may find the path when the morning mist rises.
+                </p>
+                <p>
+                    The old texts whisper of prosperity brought forth not by gold, but by the quiet luck hidden in the earth. Guard these words, for they are woven from the memories of the soil and the old woods.
+                </p>
+                
+                <!-- SVG Shamrock mimicking the uploaded image -->
+                <svg class="shamrock" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- 3D lighting for the leaves -->
+                        <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8cd556" />
+                            <stop offset="40%" stop-color="#4a9a20" />
+                            <stop offset="100%" stop-color="#1f4c0a" />
+                        </linearGradient>
+                    </defs>
+                    <g transform="translate(50, 45) scale(0.9)">
+                        <!-- Stem -->
+                        <path d="M 0,10 Q 10,35 -15,55" fill="none" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+                        <!-- Top Leaf -->
+                        <path d="M 0,10 C -20,-15 -10,-35 0,-25 C 10,-35 20,-15 0,10 Z" fill="url(#leafGrad)"/>
+                        <!-- Left Leaf -->
+                        <path d="M -5,12 C -35,5 -35,25 -20,25 C -25,35 -10,35 -5,12 Z" fill="url(#leafGrad)"/>
+                        <!-- Right Leaf -->
+                        <path d="M 5,12 C 35,5 35,25 20,25 C 25,35 10,35 5,12 Z" fill="url(#leafGrad)"/>
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Bottom Rolled Part -->
+        <div class="roller bottom"></div>
+        
+    </div>
+
+    <div class="hint" id="hint-text">Click manuscript to unroll</div>
+
+    <script>
+        function toggleScroll() {
+            const manuscript = document.getElementById('manuscript');
+            const hint = document.getElementById('hint-text');
+            
+            // Toggle the open class to trigger CSS transitions
+            manuscript.classList.toggle('is-open');
+            
+            // Fade out, change text, fade in hint
+            hint.style.opacity = '0';
+            setTimeout(() => {
+                if (manuscript.classList.contains('is-open')) {
+                    hint.innerText = "Click to roll up";
+                } else {
+                    hint.innerText = "Click manuscript to unroll";
+                }
+                hint.style.opacity = '1';
+            }, 300); // Wait for fade out to finish
+        }
+    </script>
+
+</body>
+</html>
