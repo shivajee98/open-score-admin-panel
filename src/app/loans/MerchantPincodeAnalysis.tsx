@@ -147,13 +147,13 @@ const MerchantPincodeAnalysis: React.FC<Props> = ({ onClose }) => {
                                     )}
                                     <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Export Excel</span>
                                 </button>
-                                <div className="px-4 py-2 bg-pink-50 rounded-2xl border border-pink-100 shadow-sm">
-                                    <p className="text-[10px] font-black text-pink-500 uppercase tracking-widest leading-none mb-1">Total Regions</p>
-                                    <p className="text-xl font-black text-pink-600 leading-none">{data?.summary.length || 0}</p>
+                                <div className="px-6 py-3 bg-pink-50 rounded-2xl border border-pink-100 shadow-sm">
+                                    <p className="text-xs font-black text-pink-500 uppercase tracking-widest leading-none mb-1">Total Regions</p>
+                                    <p className="text-2xl font-black text-pink-600 leading-none">{data?.summary.length || 0}</p>
                                 </div>
-                                <div className="px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">
-                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest leading-none mb-1">Total Merchants</p>
-                                    <p className="text-xl font-black text-blue-600 leading-none">
+                                <div className="px-6 py-3 bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">
+                                    <p className="text-xs font-black text-blue-500 uppercase tracking-widest leading-none mb-1">Total Merchants</p>
+                                    <p className="text-2xl font-black text-blue-600 leading-none">
                                         {data?.summary.reduce((acc, curr) => acc + curr.merchants, 0) || 0}
                                     </p>
                                 </div>
@@ -172,10 +172,10 @@ const MerchantPincodeAnalysis: React.FC<Props> = ({ onClose }) => {
                                     <table className="w-full text-left border-collapse">
                                         <thead>
                                             <tr className="bg-slate-50/50">
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pincode</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Merchants</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Approved Loans</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Pincode</th>
+                                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-center">Merchants</th>
+                                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-center">Approved Loans</th>
+                                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
@@ -187,18 +187,18 @@ const MerchantPincodeAnalysis: React.FC<Props> = ({ onClose }) => {
                                                                 <div className="w-8 h-8 rounded-lg bg-pink-50 text-pink-500 flex items-center justify-center shadow-sm">
                                                                     <MapPin size={16} />
                                                                 </div>
-                                                                <span className="text-sm font-black text-slate-900 font-mono drop-shadow-[0_0_8px_rgba(236,72,153,0.1)]">
+                                                                <span className="text-lg font-black text-slate-900 font-mono drop-shadow-[0_0_8px_rgba(236,72,153,0.1)]">
                                                                     {row.pincode}
                                                                 </span>
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4 text-center">
-                                                            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-black rounded-full shadow-sm">
+                                                            <span className="px-4 py-1.5 bg-blue-50 text-blue-600 text-sm font-black rounded-full shadow-sm">
                                                                 {row.merchants}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 text-center">
-                                                            <span className={`px-3 py-1 text-xs font-black rounded-full shadow-sm ${
+                                                            <span className={`px-4 py-1.5 text-sm font-black rounded-full shadow-sm ${
                                                                 row.approved_loans > 0 
                                                                 ? 'bg-green-50 text-green-600' 
                                                                 : 'bg-slate-50 text-slate-400'
@@ -229,16 +229,16 @@ const MerchantPincodeAnalysis: React.FC<Props> = ({ onClose }) => {
                                                                     {data.details[row.pincode].map((loan) => (
                                                                         <div key={loan.id} className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md transition-all flex items-center justify-between group/loan">
                                                                             <div className="min-w-0 pr-4">
-                                                                                <p className="text-[10px] font-black text-pink-500 uppercase tracking-widest mb-1">
+                                                                                <p className="text-xs font-black text-pink-500 uppercase tracking-widest mb-1">
                                                                                     #{loan.display_id || loan.id}
                                                                                 </p>
                                                                                 <p className="text-sm font-black text-slate-800 truncate">{loan.applicant}</p>
                                                                                 <div className="flex items-center gap-2 mt-1">
-                                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                                                                                         ₹{loan.amount.toLocaleString()}
                                                                                     </span>
                                                                                     <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                                                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">
+                                                                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-tighter">
                                                                                         {loan.status}
                                                                                     </span>
                                                                                 </div>
@@ -264,7 +264,7 @@ const MerchantPincodeAnalysis: React.FC<Props> = ({ onClose }) => {
                             <div className="w-10 h-10 rounded-2xl bg-white text-blue-500 flex items-center justify-center shadow-sm">
                                 <Sparkles size={20} />
                             </div>
-                            <p className="text-xs font-bold text-blue-600/70 leading-relaxed">
+                            <p className="text-sm font-bold text-blue-600/70 leading-relaxed">
                                 This audit data helps identify high-density business hubs and correlated loan risks within specific postal codes. Expanded views reveal individual applicant performance.
                             </p>
                         </div>
