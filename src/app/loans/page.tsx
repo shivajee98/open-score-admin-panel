@@ -549,12 +549,12 @@ export default function LoanApprovals() {
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                     <div>
                         <h3 className="text-xl font-black text-slate-900">
-                            {activeTab === 'requests' ? 'Live Loan Pipeline' : 'Archived Loan Records'}
+                            {activeTab === 'requests' ? 'Live Loan Pipeline' : 'Historical Loan Records'}
                         </h3>
                         <p className="text-slate-500 font-medium text-sm mt-1">
                             {activeTab === 'requests'
                                 ? 'Review applicant details, manage KYC and approve disbursals.'
-                                : 'Comprehensive history of closed, cancelled or rejected requests.'}
+                                : 'Audit logs and records of closed, cancelled or previously rejected requests.'}
                         </p>
                     </div>
                 </div>

@@ -74,14 +74,14 @@ const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
         };
       case 'DELETE':
         return {
-          title: 'Archive Loan',
-          description: 'Moving this loan application to the archive.',
+          title: 'Delete Loan Record',
+          description: 'Permanently deleting this loan application from the system.',
           icon: <ShieldAlert className="w-12 h-12 text-rose-500" />,
           color: 'rose',
-          step1Label: 'I understand it will be archived',
-          step2Label: 'Proceed to Archive',
-          confirmText: 'Archive Record',
-          warning: 'This record will be hidden from the main dashboard.'
+          step1Label: 'I understand it will be deleted',
+          step2Label: 'Confirm Permanent Deletion',
+          confirmText: 'Delete Permanently',
+          warning: 'This action is irreversible and will remove all associated data.'
         };
       case 'REJECT':
         return {

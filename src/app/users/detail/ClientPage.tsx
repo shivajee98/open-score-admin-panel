@@ -9,7 +9,7 @@ import {
     Calendar, Shield, ShieldAlert, CheckCircle2,
     Clock, BadgeCheck, Phone, Mail, Building2, MapPin,
     ArrowUpRight, ArrowDownLeft, Download, Users, X,
-    Search, Filter, ChevronLeft, ChevronRight, FileSpreadsheet
+    Search, Filter, ChevronLeft, ChevronRight, FileSpreadsheet, ExternalLink
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import Link from 'next/link';
@@ -398,6 +398,16 @@ export default function UserDetailsPage() {
                                         </h4>
                                         <p className="text-sm font-bold text-slate-900">{user.business_address || 'Not Provided'}</p>
                                         <p className="text-xs text-slate-500 mt-1">{user.city ? `${user.city}, ` : ''}{user.state ? `${user.state} ` : ''}{user.pincode ? `- ${user.pincode}` : ''}</p>
+                                        {(user.location_url || user.map_location_url) && (
+                                            <a 
+                                                href={user.location_url || user.map_location_url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors uppercase tracking-wider"
+                                            >
+                                                <ExternalLink size={10} /> View on Google Maps
+                                            </a>
+                                        )}
                                     </div>
                                     <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
                                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">

@@ -304,6 +304,17 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                             </p>
                                                         </div>
                                                     </div>
+
+                                                    {loan.form_data.location_url && (
+                                                        <a 
+                                                            href={loan.form_data.location_url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer" 
+                                                            className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors uppercase tracking-wider w-fit"
+                                                        >
+                                                            <ExternalLink size={10} /> View Address on Google Maps
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
