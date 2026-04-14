@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
+import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
 import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
 import MerchantPincodeAnalysis from './MerchantPincodeAnalysis';
 import { Sparkles } from 'lucide-react';
@@ -52,6 +53,28 @@ export default function LoanApprovals() {
     const [showKycSidebar, setShowKycSidebar] = useState(false);
     const [showRiskSidebar, setShowRiskSidebar] = useState(false);
     const [showPincodeModal, setShowPincodeModal] = useState(false);
+    const [dismissedClusters, setDismissedClusters] = useState<string[]>([]);
+
+    // Confirmation Dialog State
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        action: ActionType;
+        loanId: number;
+        customerName: string;
+        amount: string;
+        successMsg: string;
+        endpoint?: string;
+        method?: string;
+        repaymentId?: number;
+    }>({
+        isOpen: false,
+        action: 'PROCEED',
+        loanId: 0,
+        customerName: '',
+        amount: '',
+        successMsg: ''
+    });
+
 
     // Group loans by location clashes
     const locationClusters = useMemo(() => {
@@ -92,17 +115,17 @@ export default function LoanApprovals() {
             });
         });
 
-        // Only return clusters with more than one unique loan
+        // Filter out clusters with only one loan or those marked as seen
         return Object.entries(clusters)
-            .filter(([_, memberLoans]) => {
+            .filter(([coord, memberLoans]) => {
                 const uniqueIds = new Set(memberLoans.map(l => l.id));
-                return uniqueIds.size > 1;
+                return uniqueIds.size > 1 && !dismissedClusters.includes(coord);
             })
             .map(([coord, memberLoans]) => ({
                 coord,
                 loans: Array.from(new Map(memberLoans.map(l => [l.id, l])).values()) // unique by ID
             }));
-    }, [loans]);
+    }, [loans, dismissedClusters]);
 
     // Initial query param setup
     useEffect(() => {
@@ -146,45 +169,66 @@ export default function LoanApprovals() {
     }, [activeTab, search, statusFilter, page, itemsPerPage]);
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
-        if (!confirm('Are you sure you want to perform this action?')) return;
-        if (method === 'DELETE' && !confirm('CRITICAL: This will permanently delete the loan and its history. This cannot be undone. Are you absolutely sure?')) return;
+        const loan = loans.find(l => l.id === id);
+        setConfirmModal({
+            isOpen: true,
+            action: endpoint.toUpperCase().replace('-', '_') as ActionType || (method === 'DELETE' ? 'DELETE' : 'PROCEED'),
+            loanId: id,
+            customerName: loan?.user?.name || 'Customer',
+            amount: loan?.amount || '0',
+            successMsg,
+            endpoint,
+            method
+        });
+    };
 
-        setActionLoading(`${id}-${endpoint}`);
+    const executeAction = async () => {
+        const { loanId, endpoint, method, successMsg, action } = confirmModal;
+        
+        setActionLoading(`${loanId}-${endpoint}`);
         try {
-            // Normalize path
-            const path = endpoint ? (endpoint.startsWith('/') ? endpoint : `/${endpoint}`) : '';
-            const response = await apiFetch(`/admin/loans/${id}${path}`, { method });
-
-            if (response && response.data && response.data.kyc_link) {
-                prompt("KYC Link generated (Copy below):", response.data.kyc_link);
-            } else if (response && response.kyc_link) {
-                prompt("KYC Link generated (Copy below):", response.kyc_link);
+            let response;
+            if (action === 'REDO') {
+                response = await apiFetch(`/admin/loans/${loanId}/redo`, { method: 'POST' });
+            } else if (confirmModal.repaymentId) {
+                 await apiFetch(`/admin/repayments/${confirmModal.repaymentId}/approve`, { method: 'POST' });
+                 response = { message: 'Fee approved!' };
             } else {
-                alert(successMsg);
+                const path = endpoint ? (endpoint.startsWith('/') ? endpoint : `/${endpoint}`) : '';
+                response = await apiFetch(`/admin/loans/${loanId}${path}`, { method });
+            }
+
+            if (response && (response.data?.kyc_link || response.kyc_link)) {
+                const link = response.data?.kyc_link || response.kyc_link;
+                // Use a better way than prompt? For now, we follow the old logic but in a safer way.
+                window.prompt("KYC Link generated (Copy below):", link);
+            } else {
+                // We could use a custom toast here, but alert is what was there.
+                // toast.success(successMsg); // if we had a toast system
+                alert(response?.message || successMsg);
             }
             loadLoans();
-        } catch (e) {
-            alert('Action failed');
+        } catch (e: any) {
+            alert(e.message || 'Action failed');
         } finally {
             setActionLoading(null);
-            loadLoans();
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
         }
     };
 
-    const handleApproveFee = async (e: React.MouseEvent, repaymentId: number) => {
+    const handleApproveFee = async (e: React.MouseEvent, loan: any, repaymentId: number) => {
         e.stopPropagation();
-        if (!confirm('Confirm receipt of platform fee?')) return;
-        setActionLoading(`approve-fee-${repaymentId}`);
-        try {
-            await apiFetch(`/admin/repayments/${repaymentId}/approve`, { method: 'POST' });
-            alert('Fee approved!');
-            loadLoans();
-        } catch (e: any) {
-            alert(e.message || 'Failed to approve fee');
-        } finally {
-            setActionLoading(null);
-        }
+        setConfirmModal({
+            isOpen: true,
+            action: 'APPROVE',
+            loanId: loan.id,
+            customerName: loan.user?.name || 'Customer',
+            amount: loan.amount,
+            successMsg: 'Fee approved successfully!',
+            repaymentId
+        });
     };
+
 
     const toggleSelection = (e: any, id: number) => {
         e.stopPropagation();
@@ -667,8 +711,19 @@ export default function LoanApprovals() {
                                             </div>
                                         </td>
                                         <td className="p-6">
+                                            {/* Redo Button per State */}
+                                            {['DISBURSED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(loan.status) === false && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'redo', 'Step redone successfully!'); }}
+                                                    className="flex items-center gap-1 text-[9px] font-black text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100 mb-2 transition-all hover:scale-105 active:scale-95"
+                                                    title="Revert to previous step"
+                                                >
+                                                    <RotateCcw size={10} /> REDO STEP
+                                                </button>
+                                            )}
                                             <div className="flex items-center gap-2">
                                                 <IndianRupee size={16} className="text-slate-300" />
+
                                                 <span className="font-black text-slate-900 text-xl tracking-tighter">
                                                     {parseFloat(loan.amount).toLocaleString('en-IN')}
                                                 </span>
@@ -733,12 +788,13 @@ export default function LoanApprovals() {
                                                         {getPendingPlatformFee(loan) && (
                                                             <button
                                                                 disabled={!!actionLoading}
-                                                                onClick={(e) => handleApproveFee(e, getPendingPlatformFee(loan).id)}
+                                                                onClick={(e) => handleApproveFee(e, loan, getPendingPlatformFee(loan).id)}
                                                                 className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 transition-all font-mono"
                                                             >
                                                                 {actionLoading === `approve-fee-${getPendingPlatformFee(loan).id}` ? '...' : 'Confirm Fee'}
                                                             </button>
                                                         )}
+
                                                         <button
                                                             disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan))}
                                                             onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'release', 'Funds Released!'); }}
@@ -839,6 +895,14 @@ export default function LoanApprovals() {
                                                 <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Risk Alerts</h4>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Location Similarity</p>
+                                                    {locationClusters.length > 0 && (
+                                                        <button 
+                                                            onClick={() => setDismissedClusters(locationClusters.map(c => c.coord))}
+                                                            className="text-[8px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-tighter bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 transition-colors"
+                                                        >
+                                                            Dismiss All
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -860,9 +924,21 @@ export default function LoanApprovals() {
                                                         </div>
                                                         <span className="text-[10px] font-black font-mono text-slate-500 tracking-tighter">{cluster.coord}</span>
                                                     </div>
-                                                    <span className="px-2.5 py-1 bg-white text-orange-600 text-[9px] font-black rounded-lg shadow-sm">
-                                                        {cluster.loans.length}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2.5 py-1 bg-white text-orange-600 text-[9px] font-black rounded-lg shadow-sm">
+                                                            {cluster.loans.length}
+                                                        </span>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setDismissedClusters(prev => [...prev, cluster.coord]);
+                                                            }}
+                                                            className="p-1 hover:bg-white rounded-lg text-slate-300 hover:text-slate-600 transition-all"
+                                                            title="Mark as Seen"
+                                                        >
+                                                            <BadgeCheck size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-3">
                                                     {cluster.loans.map(l => (
@@ -1335,6 +1411,15 @@ export default function LoanApprovals() {
             {showPincodeModal && (
                 <MerchantPincodeAnalysis onClose={() => setShowPincodeModal(false)} />
             )}
+            <ActionConfirmationDialog 
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={executeAction}
+                action={confirmModal.action}
+                loanId={confirmModal.loanId}
+                customerName={confirmModal.customerName}
+                amount={confirmModal.amount}
+            />
         </AdminLayout >
     );
 }
