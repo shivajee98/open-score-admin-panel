@@ -400,12 +400,18 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
 
                                     {/* KYC Images */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                        {['aadhar_front', 'aadhar_back', 'pan_front', 'selfie', 'applicant_selfie', 'prop_1', 'prop_2', 'prop_3'].map(field => {
+                                        {['aadhar_front', 'aadhar_back', 'pan_front', 'selfie', 'applicant_selfie', 'agent_selfie', 'selfie_with_agent', 'prop_1', 'prop_2', 'prop_3'].map(field => {
                                             const file = loan.form_data[field];
                                             if (!file || typeof file !== 'object' || !file.url) return null;
                                             return (
                                                 <div key={field} className="space-y-2">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center truncate">{field.replace(/_/g, ' ')}</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center truncate">
+                                                        {field === 'selfie' || field === 'agent_selfie' || field === 'selfie_with_agent' 
+                                                            ? 'Selfie with Agent' 
+                                                            : field === 'applicant_selfie' 
+                                                                ? 'Applicant Selfie' 
+                                                                : field.replace(/_/g, ' ')}
+                                                    </p>
                                                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-square overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
                                                         <img src={file.url} alt={field} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                         <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center">
@@ -413,9 +419,21 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                         </div>
                                                     </a>
                                                     {file.geo && (
-                                                        <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center">
-                                                            <span>LAT: {typeof file.geo.lat === 'number' ? file.geo.lat.toFixed(4) : (file.geo.lat || 'N/A')}</span>
-                                                            <span>LNG: {typeof file.geo.lng === 'number' ? file.geo.lng.toFixed(4) : (file.geo.lng || 'N/A')}</span>
+                                                        <div className="flex flex-col gap-1 items-center mt-1">
+                                                            <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center italic leading-tight">
+                                                                <span>LAT: {typeof file.geo.lat === 'number' ? file.geo.lat.toFixed(4) : (file.geo.lat || 'N/A')}</span>
+                                                                <span>LNG: {typeof file.geo.lng === 'number' ? file.geo.lng.toFixed(4) : (file.geo.lng || 'N/A')}</span>
+                                                            </div>
+                                                            {(file.geo.lat && file.geo.lng) && (
+                                                                <a 
+                                                                    href={`https://www.google.com/maps/search/?api=1&query=${file.geo.lat},${file.geo.lng}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1 text-[8px] font-black text-blue-500 hover:text-blue-700 transition-colors uppercase"
+                                                                >
+                                                                    <ExternalLink size={10} /> View on Maps
+                                                                </a>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

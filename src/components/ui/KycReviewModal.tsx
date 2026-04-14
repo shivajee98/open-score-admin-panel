@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { X, CheckCircle, XCircle } from 'lucide-react';
+import { X, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 
 interface KycReviewModalProps {
     agent: any;
@@ -120,6 +120,24 @@ export default function KycReviewModal({ agent, kyc, onClose, onSuccess }: KycRe
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">PAN Card</p>
                             <p className="text-sm font-black text-slate-900 mt-1 uppercase">{kyc.pan_number || 'N/A'}</p>
                         </div>
+                        {(kyc.latitude && kyc.longitude) && (
+                            <div className="col-span-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Onboarding Location</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <p className="text-sm font-black text-slate-900 font-mono tracking-tighter">
+                                        {kyc.latitude}, {kyc.longitude}
+                                    </p>
+                                    <a 
+                                        href={`https://www.google.com/maps/search/?api=1&query=${kyc.latitude},${kyc.longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors uppercase tracking-widest flex items-center gap-1"
+                                    >
+                                        <ExternalLink size={12} /> Google Maps
+                                    </a>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">

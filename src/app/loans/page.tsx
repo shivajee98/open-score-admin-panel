@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
 import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
@@ -39,6 +39,8 @@ export default function LoanApprovals() {
     const [activeTab, setActiveTab] = useState('requests');
     const [previewLoan, setPreviewLoan] = useState<any>(null);
     const [selectedLoan, setSelectedLoan] = useState<any>(null);
+    const [cancelLoanModal, setCancelLoanModal] = useState<{ isOpen: boolean; loanId: number | null }>({ isOpen: false, loanId: null });
+    const [remarks, setRemarks] = useState('');
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedLoanIds, setSelectedLoanIds] = useState<number[]>([]);
@@ -50,6 +52,7 @@ export default function LoanApprovals() {
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
+    const [reuploadRemarks, setReuploadRemarks] = useState('');
     const [showKycSidebar, setShowKycSidebar] = useState(false);
     const [showRiskSidebar, setShowRiskSidebar] = useState(false);
     const [showPincodeModal, setShowPincodeModal] = useState(false);
@@ -711,16 +714,6 @@ export default function LoanApprovals() {
                                             </div>
                                         </td>
                                         <td className="p-6">
-                                            {/* Redo Button per State */}
-                                            {['DISBURSED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(loan.status) === false && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'redo', 'Step redone successfully!'); }}
-                                                    className="flex items-center gap-1 text-[9px] font-black text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100 mb-2 transition-all hover:scale-105 active:scale-95"
-                                                    title="Revert to previous step"
-                                                >
-                                                    <RotateCcw size={10} /> REDO STEP
-                                                </button>
-                                            )}
                                             <div className="flex items-center gap-2">
                                                 <IndianRupee size={16} className="text-slate-300" />
 
@@ -814,6 +807,17 @@ export default function LoanApprovals() {
                                                     </div>
                                                 )}
 
+                                                {/* Redo Button */}
+                                                {['DISBURSED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(loan.status) === false && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'redo', 'Step redone successfully!'); }}
+                                                        className="p-2.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                                                        title="Redo Step / Revert to Previous State"
+                                                    >
+                                                        <RotateCcw size={18} />
+                                                    </button>
+                                                )}
+
                                                 {/* View Full Details Button (Combined View) */}
                                                 <button
                                                     onClick={() => setSelectedLoan(loan.id)}
@@ -833,6 +837,13 @@ export default function LoanApprovals() {
                                                             <XCircle size={18} />
                                                         </button>
                                                     )}
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setCancelLoanModal({ isOpen: true, loanId: loan.id }); }}
+                                                        className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                                        title="Cancel Loan"
+                                                    >
+                                                        <XCircle size={18} />
+                                                    </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleAction(loan.id, '', 'Loan Deleted!', 'DELETE'); }}
                                                         className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
@@ -1300,7 +1311,7 @@ export default function LoanApprovals() {
                                             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">KYC Documents & Photos</span>
                                         </div>
                                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'prop_1', 'prop_2', 'prop_3'].map(key => {
+                                            {['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'agent_selfie', 'selfie_with_agent', 'prop_1', 'prop_2', 'prop_3'].map(key => {
                                                 const value = previewLoan.form_data[key];
                                                 if (!value || (typeof value === 'object' && !value.url)) return null;
                                                 const imgUrl = typeof value === 'string' ? value : value.url;
@@ -1309,7 +1320,13 @@ export default function LoanApprovals() {
                                                 return (
                                                     <div key={key} className="space-y-2">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate">{key.replace(/_/g, ' ')}</p>
+                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate">
+                                                                {key === 'selfie' || key === 'agent_selfie' || key === 'selfie_with_agent' 
+                                                                    ? 'Selfie with Agent' 
+                                                                    : key === 'applicant_selfie' 
+                                                                        ? 'Applicant Selfie' 
+                                                                        : key.replace(/_/g, ' ')}
+                                                            </p>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -1341,9 +1358,21 @@ export default function LoanApprovals() {
                                                             )}
                                                         </div>
                                                         {typeof value === 'object' && value.geo && (
-                                                            <div className="flex flex-col text-[8px] font-bold text-slate-400 italic">
-                                                                <span>LAT: {typeof value.geo.lat === 'number' ? value.geo.lat.toFixed(4) : (value.geo.lat || 'N/A')}</span>
-                                                                <span>LNG: {typeof value.geo.lng === 'number' ? value.geo.lng.toFixed(4) : (value.geo.lng || 'N/A')}</span>
+                                                            <div className="flex flex-col gap-1 mt-1">
+                                                                <div className="flex flex-col text-[8px] font-bold text-slate-400 italic leading-tight">
+                                                                    <span>LAT: {typeof value.geo.lat === 'number' ? value.geo.lat.toFixed(4) : (value.geo.lat || 'N/A')}</span>
+                                                                    <span>LNG: {typeof value.geo.lng === 'number' ? value.geo.lng.toFixed(4) : (value.geo.lng || 'N/A')}</span>
+                                                                </div>
+                                                                {(value.geo.lat && value.geo.lng) && (
+                                                                    <a 
+                                                                        href={`https://www.google.com/maps/search/?api=1&query=${value.geo.lat},${value.geo.lng}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center gap-1 text-[8px] font-black text-blue-500 hover:text-blue-700 transition-colors uppercase"
+                                                                    >
+                                                                        <ExternalLink size={10} /> View on Maps
+                                                                    </a>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1354,28 +1383,48 @@ export default function LoanApprovals() {
 
                                     {/* Bulk Re-upload Action */}
                                     {reuploadFields.length > 0 && (
-                                        <div className="mt-8 pt-8 border-t border-slate-100 flex justify-end">
-                                            <button
-                                                onClick={async () => {
-                                                    if (!confirm(`Ask user to re-upload ${reuploadFields.length} field(s)?`)) return;
-                                                    try {
-                                                        await apiFetch(`/admin/loans/${previewLoan.id}/request-reupload`, {
-                                                            method: 'POST',
-                                                            body: JSON.stringify({ fields: reuploadFields })
-                                                        });
-                                                        alert('Re-upload request sent!');
-                                                        setPreviewLoan(null);
-                                                        setReuploadFields([]);
-                                                        loadLoans();
-                                                    } catch (err) {
-                                                        alert('Failed to send request');
-                                                    }
-                                                }}
-                                                className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/30 transition-all flex items-center gap-3 active:scale-95"
-                                            >
-                                                <Shield size={16} />
-                                                Request Re-upload ({reuploadFields.length} Items)
-                                            </button>
+                                        <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col gap-4">
+                                            <div className="bg-rose-50/50 p-4 rounded-3xl border border-rose-100">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                                                        <MessageSquare size={16} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Re-upload Feedback</span>
+                                                </div>
+                                                <textarea
+                                                    value={reuploadRemarks}
+                                                    onChange={(e) => setReuploadRemarks(e.target.value)}
+                                                    placeholder="Explain why these fields need re-upload (e.g. 'Images are blurred', 'Address mismatch')..."
+                                                    className="w-full bg-white border border-rose-200 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-500/20 placeholder:text-rose-200 min-h-[100px]"
+                                                />
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!confirm(`Ask user to re-upload ${reuploadFields.length} field(s)?`)) return;
+                                                        try {
+                                                            await apiFetch(`/admin/loans/${previewLoan.id}/request-reupload`, {
+                                                                method: 'POST',
+                                                                body: JSON.stringify({ 
+                                                                    fields: reuploadFields,
+                                                                    remarks: reuploadRemarks 
+                                                                })
+                                                            });
+                                                            alert('Re-upload request sent!');
+                                                            setPreviewLoan(null);
+                                                            setReuploadFields([]);
+                                                            setReuploadRemarks('');
+                                                            loadLoans();
+                                                        } catch (err) {
+                                                            alert('Failed to send request');
+                                                        }
+                                                    }}
+                                                    className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/30 transition-all flex items-center gap-3 active:scale-95"
+                                                >
+                                                    <Shield size={16} />
+                                                    Request Re-upload ({reuploadFields.length} Items)
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </>
@@ -1411,6 +1460,58 @@ export default function LoanApprovals() {
             {showPincodeModal && (
                 <MerchantPincodeAnalysis onClose={() => setShowPincodeModal(false)} />
             )}
+            {/* Cancel Loan Modal */}
+            {cancelLoanModal.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                            <h3 className="text-xl font-black text-slate-900">Cancel Loan Request</h3>
+                            <p className="text-sm font-medium text-slate-500 mt-1">Please provide a reason for cancelling this loan. This will be visible to the customer.</p>
+                        </div>
+                        <div className="p-8">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cancellation Remarks</label>
+                            <textarea
+                                value={remarks}
+                                onChange={(e) => setRemarks(e.target.value)}
+                                className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-rose-100 focus:border-rose-300 outline-none transition-all resize-none"
+                                placeholder="Enter reason for cancellation (e.g. Document mismatch, User request, Policy violation...)"
+                            />
+                        </div>
+                        <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex gap-4">
+                            <button
+                                onClick={() => { setCancelLoanModal({ isOpen: false, loanId: null }); setRemarks(''); }}
+                                className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all"
+                            >
+                                Close
+                            </button>
+                            <button
+                                disabled={!remarks.trim() || actionLoading === 'cancelling'}
+                                onClick={async () => {
+                                    if (!cancelLoanModal.loanId) return;
+                                    setActionLoading('cancelling');
+                                    try {
+                                        await apiFetch(`/admin/loans/${cancelLoanModal.loanId}/cancel`, {
+                                            method: 'POST',
+                                            body: JSON.stringify({ remarks })
+                                        });
+                                        setCancelLoanModal({ isOpen: false, loanId: null });
+                                        setRemarks('');
+                                        loadLoans();
+                                    } catch (e: any) {
+                                        alert(e.message || 'Failed to cancel loan');
+                                    } finally {
+                                        setActionLoading(null);
+                                    }
+                                }}
+                                className="flex-none px-8 py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-500/20 transition-all disabled:opacity-50"
+                            >
+                                {actionLoading === 'cancelling' ? 'Processing...' : 'Confirm Cancellation'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ActionConfirmationDialog 
                 isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}

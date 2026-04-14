@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/AdminLayout';
 import { toast, Toaster } from 'sonner';
-import { User, Mail, KeyRound, ShieldCheck, CheckCircle, Lock } from 'lucide-react';
+import { User, Mail, KeyRound, ShieldCheck, CheckCircle, Lock, Bug, Trash2, Play, Square, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminProfile() {
@@ -29,6 +29,11 @@ export default function AdminProfile() {
     const [oldPin, setOldPin] = useState('');
     const [confirmNewPin, setConfirmNewPin] = useState('');
     const [pinLoading, setPinLoading] = useState(false);
+
+    // Debug Mode
+    const [debugLoading, setDebugLoading] = useState(false);
+    const [debugUsers, setDebugUsers] = useState<any[]>([]);
+    const [debugMsg, setDebugMsg] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -112,6 +117,26 @@ export default function AdminProfile() {
             toast.error(error.message || 'Failed to update PIN');
         } finally {
             setPinLoading(false);
+        }
+    };
+
+    const handleDebugAction = async (action: 'enable' | 'disable' | 'delete') => {
+        setDebugLoading(true);
+        setDebugMsg('');
+        try {
+            const res = await apiFetch(`/debug/${action}`);
+            toast.success(res.message);
+            if (action === 'disable' && res.data?.users) {
+                setDebugUsers(res.data.users);
+            }
+            if (action === 'delete') {
+                setDebugUsers([]);
+            }
+            setDebugMsg(res.message);
+        } catch (error: any) {
+            toast.error(error.message || `Failed to ${action} debug mode`);
+        } finally {
+            setDebugLoading(false);
         }
     };
 
@@ -337,6 +362,96 @@ export default function AdminProfile() {
                                     </button>
                                 </div>
                             </form>
+                        )}
+                    </div>
+                </div>
+
+                {/* Debug Mode Section */}
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+                        <Bug className="w-5 h-5 text-rose-500" />
+                        <h2 className="text-lg font-bold text-slate-800">Developer Debug Mode</h2>
+                        <span className="ml-auto bg-rose-50 text-rose-600 px-3 py-1 rounded-full text-xs font-bold ring-1 ring-rose-200">RESTRICTED</span>
+                    </div>
+
+                    <div className="p-6 space-y-6">
+                        <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
+                            Debug mode allows OTP-less authentication for testing purposes. 
+                            <strong> WARNING:</strong> While active, any 10-digit mobile number can sign up without verifying via SMS.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button
+                                onClick={() => handleDebugAction('enable')}
+                                disabled={debugLoading}
+                                className="flex items-center justify-center gap-3 px-6 py-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl hover:bg-emerald-100 transition-all group disabled:opacity-50"
+                            >
+                                <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                Enable Mode
+                            </button>
+
+                            <button
+                                onClick={() => handleDebugAction('disable')}
+                                disabled={debugLoading}
+                                className="flex items-center justify-center gap-3 px-6 py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 transition-all group disabled:opacity-50"
+                            >
+                                <Square className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                Disable & List
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    if(confirm('Are you sure? This will permanently delete all debug accounts.')) {
+                                        handleDebugAction('delete');
+                                    }
+                                }}
+                                disabled={debugLoading}
+                                className="flex items-center justify-center gap-3 px-6 py-4 bg-rose-50 text-rose-600 font-bold rounded-2xl hover:bg-rose-100 transition-all group disabled:opacity-50"
+                            >
+                                <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                Purge Users
+                            </button>
+                        </div>
+
+                        {debugMsg && (
+                            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-mono text-slate-600">
+                                {debugMsg}
+                            </div>
+                        )}
+
+                        {debugUsers.length > 0 && (
+                            <div className="mt-6 space-y-4">
+                                <div className="flex items-center gap-2 text-slate-800 font-bold">
+                                    <Users className="w-4 h-4" />
+                                    <h3>Debug Users Found ({debugUsers.length})</h3>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-2xl">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="sticky top-0 bg-slate-50 border-b border-slate-100 uppercase tracking-widest text-[10px] font-black text-slate-400">
+                                            <tr>
+                                                <th className="px-4 py-3">Name</th>
+                                                <th className="px-4 py-3">Phone</th>
+                                                <th className="px-4 py-3">Role</th>
+                                                <th className="px-4 py-3">Created</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {debugUsers.map((u) => (
+                                                <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-4 py-3 font-bold text-slate-700">{u.name}</td>
+                                                    <td className="px-4 py-3 text-slate-500">{u.mobile_number}</td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-black">{u.role}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-400 text-[10px]">
+                                                        {new Date(u.created_at).toLocaleDateString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
