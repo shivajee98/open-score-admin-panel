@@ -726,7 +726,7 @@ export default function BarringSettings() {
                     rules: rulesToSave
                 };
 
-                await apiFetch('/admin/barring-rules', {
+                await apiFetch('/admin/expense-limits', {
                     method: 'POST',
                     body: JSON.stringify(payload)
                 });

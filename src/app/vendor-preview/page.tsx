@@ -95,11 +95,13 @@ export default function VendorPreviewPage() {
         }
     };
 
-    const agentPortalUrl = 'https://agent.msmeloan.sbs';
-    // const agentPortalUrl = 'http://localhost:3001'; // For local testing if needed
+    const subUserPortalUrl = process.env.NEXT_PUBLIC_SUB_USER_APP_URL || 'https://agent.msmeloan.sbs';
+    // const subUserPortalUrl = 'http://localhost:3001'; // For local testing if needed
     
     // Construct the preview URL with the bridge token and admin_preview flag
-    const previewUrl = impersonateToken ? `${agentPortalUrl}/?token=${impersonateToken}&admin_preview=true` : '';
+    const previewUrl = impersonateToken
+        ? `${subUserPortalUrl}/login?token=${impersonateToken}&access_token=${impersonateToken}&admin_preview=true`
+        : '';
 
     if (viewMode && previewUrl) {
         return (
@@ -261,7 +263,7 @@ export default function VendorPreviewPage() {
                                     <div className="flex-1 flex justify-center">
                                         <div className="bg-[#020617] px-4 py-1.5 rounded-lg text-[9px] font-bold text-slate-500 flex items-center gap-2 border border-slate-800/50">
                                             <ShieldCheck className="w-3 h-3" />
-                                            {agentPortalUrl}
+                                            {subUserPortalUrl}
                                         </div>
                                     </div>
                                 </div>

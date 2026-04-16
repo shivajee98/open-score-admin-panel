@@ -50,7 +50,7 @@ export default function LoanApprovals() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [itemsPerPage, setItemsPerPage] = useState(100);
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
     const [reuploadRemarks, setReuploadRemarks] = useState('');
     const [showKycSidebar, setShowKycSidebar] = useState(false);
@@ -147,7 +147,9 @@ export default function LoanApprovals() {
                 search: search,
                 status: statusFilter,
                 page: page.toString(),
-                per_page: itemsPerPage.toString()
+                per_page: itemsPerPage.toString(),
+                sort_by: 'updated_at',
+                order: 'desc'
             });
             const response = await apiFetch(`${endpoint}?${query}`);
             if (response && response.data) {
@@ -281,7 +283,9 @@ export default function LoanApprovals() {
                 search: search,
                 status: statusFilter,
                 page: '1',
-                per_page: '999'
+                per_page: '999',
+                sort_by: 'updated_at',
+                order: 'desc'
             });
             const response = await apiFetch(`${endpoint}?${query}`);
             let allLoans = response?.data || response || [];
