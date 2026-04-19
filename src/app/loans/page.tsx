@@ -346,7 +346,9 @@ export default function LoanApprovals() {
                     'Last Name': formData.last_name || '',
                     'Date of Birth': formData.birth_day && formData.birth_month && formData.birth_year
                         ? `${formData.birth_day}/${formData.birth_month}/${formData.birth_year}` : '',
-                    'Marital Status': formData.marital_status || '',
+                    'Marital Status': formData.marital_status || user.marital_status || '',
+                    'Father\'s Name': formData.father_name || user.family_detail?.father_name || '',
+                    'Mother\'s Name': formData.mother_name || user.family_detail?.mother_name || '',
                     'Phone': formData.phone || '',
                     'Current Street Address': formData.street_address || user.street_address || '',
                     'Current City': formData.city || user.city || '',
@@ -1084,6 +1086,56 @@ export default function LoanApprovals() {
                                                             title="Mark for Re-upload"
                                                         >
                                                             <Shield size={10} fill={reuploadFields.includes('date_of_birth') ? "currentColor" : "none"} />
+                                                        </button>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Marital Status</p>
+                                                        <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.marital_status || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Father's Name</p>
+                                                            <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.father_name || previewLoan.user?.family_detail?.father_name || 'N/A'}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const key = 'father_name';
+                                                                setReuploadFields(prev => 
+                                                                    prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                                                );
+                                                            }}
+                                                            className={`p-1 rounded-lg transition-all border ${
+                                                                reuploadFields.includes('father_name') 
+                                                                ? "bg-rose-500 text-white border-rose-500" 
+                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                            }`}
+                                                            title="Mark for Re-upload"
+                                                        >
+                                                            <Shield size={10} fill={reuploadFields.includes('father_name') ? "currentColor" : "none"} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mother's Name</p>
+                                                            <p className="text-sm font-bold text-slate-900">{previewLoan.form_data.mother_name || previewLoan.user?.family_detail?.mother_name || 'N/A'}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const key = 'mother_name';
+                                                                setReuploadFields(prev => 
+                                                                    prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                                                );
+                                                            }}
+                                                            className={`p-1 rounded-lg transition-all border ${
+                                                                reuploadFields.includes('mother_name') 
+                                                                ? "bg-rose-500 text-white border-rose-500" 
+                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                            }`}
+                                                            title="Mark for Re-upload"
+                                                        >
+                                                            <Shield size={10} fill={reuploadFields.includes('mother_name') ? "currentColor" : "none"} />
                                                         </button>
                                                     </div>
                                                     <div>
