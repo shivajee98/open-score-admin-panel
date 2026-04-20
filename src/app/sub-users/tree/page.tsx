@@ -15,7 +15,7 @@ export default function VendorTreePage() {
     const [treeData, setTreeData] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
-    const [settings, setSettings] = useState({ max_vendor_depth: 3, min_child_commission: 10 });
+    const [settings, setSettings] = useState({ max_vendor_depth: 3, min_child_commission: 0 });
     const [savingSettings, setSavingSettings] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
 
@@ -183,8 +183,8 @@ export default function VendorTreePage() {
                                     type="number"
                                     className="w-full mt-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:outline-none text-sm font-bold"
                                     value={settings.min_child_commission}
-                                    onChange={e => setSettings({ ...settings, min_child_commission: parseFloat(e.target.value) || 10 })}
-                                    min={1}
+                                    onChange={(e) => setSettings({ ...settings, min_child_commission: parseFloat(e.target.value) || 0 })}
+                                    min="0"
                                 />
                                 <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Minimum commission amount for any vendor (floor)</p>
                             </div>

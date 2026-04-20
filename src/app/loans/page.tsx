@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check } from 'lucide-react';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
 import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
@@ -57,6 +57,17 @@ export default function LoanApprovals() {
     const [showRiskSidebar, setShowRiskSidebar] = useState(false);
     const [showPincodeModal, setShowPincodeModal] = useState(false);
     const [dismissedClusters, setDismissedClusters] = useState<string[]>([]);
+    
+    // Auto Pilot State
+    const [autoPilotSettings, setAutoPilotSettings] = useState<{
+        enabled: boolean;
+        delays: { proceed: number; send_kyc: number; approve: number };
+    }>({
+        enabled: false,
+        delays: { proceed: 0, send_kyc: 3, approve: 15 }
+    });
+    const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
 
     // Confirmation Dialog State
     const [confirmModal, setConfirmModal] = useState<{
@@ -136,7 +147,34 @@ export default function LoanApprovals() {
         const openLoanId = searchParams.get('openLoan');
         if (urlSearch) setSearch(urlSearch);
         if (openLoanId) setSelectedLoan(parseInt(openLoanId));
+        loadAutoPilotSettings();
     }, [searchParams]);
+
+    const loadAutoPilotSettings = async () => {
+        try {
+            const data = await apiFetch('/admin/loans/autopilot-settings');
+            if (data) setAutoPilotSettings(data);
+        } catch (error) {
+            console.error('Failed to load auto pilot settings', error);
+        }
+    };
+
+    const saveAutoPilotSettings = async (newSettings: any) => {
+        setSavingSettings(true);
+        try {
+            await apiFetch('/admin/loans/autopilot-settings', {
+                method: 'POST',
+                body: JSON.stringify(newSettings)
+            });
+            setAutoPilotSettings(newSettings);
+            setShowAutoPilotModal(false);
+        } catch (error) {
+            console.error('Failed to save auto pilot settings', error);
+            alert('Failed to update settings');
+        } finally {
+            setSavingSettings(false);
+        }
+    };
 
     const loadLoans = async () => {
         setLoading(true);
@@ -514,6 +552,18 @@ export default function LoanApprovals() {
                     </button>
 
                     <button
+                        onClick={() => setShowAutoPilotModal(true)}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${
+                            autoPilotSettings.enabled 
+                                ? 'bg-amber-500 text-white shadow-amber-500/20' 
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-amber-200 shadow-slate-200/50'
+                        }`}
+                    >
+                        <Zap size={16} className={autoPilotSettings.enabled ? 'text-white animate-pulse' : 'text-amber-500'} />
+                        <span className="hidden sm:inline">Auto Pilot</span>
+                    </button>
+
+                    <button
                         onClick={() => setShowPincodeModal(true)}
                         className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-all shadow-lg shadow-indigo-100/50 group/pin"
                     >
@@ -705,6 +755,22 @@ export default function LoanApprovals() {
                                                                 }`}>
                                                                 {isPlatformFeePaid(loan) ? ' Fee Paid' : ' Fee Pending'}
                                                             </span>
+                                                        )}
+                                                        {/* Auto Pilot Risk Indicator */}
+                                                        {loan.is_auto_pilot_risk && (
+                                                            <div className="group/risk relative inline-block">
+                                                                <span className="flex items-center gap-1 text-[8px] font-black px-2 py-0.5 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-500/20 border-2 border-white animate-pulse">
+                                                                    <AlertTriangle size={8} /> RISK
+                                                                </span>
+                                                                <div className="absolute bottom-full left-0 mb-2 hidden group-hover/risk:block z-50">
+                                                                    <div className="bg-slate-900 text-white text-[10px] font-bold p-3 rounded-2xl shadow-2xl border border-slate-700 min-w-[200px] leading-relaxed">
+                                                                        <p className="text-rose-400 mb-1 flex items-center gap-1 uppercase tracking-widest text-[8px]">
+                                                                            <Shield size={10} /> Auto-Pilot Flag
+                                                                        </p>
+                                                                        {loan.auto_pilot_risk_reason}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
                                                     {/* Quick KYC Access */}
@@ -1562,6 +1628,120 @@ export default function LoanApprovals() {
                                 className="flex-none px-8 py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-500/20 transition-all disabled:opacity-50"
                             >
                                 {actionLoading === 'cancelling' ? 'Processing...' : 'Confirm Cancellation'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAutoPilotModal && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 border border-slate-100">
+                        <div className="p-10 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <div className="flex items-center gap-5">
+                                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-2xl transition-all ${autoPilotSettings.enabled ? 'bg-amber-500 text-white shadow-amber-500/30 rotate-12' : 'bg-slate-200 text-slate-400'}`}>
+                                    <Zap size={32} className={autoPilotSettings.enabled ? 'animate-pulse' : ''} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Auto Pilot Engine</h3>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-0.5">Workflow Automation & Risk Guard</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowAutoPilotModal(false)} className="p-3 hover:bg-slate-200 rounded-2xl text-slate-400 transition-all">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-10 space-y-10">
+                            {/* Toggle Switch */}
+                            <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                <div>
+                                    <h4 className="font-black text-slate-900">Enable Auto-Pilot</h4>
+                                    <p className="text-xs font-medium text-slate-500">Automatically progress loans through steps</p>
+                                </div>
+                                <button
+                                    onClick={() => setAutoPilotSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                                    className={`w-16 h-8 rounded-full p-1 transition-all duration-300 ${autoPilotSettings.enabled ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                >
+                                    <div className={`w-6 h-6 bg-white rounded-full shadow-lg transition-transform duration-300 ${autoPilotSettings.enabled ? 'translate-x-8' : 'translate-x-0'}`} />
+                                </button>
+                            </div>
+
+                            {/* Delay Configuration */}
+                            <div className="space-y-6">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step Transition Delays (Minutes)</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-tight ml-2">Proceed</label>
+                                        <div className="relative">
+                                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                            <input
+                                                type="number"
+                                                value={autoPilotSettings.delays.proceed}
+                                                onChange={(e) => setAutoPilotSettings(prev => ({ ...prev, delays: { ...prev.delays, proceed: parseInt(e.target.value) || 0 } }))}
+                                                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.25rem] font-black text-slate-900 focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-tight ml-2">Send KYC</label>
+                                        <div className="relative">
+                                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                            <input
+                                                type="number"
+                                                value={autoPilotSettings.delays.send_kyc}
+                                                onChange={(e) => setAutoPilotSettings(prev => ({ ...prev, delays: { ...prev.delays, send_kyc: parseInt(e.target.value) || 0 } }))}
+                                                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.25rem] font-black text-slate-900 focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-tight ml-2">Approve</label>
+                                        <div className="relative">
+                                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                            <input
+                                                type="number"
+                                                value={autoPilotSettings.delays.approve}
+                                                onChange={(e) => setAutoPilotSettings(prev => ({ ...prev, delays: { ...prev.delays, approve: parseInt(e.target.value) || 0 } }))}
+                                                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.25rem] font-black text-slate-900 focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm shrink-0 border border-blue-100">
+                                    <Shield size={20} className="text-blue-500" />
+                                </div>
+                                <div>
+                                    <h5 className="text-[11px] font-black text-blue-900 uppercase tracking-tight mb-1">Safety Guard Active</h5>
+                                    <p className="text-[10px] font-medium text-blue-600 leading-relaxed">
+                                        Auto-Pilot will automatically flag suspicious applications (shared FCM, identical GPS, or PII clusters). 
+                                        Financial steps (Confirm Fee & Disburse) always require manual approval.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-10 bg-slate-50/50 border-t border-slate-100 flex gap-6">
+                            <button
+                                onClick={() => setShowAutoPilotModal(false)}
+                                className="flex-1 py-5 bg-white border border-slate-200 text-slate-600 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all shadow-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                disabled={savingSettings}
+                                onClick={() => saveAutoPilotSettings(autoPilotSettings)}
+                                className="flex-[2] py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-slate-800 shadow-2xl shadow-slate-900/30 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
+                            >
+                                {savingSettings ? 'Syncing...' : (
+                                    <>
+                                        <Check size={18} />
+                                        Update Configuration
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
