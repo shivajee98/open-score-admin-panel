@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -83,6 +83,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
         // Promotions & Tools
         { label: 'QR Generator', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
+        { label: 'Global Zones', href: '/pincodes', icon: <MapPin className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Coupons', href: '/coupon-generator', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare, Clock, User, Send, ShieldAlert, Wallet, BadgeCheck, Ban, AlertCircle, Briefcase, PlayCircle, ExternalLink, Eye, XCircle, TrendingUp, IndianRupee } from 'lucide-react';
+import { MessageSquare, Clock, User, Send, ShieldAlert, Wallet, BadgeCheck, Ban, AlertCircle, Briefcase, PlayCircle, ExternalLink, Eye, XCircle, TrendingUp, IndianRupee, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import AdminLayout from '@/components/AdminLayout';
@@ -114,7 +114,12 @@ export default function SupportTicketsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isMessageLoading, setIsMessageLoading] = useState(false);
     const [newMessage, setNewMessage] = useState('');
-    const [statusFilter, setStatusFilter] = useState('active'); // Default to active chats
+    const [statusFilter, setStatusFilter] = useState('active');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [totalTickets, setTotalTickets] = useState(0);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Modals for payment
@@ -131,17 +136,20 @@ export default function SupportTicketsPage() {
     const [cashbackReason, setCashbackReason] = useState('Support Ticket Reward');
     const [isProcessingCashback, setIsProcessingCashback] = useState(false);
 
-    const fetchTickets = useCallback(async (silent = false) => {
+    const fetchTickets = useCallback(async (silent = false, p = page) => {
         if (!silent) setIsLoading(true);
         try {
-            const res = await apiFetch(`/admin/support/tickets?status=${statusFilter}`);
+            const res = await apiFetch(`/admin/support/tickets?status=${statusFilter}&page=${p}&search=${debouncedSearch}`);
             setTickets(res.data || []);
+            setPage(res.current_page || 1);
+            setLastPage(res.last_page || 1);
+            setTotalTickets(res.total || 0);
         } catch {
             toast.error('Failed to load tickets');
         } finally {
             setIsLoading(false);
         }
-    }, [statusFilter]);
+    }, [statusFilter, page, searchQuery]);
 
     const fetchMessages = useCallback(async (ticketId: number, silent = false) => {
         if (!silent) setIsMessageLoading(true);
@@ -162,6 +170,14 @@ export default function SupportTicketsPage() {
     }, []);
 
     const selectedTicketId = selectedTicket?.id;
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     useEffect(() => {
         fetchTickets();
@@ -408,8 +424,23 @@ export default function SupportTicketsPage() {
                     <div className="p-4 border-b border-slate-100 space-y-3">
                         <div className="flex items-center justify-between">
                             <h3 className="font-black text-slate-900">Inboxes</h3>
-                            <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{tickets.length}</span>
+                            <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{totalTickets}</span>
                         </div>
+                        
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Search usernames..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setPage(1);
+                                }}
+                                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                        </div>
+
                         <div className="flex gap-1 p-1 bg-white border border-slate-200 rounded-lg">
                             {[
                                 { id: 'active', label: 'ONGOING' },
@@ -458,6 +489,29 @@ export default function SupportTicketsPage() {
                             ))
                         )}
                     </div>
+
+                    {/* Pagination */}
+                    {lastPage > 1 && (
+                        <div className="p-3 border-t border-slate-100 bg-white flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page {page} of {lastPage}</p>
+                            <div className="flex gap-1">
+                                <button
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(prev => prev - 1)}
+                                    className="p-1.5 bg-slate-100 rounded-lg disabled:opacity-30 hover:bg-slate-200 transition-all"
+                                >
+                                    <ChevronLeft size={14} />
+                                </button>
+                                <button
+                                    disabled={page >= lastPage}
+                                    onClick={() => setPage(prev => prev + 1)}
+                                    className="p-1.5 bg-slate-900 text-white rounded-lg disabled:opacity-30 hover:bg-slate-800 transition-all"
+                                >
+                                    <ChevronRight size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: Chat View */}

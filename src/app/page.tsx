@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
@@ -29,7 +29,9 @@ export default function AdminDashboard() {
         totalReferralPaid: 0,
         totalQrDeposits: 0,
         totalVendorsPendingDues: 0,
-        totalAgentsPendingDues: 0
+        totalAgentsPendingDues: 0,
+        activePincodes: [],
+        upcomingPincodes: []
     });
     const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [pendingRepayments, setPendingRepayments] = useState<any[]>([]);
@@ -46,13 +48,14 @@ export default function AdminDashboard() {
     const loadData = async () => {
         try {
             // Parallel fetch for speed
-            const [analytics, pending, users, pendingRepays, referralsData, qrData] = await Promise.all([
+            const [analytics, pending, users, pendingRepays, referralsData, qrData, analyticsPincodes] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
                 apiFetch('/admin/users'),
                 apiFetch('/admin/repayments/pending'),
                 apiFetch('/admin/all-referrals'),
-                apiFetch('/admin/qr-bookings')
+                apiFetch('/admin/qr-bookings'),
+                apiFetch('/analytics/pincodes')
             ]);
 
             const referralList = referralsData?.data || [];
@@ -82,7 +85,9 @@ export default function AdminDashboard() {
                 totalVendorsTransactionSum: analytics?.total_vendors_transaction_sum || 0,
                 totalVendorsPendingDues: analytics?.total_vendors_pending_dues || 0,
                 totalAgents: analytics?.total_agents || 0,
-                totalAgentsPendingDues: analytics?.total_agents_pending_dues || 0
+                totalAgentsPendingDues: analytics?.total_agents_pending_dues || 0,
+                activePincodes: Array.isArray(analyticsPincodes?.active) ? analyticsPincodes.active : [],
+                upcomingPincodes: Array.isArray(analyticsPincodes?.upcoming) ? analyticsPincodes.upcoming : []
             } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
@@ -254,6 +259,16 @@ export default function AdminDashboard() {
                         <p className="text-sm font-black text-slate-900 group-hover:text-indigo-600 transition-colors">https://openscore.msmeloan.sbs/public-qr/</p>
                     </div>
                 </div>
+
+                <Link href="/pincodes" className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 hover:border-blue-200 transition-all group">
+                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
+                        <MapPin className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Active Clusters</p>
+                        <p className="text-xl font-black text-slate-900">{(stats as any).activePincodes?.length || 0} Zones</p>
+                    </div>
+                </Link>
             </div>
 
             {/* Recent Repayments & Health Grid */}
@@ -345,6 +360,65 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Zone Coverage Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                        <div>
+                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Active Penetration</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">50+ Merchants Mapped</p>
+                        </div>
+                        <Link href="/pincodes" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1">
+                            Full Map <ChevronRight className="w-3 h-3" />
+                        </Link>
+                    </div>
+                    <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {(stats as any).activePincodes && (stats as any).activePincodes.slice(0, 6).map((area: any) => (
+                            <div key={area.pincode} className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="w-6 h-6 bg-blue-600 text-white rounded-lg flex items-center justify-center shrink-0">
+                                    <MapPin className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="overflow-hidden">
+                                    <p className="text-xs font-black text-slate-900 leading-none">{area.pincode}</p>
+                                    <p className="text-[8px] font-bold text-blue-500 uppercase mt-0.5">{area.mapped_count} Mapped</p>
+                                </div>
+                            </div>
+                        ))}
+                        {(stats as any).activePincodes?.length === 0 && (
+                            <div className="col-span-full py-4 text-center text-[10px] font-bold text-slate-300 uppercase italic">No active clusters yet</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                        <div>
+                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Upcoming Growth</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">1-49 Merchants mapped</p>
+                        </div>
+                        <Link href="/pincodes?tab=upcoming" className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline flex items-center gap-1">
+                            Growth View <ChevronRight className="w-3 h-3" />
+                        </Link>
+                    </div>
+                    <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {(stats as any).upcomingPincodes && (stats as any).upcomingPincodes.slice(0, 6).map((area: any) => (
+                            <div key={area.pincode} className="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                <div className="w-6 h-6 bg-slate-100 text-slate-400 rounded-lg flex items-center justify-center shrink-0">
+                                    <MapPin className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="overflow-hidden">
+                                    <p className="text-xs font-black text-slate-900 leading-none">{area.pincode}</p>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">{area.mapped_count} entities</p>
+                                </div>
+                            </div>
+                        ))}
+                        {(stats as any).upcomingPincodes?.length === 0 && (
+                            <div className="col-span-full py-4 text-center text-[10px] font-bold text-slate-300 uppercase italic">No growth areas detected</div>
+                        )}
                     </div>
                 </div>
             </div>
