@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
-import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight } from 'lucide-react';
+import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 
@@ -26,6 +26,36 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     // Reject Modal State
     const [rejectingId, setRejectingId] = useState<number | null>(null);
     const [rejectReason, setRejectReason] = useState('');
+
+    // Image Upload State
+    const [uploadingField, setUploadingField] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [selectedUploadField, setSelectedUploadField] = useState<string | null>(null);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedUploadField) return;
+
+        setUploadingField(selectedUploadField);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', selectedUploadField);
+
+        try {
+            await apiFetch(`/admin/loans/${loanId}/add-image`, {
+                method: 'POST',
+                body: formData
+            });
+            loadDetails(); // Refresh the data
+            onUpdate();
+        } catch (error: any) {
+            alert(error.message || 'Failed to upload image' );
+        } finally {
+            setUploadingField(null);
+            setSelectedUploadField(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     useEffect(() => {
         loadDetails();
@@ -152,6 +182,13 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     return (
         <div className="contents">
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleImageUpload}
+                />
                 <div className="bg-slate-50 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden my-auto relative">
 
                     {/* Header */}
@@ -410,7 +447,7 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                     )}
 
                                     {/* KYC Images */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-10">
                                         {[
                                             { id: 'aadhar_front', label: 'Aadhaar Front' },
                                             { id: 'aadhar_back', label: 'Aadhaar Back' },
@@ -421,50 +458,87 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                             { id: 'prop_2', label: 'Property Side 2' },
                                             { id: 'prop_3', label: 'Property Side 3' }
                                         ].map(field => {
-                                            const file = loan.form_data[field.id] || (field.id === 'pan_front' ? loan.form_data['pan_card'] : null);
-                                            const hasImage = file && typeof file === 'object' && file.url;
+                                            const rawFile = loan.form_data[field.id] || (field.id === 'pan_front' ? loan.form_data['pan_card'] : null);
+                                            
+                                            // Normalize to array of image objects
+                                            const files = Array.isArray(rawFile) 
+                                                ? (rawFile.every(f => typeof f === 'object' && f.url) ? rawFile : [])
+                                                : (rawFile && typeof rawFile === 'object' && rawFile.url ? [rawFile] : []);
+                                            
+                                            const hasImages = files.length > 0;
 
                                             return (
-                                                <div key={field.id} className="space-y-3">
+                                                <div key={field.id} className="space-y-4">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center truncate">
                                                         {field.label}
                                                     </p>
                                                     
-                                                    {hasImage ? (
-                                                        <>
-                                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="block relative group aspect-square overflow-hidden rounded-2xl border-2 border-slate-100 bg-white shadow-sm">
-                                                                <img src={file.url} alt={field.label} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                                <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors flex items-center justify-center">
-                                                                    <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all text-slate-900 shadow-xl">
-                                                                        <ExternalLink className="w-4 h-4" />
+                                                    <div className="grid grid-cols-1 gap-4">
+                                                        {files.map((file, idx) => (
+                                                            <div key={idx} className="space-y-2">
+                                                                <a href={getStorageUrl(file.url)} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video sm:aspect-square overflow-hidden rounded-2xl border-2 border-slate-100 bg-white shadow-sm">
+                                                                    <img src={getStorageUrl(file.url)} alt={`${field.label} ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                                    <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors flex items-center justify-center">
+                                                                        <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all text-slate-900 shadow-xl">
+                                                                            <ExternalLink className="w-4 h-4" />
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </a>
-                                                            {file.geo && (
-                                                                <div className="flex flex-col gap-1 items-center mt-2">
-                                                                    <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center italic leading-tight">
-                                                                        <span>{file.geo.lat?.toFixed(4)}, {file.geo.lng?.toFixed(4)}</span>
+                                                                    {file.added_by_admin && (
+                                                                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-blue-500 text-[8px] font-black text-white rounded-full shadow-lg border border-blue-400">
+                                                                            ADMIN ADDED
+                                                                        </div>
+                                                                    )}
+                                                                </a>
+                                                                {file.geo && (
+                                                                    <div className="flex flex-col gap-1 items-center">
+                                                                        <div className="flex flex-col text-[8px] font-bold text-slate-400 items-center italic leading-tight">
+                                                                            <span>{file.geo.lat?.toFixed(4)}, {file.geo.lng?.toFixed(4)}</span>
+                                                                        </div>
+                                                                        <a 
+                                                                            href={`https://www.google.com/maps/search/?api=1&query=${file.geo.lat},${file.geo.lng}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="flex items-center gap-1 text-[8px] font-black text-blue-500 hover:text-blue-700 transition-colors uppercase tracking-widest"
+                                                                        >
+                                                                            <MapPin size={10} /> View Map
+                                                                        </a>
                                                                     </div>
-                                                                    <a 
-                                                                        href={`https://www.google.com/maps/search/?api=1&query=${file.geo.lat},${file.geo.lng}`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="flex items-center gap-1 text-[8px] font-black text-blue-500 hover:text-blue-700 transition-colors uppercase tracking-widest"
-                                                                    >
-                                                                        <MapPin size={10} /> View Map
-                                                                    </a>
-                                                                </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+
+                                                        {!hasImages && (
+                                                            <div className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-300 p-4 text-center">
+                                                                <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
+                                                                <p className="text-[9px] font-black uppercase tracking-tighter leading-tight">Missing<br />Document</p>
+                                                            </div>
+                                                        )}
+
+                                                        <button 
+                                                            disabled={uploadingField !== null}
+                                                            onClick={() => { setSelectedUploadField(field.id); fileInputRef.current?.click(); }}
+                                                            className={`w-full py-4 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-all
+                                                                ${uploadingField === field.id 
+                                                                    ? 'bg-blue-50 border-blue-300 text-blue-600' 
+                                                                    : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-white hover:border-blue-400 hover:text-blue-500 hover:shadow-md'
+                                                                }
+                                                            `}
+                                                        >
+                                                            {uploadingField === field.id ? (
+                                                                <>
+                                                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                                                    <span className="text-[10px] font-black uppercase tracking-widest">Uploading...</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
+                                                                        <Plus className="w-4 h-4" />
+                                                                    </div>
+                                                                    <span className="text-[10px] font-black uppercase tracking-widest">{hasImages ? 'Add More' : 'Add Image'}</span>
+                                                                </>
                                                             )}
-                                                        </>
-                                                    ) : (
-                                                        <div className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-300 p-4 text-center">
-                                                            <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
-                                                            <p className="text-[9px] font-black uppercase tracking-tighter leading-tight">Missing<br />Document</p>
-                                                            {loan.status === 'PENDING' && (
-                                                                <span className="mt-2 text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase">Awaiting Upload</span>
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
