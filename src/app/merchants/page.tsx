@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink, AlertCircle } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import VaultConfigModal from '@/components/VaultConfigModal';
@@ -208,6 +208,18 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                         <p className="text-xs font-medium text-slate-500">{user.mobile_number}</p>
                     </div>
                 </div>
+            </td>
+            <td className="p-6">
+                {user.kyc_leads?.[0]?.rejection_reason && (
+                    <div className="max-w-[200px]">
+                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-tighter mb-1 flex items-center gap-1">
+                            <AlertCircle size={10} /> Rejected:
+                        </p>
+                        <p className="text-[11px] font-bold text-slate-600 italic line-clamp-2">
+                            "{user.kyc_leads[0].rejection_reason}"
+                        </p>
+                    </div>
+                )}
             </td>
             <td className="p-6">
                 <span className={cn(
@@ -1039,6 +1051,7 @@ export default function MerchantsPage() {
                                     )}
                                 </th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Merchant Details</th>
+                                <th className="p-6 text-xs font-bold text-rose-500 uppercase tracking-widest">Decline Reason</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
                                 <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback Wallet</th>
