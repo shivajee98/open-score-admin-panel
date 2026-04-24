@@ -52,20 +52,28 @@ export default function PayoutsAdminPage() {
         fetchPayouts();
     }, []);
 
-    const handleAction = async (status: 'PAID' | 'REJECTED') => {
+    const handleAction = async (status: 'PAID' | 'REJECTED' | 'WAITING') => {
         if (!selectedPayout) return;
 
         try {
             let endpoint: string;
 
             if (selectedPayout.type === 'BANK_TRANSFER') {
-                endpoint = status === 'PAID'
-                    ? `/admin/bank-transfers/${selectedPayout.batch_id}/approve`
-                    : `/admin/bank-transfers/${selectedPayout.batch_id}/reject`;
+                if (status === 'WAITING') {
+                    endpoint = `/admin/bank-transfers/${selectedPayout.batch_id}/waiting`;
+                } else {
+                    endpoint = status === 'PAID'
+                        ? `/admin/bank-transfers/${selectedPayout.batch_id}/approve`
+                        : `/admin/bank-transfers/${selectedPayout.batch_id}/reject`;
+                }
             } else {
-                endpoint = status === 'PAID'
-                    ? `/admin/payouts/${selectedPayout.id}/approve`
-                    : `/admin/payouts/${selectedPayout.id}/reject`;
+                if (status === 'WAITING') {
+                    endpoint = `/admin/payouts/${selectedPayout.id}/waiting`;
+                } else {
+                    endpoint = status === 'PAID'
+                        ? `/admin/payouts/${selectedPayout.id}/approve`
+                        : `/admin/payouts/${selectedPayout.id}/reject`;
+                }
             }
 
             await apiFetch(endpoint, {
@@ -73,7 +81,8 @@ export default function PayoutsAdminPage() {
                 body: JSON.stringify({ admin_note: adminNote })
             });
 
-            toast.success(`${selectedPayout.type === 'BANK_TRANSFER' ? 'Batch' : 'Payout'} ${status === 'PAID' ? 'approved' : 'rejected'} successfully`);
+            const actionLabel = status === 'PAID' ? 'approved' : status === 'REJECTED' ? 'rejected' : 'set to waiting';
+            toast.success(`${selectedPayout.type === 'BANK_TRANSFER' ? 'Batch' : 'Payout'} ${actionLabel} successfully`);
             setIsActionModalOpen(false);
             setAdminNote('');
             setSelectedPayout(null);
@@ -82,6 +91,7 @@ export default function PayoutsAdminPage() {
             toast.error(err.message || `Failed to process`);
         }
     };
+
 
     const handleExport = async () => {
         try {
@@ -129,7 +139,9 @@ export default function PayoutsAdminPage() {
             case 'APPROVED': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
             case 'REJECTED': return 'bg-rose-50 text-rose-600 border-rose-100';
             case 'PENDING': return 'bg-amber-50 text-amber-600 border-amber-100';
+            case 'WAITING': return 'bg-blue-50 text-blue-600 border-blue-100';
             default: return 'bg-slate-50 text-slate-600 border-slate-100';
+
         }
     };
 
@@ -190,9 +202,11 @@ export default function PayoutsAdminPage() {
                             >
                                 <option value="ALL">All Status</option>
                                 <option value="PENDING">Pending</option>
+                                <option value="WAITING">Waiting</option>
                                 <option value="PAID">Paid</option>
                                 <option value="APPROVED">Approved</option>
                                 <option value="REJECTED">Rejected</option>
+
                             </select>
                         </div>
 
@@ -490,20 +504,27 @@ export default function PayoutsAdminPage() {
                                 ></textarea>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <button
                                     onClick={() => handleAction('PAID')}
-                                    className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black text-base hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-95"
+                                    className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-95"
                                 >
-                                    <CheckCircle2 className="w-5 h-5" /> {selectedPayout.type === 'BANK_TRANSFER' ? 'Approve Batch' : 'Mark as Paid'}
+                                    <CheckCircle2 className="w-4 h-4" /> {selectedPayout.type === 'BANK_TRANSFER' ? 'Approve' : 'Paid'}
+                                </button>
+                                <button
+                                    onClick={() => handleAction('WAITING')}
+                                    className="py-4 bg-blue-600 text-white rounded-2xl font-black text-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 active:scale-95"
+                                >
+                                    <Clock className="w-4 h-4" /> Wait
                                 </button>
                                 <button
                                     onClick={() => handleAction('REJECTED')}
-                                    className="flex-1 py-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-black text-base hover:bg-rose-100 transition-all flex items-center justify-center gap-2 active:scale-95"
+                                    className="py-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-black text-xs hover:bg-rose-100 transition-all flex items-center justify-center gap-2 active:scale-95"
                                 >
-                                    <XCircle className="w-5 h-5" /> Reject{selectedPayout.type === 'BANK_TRANSFER' ? ' & Refund' : ' Request'}
+                                    <XCircle className="w-4 h-4" /> Reject
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 )}
