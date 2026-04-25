@@ -91,6 +91,21 @@ export default function LoanApprovals() {
 
 
     // Group loans by location clashes
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setPreviewLoan(null);
+                setSelectedLoan(null);
+                setShowPincodeModal(false);
+                setShowAutoPilotModal(false);
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                setCancelLoanModal({ isOpen: false, loanId: null });
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
+
     const locationClusters = useMemo(() => {
         const clusters: Record<string, any[]> = {};
         
@@ -829,22 +844,24 @@ export default function LoanApprovals() {
                                                     </button>
                                                 )}
 
-                                                {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
+                                                {['FORM_SUBMITTED', 'KYC_SUBMITTED', 'APPROVED', 'DISBURSED', 'CLOSED'].includes(loan.status) && (
                                                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setPreviewLoan(loan); }}
                                                             className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
-                                                            title="Preview KYC"
+                                                            title="Preview KYC / Request Re-upload"
                                                         >
                                                             <Search size={18} />
                                                         </button>
-                                                        <button
-                                                            disabled={!!actionLoading}
-                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'approve', 'Loan Approved!'); }}
-                                                            className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all font-mono"
-                                                        >
-                                                            Approve
-                                                        </button>
+                                                        {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
+                                                            <button
+                                                                disabled={!!actionLoading}
+                                                                onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'approve', 'Loan Approved!'); }}
+                                                                className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all font-mono"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
 
@@ -1455,18 +1472,18 @@ export default function LoanApprovals() {
                                                 };
 
                                                 const rawVal = getRawValue();
-                                                if (!rawVal) return null;
 
                                                 // Normalize to object with URL
                                                 const normalize = (val: any) => {
+                                                    if (!val) return null;
                                                     if (Array.isArray(val)) return val[0];
                                                     if (typeof val === 'string') return { url: val };
                                                     return val;
                                                 };
 
                                                 const value = normalize(rawVal);
-                                                if (!value || (!value.url && !value.path)) return null;
-                                                const imgUrl = getStorageUrl(value.url || value.path || '') || '';
+                                                const hasImage = value && (value.url || value.path);
+                                                const imgUrl = hasImage ? (getStorageUrl(value.url || value.path || '') || '') : '';
                                                 const isSelected = reuploadFields.includes(field.id);
 
                                                 return (
@@ -1493,19 +1510,28 @@ export default function LoanApprovals() {
                                                             </button>
                                                         </div>
                                                         <div className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all ${isSelected ? 'border-rose-500 shadow-lg shadow-rose-500/20' : 'border-slate-100'}`}>
-                                                            <img src={imgUrl} alt={field.label} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                                <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/40 transition-all">
-                                                                    <Eye size={20} />
-                                                                </a>
-                                                            </div>
+                                                            {hasImage ? (
+                                                                <>
+                                                                    <img src={imgUrl} alt={field.label} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                                    <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                        <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/40 transition-all">
+                                                                            <Eye size={20} />
+                                                                        </a>
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center text-slate-300">
+                                                                    <Camera size={24} className="mb-2 opacity-50" />
+                                                                    <span className="text-[8px] font-bold uppercase tracking-wider">No Image</span>
+                                                                </div>
+                                                            )}
                                                             {isSelected && (
-                                                                <div className="absolute top-2 right-2 bg-rose-500 text-white p-1 rounded-lg">
+                                                                <div className="absolute top-2 right-2 bg-rose-500 text-white p-1 rounded-lg shadow-md">
                                                                     <BadgeCheck size={12} />
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        {value.geo && (
+                                                        {value && value.geo && (
                                                             <div className="flex flex-col gap-1 mt-1">
                                                                 <div className="flex flex-col text-[8px] font-bold text-slate-400 italic leading-tight">
                                                                     <span>LAT: {typeof value.geo.lat === 'number' ? value.geo.lat.toFixed(4) : (value.geo.lat || 'N/A')}</span>
