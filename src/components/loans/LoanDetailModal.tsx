@@ -449,22 +449,70 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                     {/* KYC Images */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-10">
                                         {[
-                                            { id: 'aadhar_front', label: 'Aadhaar Front' },
-                                            { id: 'aadhar_back', label: 'Aadhaar Back' },
-                                            { id: 'pan_front', label: 'PAN Card' },
-                                            { id: 'applicant_selfie', label: 'Applicant Selfie' },
-                                            { id: 'selfie_with_agent', label: 'Selfie with Agent' },
-                                            { id: 'prop_1', label: 'Property Side 1' },
-                                            { id: 'prop_2', label: 'Property Side 2' },
-                                            { id: 'prop_3', label: 'Property Side 3' }
+                                            { id: 'aadhar_front', label: 'Aadhaar Front', aliases: ['aadhaar_front'] },
+                                            { id: 'aadhar_back', label: 'Aadhaar Back', aliases: ['aadhaar_back'] },
+                                            { id: 'pan_card', label: 'PAN Card', aliases: ['pan_front', 'pan_number_card'] },
+                                            { id: 'applicant_selfie', label: 'Applicant Selfie', aliases: ['selfie'] },
+                                            { id: 'selfie_with_agent', label: 'Selfie with Agent', aliases: ['agent_selfie'] },
+                                            { id: 'prop_1', label: 'Property Side 1', aliases: ['property_1'] },
+                                            { id: 'prop_2', label: 'Property Side 2', aliases: ['property_2'] },
+                                            { id: 'prop_3', label: 'Property Side 3', aliases: ['property_3'] }
                                         ].map(field => {
-                                            const rawFile = loan.form_data[field.id] || (field.id === 'pan_front' ? loan.form_data['pan_card'] : null);
+                                            // Check multiple locations and aliases for the image data
+                                            const getRawFile = () => {
+                                                const searchKeys = [field.id, ...(field.aliases || [])];
+                                                
+                                                for (const key of searchKeys) {
+                                                    // 1. Check root level of form_data
+                                                    if (loan.form_data?.[key]) return loan.form_data[key];
+                                                    
+                                                    // 2. Check kyc_images object (standard for customer uploads)
+                                                    if (loan.form_data?.kyc_images?.[key]) return loan.form_data.kyc_images[key];
+                                                    
+                                                    // 3. Check kycImages (camelCase variation)
+                                                    if (loan.form_data?.kycImages?.[key]) return loan.form_data.kycImages[key];
+
+                                                    // 4. Check direct key on loan object (sometimes returned flat)
+                                                    if (loan[key]) return loan[key];
+                                                }
+                                                return null;
+                                            };
+
+                                            const rawFile = getRawFile();
                                             
-                                            // Normalize to array of image objects
-                                            const files = Array.isArray(rawFile) 
-                                                ? (rawFile.every(f => typeof f === 'object' && f.url) ? rawFile : [])
-                                                : (rawFile && typeof rawFile === 'object' && rawFile.url ? [rawFile] : []);
-                                            
+                                            // Normalize to array of image objects: [{ url: string, geo?: any, added_by_admin?: boolean }]
+                                            const normalize = (val: any): any[] => {
+                                                if (!val) return [];
+                                                
+                                                // Handle Array (bulk uploads or multiple versions)
+                                                if (Array.isArray(val)) {
+                                                    return val.map(item => {
+                                                        if (typeof item === 'string') return { url: item };
+                                                        if (item && typeof item === 'object') {
+                                                            return { ...item, url: item.url || item.path || item.filePath };
+                                                        }
+                                                        return null;
+                                                    }).filter(i => i && i.url);
+                                                }
+                                                
+                                                // Handle single object { url: '...', geo: '...' }
+                                                if (typeof val === 'object') {
+                                                    const url = val.url || val.path || val.filePath;
+                                                    if (url) return [{ ...val, url }];
+                                                    // Might be an object that IS the file if keys are actually files?
+                                                    // (Unlikely, but let's check for a few common keys)
+                                                    if (val.url) return [val];
+                                                }
+                                                
+                                                // Handle single string (path/URL)
+                                                if (typeof val === 'string') {
+                                                    return [{ url: val }];
+                                                }
+                                                
+                                                return [];
+                                            };
+
+                                            const files = normalize(rawFile);
                                             const hasImages = files.length > 0;
 
                                             return (
@@ -476,8 +524,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                     <div className="grid grid-cols-1 gap-4">
                                                         {files.map((file, idx) => (
                                                             <div key={idx} className="space-y-2">
-                                                                <a href={getStorageUrl(file.url)} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video sm:aspect-square overflow-hidden rounded-2xl border-2 border-slate-100 bg-white shadow-sm">
-                                                                    <img src={getStorageUrl(file.url)} alt={`${field.label} ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                                <a href={getStorageUrl(file.url) || ''} target="_blank" rel="noopener noreferrer" className="block relative group aspect-video sm:aspect-square overflow-hidden rounded-2xl border-2 border-slate-100 bg-white shadow-sm">
+                                                                    <img src={getStorageUrl(file.url) || ''} alt={`${field.label} ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                                     <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors flex items-center justify-center">
                                                                         <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all text-slate-900 shadow-xl">
                                                                             <ExternalLink className="w-4 h-4" />

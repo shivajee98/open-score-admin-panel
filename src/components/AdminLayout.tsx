@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -110,6 +110,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Monitoring Alerts', href: '/monitoring', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Broadcasts', href: '/broadcast-notifications', icon: <Megaphone className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'Direct Messaging', href: '/direct-messaging', icon: <MessageSquare className="w-5 h-5 text-emerald-400" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'User Preview', href: '/user-preview', icon: <Smartphone className="w-5 h-5 text-indigo-400" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Vendor Preview', href: '/vendor-preview', icon: <Search className="w-5 h-5 text-emerald-400" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Dynamic Buttons', href: '/dynamic-buttons', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },

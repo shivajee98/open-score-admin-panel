@@ -422,15 +422,15 @@ export default function LoanApprovals() {
                     'Account Holder': user.account_holder_name || formData.account_holder_name || '',
                     'Account Number': user.account_number || formData.account_number || '',
                     // KYC Photo URLs
-                    'Aadhaar Front': getStorageUrl(formData.aadhar_front?.url || formData.aadhar_front || ''),
-                    'Aadhaar Back': getStorageUrl(formData.aadhar_back?.url || formData.aadhar_back || ''),
-                    'PAN Front': getStorageUrl(formData.pan_front?.url || formData.pan_front || ''),
-                    'Applicant Selfie': getStorageUrl(formData.applicant_selfie?.url || formData.applicant_selfie || formData.selfie?.url || formData.selfie || ''),
-                    'Selfie with Agent': getStorageUrl(formData.agent_selfie?.url || formData.agent_selfie || formData.selfie_with_agent?.url || formData.selfie_with_agent || ''),
-                    'Property Photo 1': getStorageUrl(formData.prop_1?.url || formData.prop_1 || ''),
-                    'Property Photo 2': getStorageUrl(formData.prop_2?.url || formData.prop_2 || ''),
-                    'Property Photo 3': getStorageUrl(formData.prop_3?.url || formData.prop_3 || ''),
-                    'Address Photo': getStorageUrl(formData.address_photo?.url || formData.address_photo || ''),
+                    'Aadhaar Front': getStorageUrl(formData.aadhar_front?.url || formData.aadhar_front || '') || '',
+                    'Aadhaar Back': getStorageUrl(formData.aadhar_back?.url || formData.aadhar_back || '') || '',
+                    'PAN Front': getStorageUrl(formData.pan_front?.url || formData.pan_front || '') || '',
+                    'Applicant Selfie': getStorageUrl(formData.applicant_selfie?.url || formData.applicant_selfie || formData.selfie?.url || formData.selfie || '') || '',
+                    'Selfie with Agent': getStorageUrl(formData.agent_selfie?.url || formData.agent_selfie || formData.selfie_with_agent?.url || formData.selfie_with_agent || '') || '',
+                    'Property Photo 1': getStorageUrl(formData.prop_1?.url || formData.prop_1 || '') || '',
+                    'Property Photo 2': getStorageUrl(formData.prop_2?.url || formData.prop_2 || '') || '',
+                    'Property Photo 3': getStorageUrl(formData.prop_3?.url || formData.prop_3 || '') || '',
+                    'Address Photo': getStorageUrl(formData.address_photo?.url || formData.address_photo || '') || '',
                     'Location URL': formData.location_url || user.location_url || '',
                 };
             });
@@ -1433,27 +1433,53 @@ export default function LoanApprovals() {
                                             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">KYC Documents & Photos</span>
                                         </div>
                                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'agent_selfie', 'selfie_with_agent', 'prop_1', 'prop_2', 'prop_3'].map(key => {
-                                                const value = previewLoan.form_data[key];
-                                                if (!value || (typeof value === 'object' && !value.url)) return null;
-                                                const imgUrl = typeof value === 'string' ? value : value.url;
-                                                const isSelected = reuploadFields.includes(key);
+                                            {[
+                                                { id: 'aadhar_front', label: 'Aadhaar Front', aliases: ['aadhaar_front'] },
+                                                { id: 'aadhar_back', label: 'Aadhaar Back', aliases: ['aadhaar_back'] },
+                                                { id: 'pan_card', label: 'PAN Card', aliases: ['pan_front', 'pan_number_card'] },
+                                                { id: 'applicant_selfie', label: 'Applicant Selfie', aliases: ['selfie'] },
+                                                { id: 'selfie_with_agent', label: 'Selfie with Agent', aliases: ['agent_selfie'] },
+                                                { id: 'prop_1', label: 'Property Side 1', aliases: ['property_1'] },
+                                                { id: 'prop_2', label: 'Property Side 2', aliases: ['property_2'] },
+                                                { id: 'prop_3', label: 'Property Side 3', aliases: ['property_3'] }
+                                            ].map(field => {
+                                                const getRawValue = () => {
+                                                    const searchKeys = [field.id, ...(field.aliases || [])];
+                                                    for (const key of searchKeys) {
+                                                        // Check root, kyc_images, and kycImages
+                                                        if (previewLoan.form_data?.[key]) return previewLoan.form_data[key];
+                                                        if (previewLoan.form_data?.kyc_images?.[key]) return previewLoan.form_data.kyc_images[key];
+                                                        if (previewLoan.form_data?.kycImages?.[key]) return previewLoan.form_data.kycImages[key];
+                                                    }
+                                                    return null;
+                                                };
+
+                                                const rawVal = getRawValue();
+                                                if (!rawVal) return null;
+
+                                                // Normalize to object with URL
+                                                const normalize = (val: any) => {
+                                                    if (Array.isArray(val)) return val[0];
+                                                    if (typeof val === 'string') return { url: val };
+                                                    return val;
+                                                };
+
+                                                const value = normalize(rawVal);
+                                                if (!value || (!value.url && !value.path)) return null;
+                                                const imgUrl = getStorageUrl(value.url || value.path || '') || '';
+                                                const isSelected = reuploadFields.includes(field.id);
 
                                                 return (
-                                                    <div key={key} className="space-y-2">
+                                                    <div key={field.id} className="space-y-2">
                                                         <div className="flex justify-between items-center mb-1">
                                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate">
-                                                                {key === 'selfie' || key === 'agent_selfie' || key === 'selfie_with_agent' 
-                                                                    ? 'Selfie with Agent' 
-                                                                    : key === 'applicant_selfie' 
-                                                                        ? 'Applicant Selfie' 
-                                                                        : key.replace(/_/g, ' ')}
+                                                                {field.label}
                                                             </p>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setReuploadFields(prev => 
-                                                                        prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                                                        prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]
                                                                     );
                                                                 }}
                                                                 className={`p-1.5 rounded-lg transition-all border ${
@@ -1467,7 +1493,7 @@ export default function LoanApprovals() {
                                                             </button>
                                                         </div>
                                                         <div className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all ${isSelected ? 'border-rose-500 shadow-lg shadow-rose-500/20' : 'border-slate-100'}`}>
-                                                            <img src={imgUrl} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                                            <img src={imgUrl} alt={field.label} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                                             <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                                                                 <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/40 transition-all">
                                                                     <Eye size={20} />
@@ -1479,7 +1505,7 @@ export default function LoanApprovals() {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        {typeof value === 'object' && value.geo && (
+                                                        {value.geo && (
                                                             <div className="flex flex-col gap-1 mt-1">
                                                                 <div className="flex flex-col text-[8px] font-bold text-slate-400 italic leading-tight">
                                                                     <span>LAT: {typeof value.geo.lat === 'number' ? value.geo.lat.toFixed(4) : (value.geo.lat || 'N/A')}</span>
