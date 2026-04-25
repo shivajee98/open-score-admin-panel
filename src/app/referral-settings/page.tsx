@@ -12,7 +12,9 @@ export default function ReferralSettingsPage() {
         is_enabled: true,
         signup_bonus: 100,
         loan_disbursement_bonus: 250,
-        agent_signup_bonus: 50
+        agent_signup_bonus: 50,
+        vault_card_activation_bonus: 0,
+        vault_card_activation_fee: 0
     });
     const [referrals, setReferrals] = useState<any[]>([]);
     const [stats, setStats] = useState({
@@ -201,6 +203,48 @@ export default function ReferralSettingsPage() {
                             </div>
                             <p className="text-xs text-slate-500 mt-2">
                                 Bonus credited to referrer when referred user's loan is disbursed (default: ₹250)
+                            </p>
+                        </div>
+
+                        {/* Vault Card Activation Bonus */}
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                Vault Card Activation Bonus Amount
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                                <input
+                                    type="number"
+                                    value={settings.vault_card_activation_bonus}
+                                    onChange={(e) => setSettings({ ...settings, vault_card_activation_bonus: parseFloat(e.target.value) || 0 })}
+                                    className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                                    min="0"
+                                    step="10"
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500 mt-2">
+                                Base commission credited for vault card activation (default: ₹0)
+                            </p>
+                        </div>
+
+                        {/* Vault Card Activation Fee */}
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                Vault Card Activation Fee (User Payment)
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                                <input
+                                    type="number"
+                                    value={settings.vault_card_activation_fee || 0}
+                                    onChange={(e) => setSettings({ ...settings, vault_card_activation_fee: parseFloat(e.target.value) || 0 })}
+                                    className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                                    min="0"
+                                    step="10"
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500 mt-2">
+                                The amount the agent/user must pay to activate a Vault Card.
                             </p>
                         </div>
 

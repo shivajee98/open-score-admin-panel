@@ -83,6 +83,7 @@ export default function SubUsersPage() {
         credit_limit: '',
         default_signup_amount: '',
         admin_loan_commission: '',
+        admin_vault_card_commission: '',
         bonus_milestone_count: '',
         bonus_milestone_amount: '',
         can_create_vendors: false,
@@ -230,6 +231,7 @@ export default function SubUsersPage() {
             credit_limit: (subUser.credit_limit ?? 0).toString(),
             default_signup_amount: (subUser.default_signup_amount ?? 0).toString(),
             admin_loan_commission: (subUser.admin_loan_commission ?? 0).toString(),
+            admin_vault_card_commission: ((subUser as any).admin_vault_card_commission ?? 0).toString(),
             bonus_milestone_count: (subUser.bonus_milestone_count ?? 0).toString(),
             bonus_milestone_amount: (subUser.bonus_milestone_amount ?? 0).toString(),
             can_create_vendors: subUser.can_create_vendors ?? false,
@@ -1032,16 +1034,29 @@ export default function SubUsersPage() {
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Disbursement Commission (Admin to Agent)</label>
-                                <input
-                                    type="number"
-                                    required
-                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
-                                    value={formData.admin_loan_commission}
-                                    placeholder="2000"
-                                    onChange={(e) => setFormData({ ...formData, admin_loan_commission: e.target.value })}
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Disbursement Commission (Admin to Agent)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                        value={formData.admin_loan_commission}
+                                        placeholder="2000"
+                                        onChange={(e) => setFormData({ ...formData, admin_loan_commission: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vault Card Commission (Admin to Agent)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-900 transition-all"
+                                        value={formData.admin_vault_card_commission}
+                                        placeholder="100"
+                                        onChange={(e) => setFormData({ ...formData, admin_vault_card_commission: e.target.value })}
+                                    />
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
