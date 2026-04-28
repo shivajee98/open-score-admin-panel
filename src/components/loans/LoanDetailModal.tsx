@@ -262,6 +262,34 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                     </div>
 
                     <div className="p-6 sm:p-8 space-y-8">
+                        {/* System Intelligence / Risk Flag */}
+                        {loan.is_auto_pilot_risk && (
+                            <div className="bg-rose-50 border-2 border-rose-100 rounded-3xl p-6 shadow-xl shadow-rose-500/5 animate-in slide-in-from-top-4 duration-500">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 bg-white rounded-2xl shadow-sm border border-rose-100 flex-shrink-0 animate-pulse">
+                                        <AlertCircle className="w-6 h-6 text-rose-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <h3 className="text-xs font-black text-rose-900 uppercase tracking-widest">System Intelligence Alert</h3>
+                                            <span className="px-2 py-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full uppercase">Review Required</span>
+                                        </div>
+                                        <p className="text-sm font-bold text-rose-700 leading-relaxed mb-3">
+                                            Auto-pilot was paused for this loan due to the following detected issues:
+                                        </p>
+                                        <div className="space-y-2">
+                                            {loan.auto_pilot_risk_reason?.split(' | ').map((reason: string, i: number) => (
+                                                <div key={i} className="flex items-start gap-2 bg-white/50 p-3 rounded-xl border border-rose-100/50">
+                                                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                                                    <p className="text-xs font-black text-rose-800">{reason}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">

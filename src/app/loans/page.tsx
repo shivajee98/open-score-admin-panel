@@ -675,6 +675,7 @@ export default function LoanApprovals() {
                                     </th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Applicant & Loan ID</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Bal.</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Details</th>
                                     <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                                 </tr>
@@ -782,7 +783,14 @@ export default function LoanApprovals() {
                                                                         <p className="text-rose-400 mb-1 flex items-center gap-1 uppercase tracking-widest text-[8px]">
                                                                             <Shield size={10} /> Auto-Pilot Flag
                                                                         </p>
-                                                                        {loan.auto_pilot_risk_reason}
+                                                                        <div className="space-y-1.5 mt-2">
+                                                                            {loan.auto_pilot_risk_reason?.split(' | ').map((reason: string, i: number) => (
+                                                                                <div key={i} className="flex items-start gap-1.5 text-slate-300 font-medium">
+                                                                                    <div className="mt-1 w-1 h-1 rounded-full bg-rose-500 shrink-0" />
+                                                                                    <span>{reason}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -809,6 +817,14 @@ export default function LoanApprovals() {
                                                 </span>
                                             </div>
                                             <p className="text-[10px] font-bold text-slate-400 mt-0.5">Application Date: {new Date(loan.created_at).toLocaleDateString()}</p>
+                                        </td>
+                                        <td className="p-6">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`font-mono font-bold text-lg tracking-tight ${parseFloat(loan.user_wallet_balance || 0) > 0 ? "text-emerald-600" : "text-slate-600"}`}>
+                                                    ₹{parseFloat(loan.user_wallet_balance || '0').toLocaleString('en-IN')}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Wallet Balance</p>
                                         </td>
                                         <td className="p-6">
                                             <div className="space-y-1.5">
