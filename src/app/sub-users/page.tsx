@@ -24,6 +24,8 @@ interface SubUser {
     bonus_milestone_amount?: number;
     vendors_count?: number;
     agents_count?: number;
+    available_earnings: number;
+    upcoming_earnings: number;
     can_create_vendors?: boolean;
     show_letter?: boolean;
     is_active: boolean;
@@ -116,7 +118,7 @@ export default function SubUsersPage() {
     const handleExport = async (type: 'all' | 'selected') => {
         try {
             const query = new URLSearchParams();
-            
+
             if (type === 'all') {
                 if (search) query.append('search', search);
                 // Include other active filters
@@ -367,7 +369,7 @@ export default function SubUsersPage() {
                             <span>Bulk Data Download</span>
                             <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showDownloadOptions ? 'rotate-180' : ''}`} />
                         </button>
-                        
+
                         {showDownloadOptions && (
                             <div className="absolute right-0 mt-3 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="p-2 flex flex-col gap-1.5">
@@ -393,9 +395,9 @@ export default function SubUsersPage() {
                                         }}
                                         className={cn(
                                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm group text-left w-full",
-                                            selectedIds.length > 0 
-                                            ? "text-slate-300 hover:bg-slate-800 hover:text-blue-400" 
-                                            : "text-slate-600 cursor-not-allowed"
+                                            selectedIds.length > 0
+                                                ? "text-slate-300 hover:bg-slate-800 hover:text-blue-400"
+                                                : "text-slate-600 cursor-not-allowed"
                                         )}
                                     >
                                         <div className={cn(
@@ -496,7 +498,7 @@ export default function SubUsersPage() {
 
                     <div className="flex flex-wrap items-center gap-4 flex-1 justify-end w-full md:w-auto">
                         <div className="flex items-center gap-3 bg-white/10 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10 group cursor-pointer"
-                             onClick={() => setFormData((f: any) => ({ ...f, bulk_show_support: !f.bulk_show_support }))}>
+                            onClick={() => setFormData((f: any) => ({ ...f, bulk_show_support: !f.bulk_show_support }))}>
                             <span className="text-xs font-black uppercase tracking-widest">Show Support?</span>
                             <button
                                 className={`relative w-10 h-5 rounded-full transition-colors border border-white/20 ${formData.bulk_show_support ? 'bg-white' : 'bg-white/20'}`}
@@ -709,7 +711,8 @@ export default function SubUsersPage() {
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Child Accounts</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
-                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Dues</th>
+                                    <th className="p-6 text-xs font-bold text-emerald-500 uppercase tracking-widest text-center">Available</th>
+                                    <th className="p-6 text-xs font-bold text-amber-500 uppercase tracking-widest text-center">Upcoming</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                                 </tr>
                             </thead>
@@ -827,12 +830,16 @@ export default function SubUsersPage() {
                                                         <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
                                                     </div>
                                                 </td>
-                                                <td className="p-6">
+                                                <td className="p-6 text-center">
                                                     <div className="flex flex-col">
-                                                        <span className="font-black text-rose-600 text-base tabular-nums truncate max-w-[120px]" title={`₹${(subUser.earnings_balance ?? 0).toLocaleString()}`}>
-                                                            ₹{(subUser.earnings_balance ?? 0).toLocaleString()}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Pending Payout</span>
+                                                        <span className="font-mono font-black text-emerald-600 text-sm">₹{parseFloat((subUser as any).available_earnings || '0').toLocaleString('en-IN')}</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Balance</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-6 text-center">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-mono font-black text-amber-600 text-sm">₹{parseFloat((subUser as any).upcoming_earnings || '0').toLocaleString('en-IN')}</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Agents Pending</span>
                                                     </div>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">

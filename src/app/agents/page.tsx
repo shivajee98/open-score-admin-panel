@@ -250,6 +250,18 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, 
             </td>
             <td className="p-6">
                 <div className="flex flex-col">
+                    <span className="font-mono font-black text-emerald-600 text-sm">₹{parseFloat(user.available_earnings || '0').toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Verified</span>
+                </div>
+            </td>
+            <td className="p-6">
+                <div className="flex flex-col">
+                    <span className="font-mono font-black text-amber-600 text-sm">₹{parseFloat(user.upcoming_earnings || '0').toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unverified</span>
+                </div>
+            </td>
+            <td className="p-6">
+                <div className="flex flex-col">
                     <p className="text-xs font-bold text-slate-700">{new Date(user.date_of_join).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                     <p className="text-[10px] text-slate-400 font-mono italic">{new Date(user.date_of_join).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
@@ -767,6 +779,8 @@ export default function AgentsPage() {
                                 <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback %</th>
                                 <th className="p-6 text-xs font-bold text-violet-500 uppercase tracking-widest">Team Earnings</th>
+                                <th className="p-6 text-xs font-bold text-emerald-500 uppercase tracking-widest">Available</th>
+                                <th className="p-6 text-xs font-bold text-amber-500 uppercase tracking-widest">Upcoming</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>

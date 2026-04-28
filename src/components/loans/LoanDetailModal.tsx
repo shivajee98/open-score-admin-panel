@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
-import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2, MessageSquare } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 
@@ -32,7 +32,8 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedUploadField, setSelectedUploadField] = useState<string | null>(null);
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
-    const [reuploadRemarks, setReuploadRemarks] = useState('');
+    const [reuploadRemarks, setReuploadRemarks] = useState<Record<string, string>>({});
+    const [generalRemarks, setGeneralRemarks] = useState('');
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -83,6 +84,15 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
             const res = await apiFetch(`/admin/loans/${loanId}/details`);
             if (res && res.loan) {
                 setData(res);
+                if (res.loan.reupload_fields) {
+                    setReuploadFields(res.loan.reupload_fields);
+                }
+                if (res.loan.reupload_remarks) {
+                    setReuploadRemarks(res.loan.reupload_remarks);
+                }
+                if (res.loan.remarks) {
+                    setGeneralRemarks(res.loan.remarks);
+                }
             }
         } catch (e) {
             console.error(e);
@@ -186,12 +196,11 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                 method: 'POST',
                 body: JSON.stringify({
                     fields: reuploadFields,
-                    remarks: reuploadRemarks
+                    remarks: generalRemarks,
+                    field_remarks: reuploadRemarks
                 })
             });
             alert('Re-upload request sent! User will see correction prompts.');
-            setReuploadFields([]);
-            setReuploadRemarks('');
             loadDetails();
             onUpdate();
         } catch (e: any) {
@@ -199,6 +208,39 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
         } finally {
             setActionLoading(null);
         }
+    };
+
+    const handleReverifyKyc = async () => {
+        if (!confirm('This will clear all pending re-upload flags and remarks for this loan. Proceed?')) return;
+        
+        setActionLoading('reverify');
+        try {
+            await apiFetch(`/admin/loans/${loanId}/reverify-kyc`, {
+                method: 'POST'
+            });
+            alert('KYC re-verified successfully!');
+            setReuploadFields([]);
+            setReuploadRemarks({});
+            loadDetails();
+            onUpdate();
+        } catch (e: any) {
+            alert(e.message || 'Failed to re-verify KYC');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const toggleReuploadField = (key: string) => {
+        setReuploadFields(prev =>
+            prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+        );
+    };
+
+    const updateFieldRemark = (key: string, remark: string) => {
+        setReuploadRemarks(prev => ({
+            ...prev,
+            [key]: remark
+        }));
     };
 
     if (loading || !data) {
@@ -366,42 +408,72 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                         <p className="text-sm font-bold text-slate-900">{loan.form_data.first_name} {loan.form_data.last_name}</p>
                                                     </div>
                                                     <button
-                                                        onClick={() => {
-                                                            const key = 'full_name';
-                                                            setReuploadFields(prev =>
-                                                                prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('full_name')
-                                                                ? "bg-rose-500 text-white border-rose-500"
-                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                        onClick={() => toggleReuploadField('full_name')}
+                                                        className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('full_name')
+                                                                ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                                : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                             }`}
                                                         title="Mark for Re-upload"
                                                     >
-                                                        <Shield size={10} fill={reuploadFields.includes('full_name') ? "currentColor" : "none"} />
+                                                        <Shield size={12} fill={reuploadFields.includes('full_name') ? "currentColor" : "none"} />
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                            {reuploadFields.includes('full_name') ? 'Flagged' : 'Flag'}
+                                                        </span>
                                                     </button>
                                                 </div>
+                                                {reuploadFields.includes('full_name') && (
+                                                    <div className="col-span-2 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                        <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageSquare size={12} className="text-rose-500" />
+                                                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Correction Feedback (Name)</span>
+                                                            </div>
+                                                            <textarea 
+                                                                value={reuploadRemarks['full_name'] || ''}
+                                                                onChange={(e) => updateFieldRemark('full_name', e.target.value)}
+                                                                placeholder="Explain what is wrong with the name..."
+                                                                className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                                rows={2}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mobile Number</p>
                                                         <p className="text-sm font-bold text-slate-900">{loan.form_data.phone || loan.user?.mobile_number || 'N/A'}</p>
                                                     </div>
                                                     <button
-                                                        onClick={() => {
-                                                            const key = 'phone';
-                                                            setReuploadFields(prev =>
-                                                                prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('phone')
-                                                                ? "bg-rose-500 text-white border-rose-500"
-                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                        onClick={() => toggleReuploadField('phone')}
+                                                        className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('phone')
+                                                                ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                                : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                             }`}
                                                         title="Mark for Re-upload"
                                                     >
-                                                        <Shield size={10} fill={reuploadFields.includes('phone') ? "currentColor" : "none"} />
+                                                        <Shield size={12} fill={reuploadFields.includes('phone') ? "currentColor" : "none"} />
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                            {reuploadFields.includes('phone') ? 'Flagged' : 'Flag'}
+                                                        </span>
                                                     </button>
                                                 </div>
+                                                {reuploadFields.includes('phone') && (
+                                                    <div className="col-span-1 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                        <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageSquare size={12} className="text-rose-500" />
+                                                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">Remark (Phone)</span>
+                                                            </div>
+                                                            <textarea 
+                                                                value={reuploadRemarks['phone'] || ''}
+                                                                onChange={(e) => updateFieldRemark('phone', e.target.value)}
+                                                                placeholder="Reason for re-upload..."
+                                                                className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                                rows={2}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Alternate Mobile</p>
                                                     <div className="flex items-center gap-2">
@@ -423,21 +495,36 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                         </p>
                                                     </div>
                                                     <button
-                                                        onClick={() => {
-                                                            const key = 'date_of_birth';
-                                                            setReuploadFields(prev =>
-                                                                prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('date_of_birth')
-                                                                ? "bg-rose-500 text-white border-rose-500"
-                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                        onClick={() => toggleReuploadField('date_of_birth')}
+                                                        className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('date_of_birth')
+                                                                ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                                : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                             }`}
                                                         title="Mark for Re-upload"
                                                     >
-                                                        <Shield size={10} fill={reuploadFields.includes('date_of_birth') ? "currentColor" : "none"} />
+                                                        <Shield size={12} fill={reuploadFields.includes('date_of_birth') ? "currentColor" : "none"} />
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                            {reuploadFields.includes('date_of_birth') ? 'Flagged' : 'Flag'}
+                                                        </span>
                                                     </button>
                                                 </div>
+                                                {reuploadFields.includes('date_of_birth') && (
+                                                    <div className="col-span-1 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                        <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageSquare size={12} className="text-rose-500" />
+                                                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">Remark (DOB)</span>
+                                                            </div>
+                                                            <textarea 
+                                                                value={reuploadRemarks['date_of_birth'] || ''}
+                                                                onChange={(e) => updateFieldRemark('date_of_birth', e.target.value)}
+                                                                placeholder="Reason for re-upload..."
+                                                                className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                                rows={2}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Marital Status</p>
                                                     <p className="text-sm font-bold text-slate-900 uppercase">{loan.form_data.marital_status || 'N/A'}</p>
@@ -448,42 +535,72 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                         <p className="text-sm font-bold text-slate-900">{loan.form_data.father_name || loan.user?.family_detail?.father_name || 'N/A'}</p>
                                                     </div>
                                                     <button
-                                                        onClick={() => {
-                                                            const key = 'father_name';
-                                                            setReuploadFields(prev =>
-                                                                prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('father_name')
-                                                                ? "bg-rose-500 text-white border-rose-500"
-                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                        onClick={() => toggleReuploadField('father_name')}
+                                                        className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('father_name')
+                                                                ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                                : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                             }`}
                                                         title="Mark for Re-upload"
                                                     >
-                                                        <Shield size={10} fill={reuploadFields.includes('father_name') ? "currentColor" : "none"} />
+                                                        <Shield size={12} fill={reuploadFields.includes('father_name') ? "currentColor" : "none"} />
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                            {reuploadFields.includes('father_name') ? 'Flagged' : 'Flag'}
+                                                        </span>
                                                     </button>
                                                 </div>
+                                                {reuploadFields.includes('father_name') && (
+                                                    <div className="col-span-1 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                        <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageSquare size={12} className="text-rose-500" />
+                                                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">Remark (Father)</span>
+                                                            </div>
+                                                            <textarea 
+                                                                value={reuploadRemarks['father_name'] || ''}
+                                                                onChange={(e) => updateFieldRemark('father_name', e.target.value)}
+                                                                placeholder="Reason for re-upload..."
+                                                                className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                                rows={2}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mother's Name</p>
                                                         <p className="text-sm font-bold text-slate-900">{loan.form_data.mother_name || loan.user?.family_detail?.mother_name || 'N/A'}</p>
                                                     </div>
                                                     <button
-                                                        onClick={() => {
-                                                            const key = 'mother_name';
-                                                            setReuploadFields(prev =>
-                                                                prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('mother_name')
-                                                                ? "bg-rose-500 text-white border-rose-500"
-                                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                        onClick={() => toggleReuploadField('mother_name')}
+                                                        className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('mother_name')
+                                                                ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                                : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                             }`}
                                                         title="Mark for Re-upload"
                                                     >
-                                                        <Shield size={10} fill={reuploadFields.includes('mother_name') ? "currentColor" : "none"} />
+                                                        <Shield size={12} fill={reuploadFields.includes('mother_name') ? "currentColor" : "none"} />
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                            {reuploadFields.includes('mother_name') ? 'Flagged' : 'Flag'}
+                                                        </span>
                                                     </button>
                                                 </div>
+                                                {reuploadFields.includes('mother_name') && (
+                                                    <div className="col-span-1 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                        <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageSquare size={12} className="text-rose-500" />
+                                                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">Remark (Mother)</span>
+                                                            </div>
+                                                            <textarea 
+                                                                value={reuploadRemarks['mother_name'] || ''}
+                                                                onChange={(e) => updateFieldRemark('mother_name', e.target.value)}
+                                                                placeholder="Reason for re-upload..."
+                                                                className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                                rows={2}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div className="col-span-2">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Loan Usage / Purpose</p>
                                                     <p className="text-sm font-bold text-slate-900">{loan.form_data.loan_usage || 'N/A'}</p>
@@ -503,20 +620,37 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        const key = 'address_details';
-                                                        setReuploadFields(prev =>
-                                                            prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                        );
+                                                        toggleReuploadField('address_details');
                                                     }}
-                                                    className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('address_details')
-                                                            ? "bg-rose-500 text-white border-rose-500"
-                                                            : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                    className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('address_details')
+                                                            ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                            : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                         }`}
                                                     title="Mark Address for Re-upload"
                                                 >
-                                                    <Shield size={10} fill={reuploadFields.includes('address_details') ? "currentColor" : "none"} />
+                                                    <Shield size={12} fill={reuploadFields.includes('address_details') ? "currentColor" : "none"} />
+                                                    <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                        {reuploadFields.includes('address_details') ? 'Flagged' : 'Flag'}
+                                                    </span>
                                                 </button>
                                             </div>
+                                            {reuploadFields.includes('address_details') && (
+                                                <div className="mt-2 mb-4 animate-in zoom-in-95 duration-200">
+                                                    <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-4 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                        <div className="flex items-center gap-2">
+                                                            <MessageSquare size={12} className="text-rose-500" />
+                                                            <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Correction Remark (Address)</span>
+                                                        </div>
+                                                        <textarea 
+                                                            value={reuploadRemarks['address_details'] || ''}
+                                                            onChange={(e) => updateFieldRemark('address_details', e.target.value)}
+                                                            placeholder="Why does address need re-upload? (e.g. Current address proof missing)"
+                                                            className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[60px] shadow-inner"
+                                                            rows={2}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
@@ -573,42 +707,72 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                 <p className="text-sm font-black text-slate-900 uppercase font-mono">{loan.form_data.pan_number || 'N/A'}</p>
                                             </div>
                                             <button
-                                                onClick={() => {
-                                                    const key = 'pan_number';
-                                                    setReuploadFields(prev =>
-                                                        prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                    );
-                                                }}
-                                                className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('pan_number')
-                                                        ? "bg-rose-500 text-white border-rose-500"
-                                                        : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                onClick={() => toggleReuploadField('pan_number')}
+                                                className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('pan_number')
+                                                        ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                        : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                     }`}
                                                 title="Mark for Re-upload"
                                             >
-                                                <Shield size={10} fill={reuploadFields.includes('pan_number') ? "currentColor" : "none"} />
+                                                <Shield size={12} fill={reuploadFields.includes('pan_number') ? "currentColor" : "none"} />
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                    {reuploadFields.includes('pan_number') ? 'Flagged' : 'Flag'}
+                                                </span>
                                             </button>
                                         </div>
+                                        {reuploadFields.includes('pan_number') && (
+                                            <div className="col-span-2 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                    <div className="flex items-center gap-2">
+                                                        <MessageSquare size={12} className="text-rose-500" />
+                                                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Correction Feedback (PAN)</span>
+                                                    </div>
+                                                    <textarea 
+                                                        value={reuploadRemarks['pan_number'] || ''}
+                                                        onChange={(e) => updateFieldRemark('pan_number', e.target.value)}
+                                                        placeholder="Reason for re-upload..."
+                                                        className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                        rows={2}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="col-span-2 flex justify-between items-start">
                                             <div>
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aadhaar Card Number</p>
                                                 <p className="text-sm font-black text-slate-900 font-mono">{loan.form_data.aadhar_number || 'N/A'}</p>
                                             </div>
                                             <button
-                                                onClick={() => {
-                                                    const key = 'aadhar_number';
-                                                    setReuploadFields(prev =>
-                                                        prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                                    );
-                                                }}
-                                                className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('aadhar_number')
-                                                        ? "bg-rose-500 text-white border-rose-500"
-                                                        : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                onClick={() => toggleReuploadField('aadhar_number')}
+                                                className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('aadhar_number')
+                                                        ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                        : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                     }`}
                                                 title="Mark for Re-upload"
                                             >
-                                                <Shield size={10} fill={reuploadFields.includes('aadhar_number') ? "currentColor" : "none"} />
+                                                <Shield size={12} fill={reuploadFields.includes('aadhar_number') ? "currentColor" : "none"} />
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                    {reuploadFields.includes('aadhar_number') ? 'Flagged' : 'Flag'}
+                                                </span>
                                             </button>
                                         </div>
+                                        {reuploadFields.includes('aadhar_number') && (
+                                            <div className="col-span-2 mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                    <div className="flex items-center gap-2">
+                                                        <MessageSquare size={12} className="text-rose-500" />
+                                                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Correction Feedback (Aadhaar)</span>
+                                                    </div>
+                                                    <textarea 
+                                                        value={reuploadRemarks['aadhar_number'] || ''}
+                                                        onChange={(e) => updateFieldRemark('aadhar_number', e.target.value)}
+                                                        placeholder="Reason for re-upload..."
+                                                        className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                        rows={2}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                         <div>
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Monthly Income</p>
                                             <p className="text-sm font-bold text-emerald-600">₹{parseFloat(loan.form_data.gross_monthly_income || 0).toLocaleString()}</p>
@@ -666,20 +830,37 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const key = 'bank_details';
-                                            setReuploadFields(prev =>
-                                                prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
-                                            );
+                                            toggleReuploadField('bank_details');
                                         }}
-                                        className={`p-1 rounded-lg transition-all border ${reuploadFields.includes('bank_details')
-                                                ? "bg-rose-500 text-white border-rose-500"
-                                                : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                        className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes('bank_details')
+                                                ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                             }`}
                                         title="Mark Bank Account for Re-upload"
                                     >
-                                        <Shield size={10} fill={reuploadFields.includes('bank_details') ? "currentColor" : "none"} />
+                                        <Shield size={12} fill={reuploadFields.includes('bank_details') ? "currentColor" : "none"} />
+                                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                                            {reuploadFields.includes('bank_details') ? 'Flagged' : 'Flag'}
+                                        </span>
                                     </button>
                                 </div>
+                                {reuploadFields.includes('bank_details') && (
+                                    <div className="mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                        <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-4 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                            <div className="flex items-center gap-2">
+                                                <MessageSquare size={12} className="text-rose-500" />
+                                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">Correction Remark (Bank Info)</span>
+                                            </div>
+                                            <textarea 
+                                                value={reuploadRemarks['bank_details'] || ''}
+                                                onChange={(e) => updateFieldRemark('bank_details', e.target.value)}
+                                                placeholder="Why does bank info need re-upload? (e.g. Account name mismatch)"
+                                                className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Bank Name</p>
@@ -779,19 +960,37 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setReuploadFields(prev =>
-                                                        prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]
-                                                    );
+                                                    toggleReuploadField(field.id);
                                                 }}
-                                                className={`p-1 rounded-lg transition-all border ${reuploadFields.includes(field.id)
-                                                        ? "bg-rose-500 text-white border-rose-500"
-                                                        : "text-rose-300 border-slate-100 hover:text-rose-500 hover:bg-rose-50"
+                                                className={`px-2 py-1 rounded-full transition-all border flex items-center gap-1.5 ${reuploadFields.includes(field.id)
+                                                        ? "bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-500/20"
+                                                        : "bg-white text-rose-300 border-slate-200 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200"
                                                     }`}
                                                 title="Mark for Re-upload"
                                             >
-                                                <Shield size={10} fill={reuploadFields.includes(field.id) ? "currentColor" : "none"} />
+                                                <Shield size={12} fill={reuploadFields.includes(field.id) ? "currentColor" : "none"} />
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">
+                                                    {reuploadFields.includes(field.id) ? 'Flagged' : 'Flag'}
+                                                </span>
                                             </button>
                                         </div>
+                                        {reuploadFields.includes(field.id) && (
+                                            <div className="mt-1 mb-4 animate-in zoom-in-95 duration-200">
+                                                <div className="bg-rose-50/80 backdrop-blur-sm border-2 border-rose-200 rounded-2xl p-3 flex flex-col gap-2 shadow-xl shadow-rose-900/5">
+                                                    <div className="flex items-center gap-2">
+                                                        <MessageSquare size={12} className="text-rose-500" />
+                                                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">Remark ({field.label})</span>
+                                                    </div>
+                                                    <textarea 
+                                                        value={reuploadRemarks[field.id] || ''}
+                                                        onChange={(e) => updateFieldRemark(field.id, e.target.value)}
+                                                        placeholder="Reason for image re-upload..."
+                                                        className="text-xs font-bold text-rose-900 border-none focus:ring-0 w-full bg-white/50 rounded-xl p-2 placeholder:text-rose-300 resize-none min-h-[50px] shadow-inner"
+                                                        rows={2}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="grid grid-cols-1 gap-4">
                                             {files.map((file, idx) => (
@@ -870,31 +1069,82 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                         </div>
 
                         {/* Bulk Re-upload Action */}
-                        {reuploadFields.length > 0 && (
-                            <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col gap-4">
-                                <div className="bg-rose-50/50 p-4 rounded-3xl border border-rose-100 px-6 py-6">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
-                                            <Shield size={16} />
+                        {(reuploadFields.length > 0 || (loan.reupload_fields && loan.reupload_fields.length > 0)) && (
+                            <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col gap-6">
+                                {reuploadFields.length > 0 && (
+                                    <div className="bg-rose-50/50 p-6 rounded-[2rem] border-2 border-rose-100 transition-all duration-500 shadow-2xl shadow-rose-900/5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/30">
+                                                    <Shield size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-rose-900 uppercase tracking-widest leading-none mb-1">Re-upload Summary</h4>
+                                                    <p className="text-[10px] font-black text-rose-400 uppercase tracking-tighter">{reuploadFields.length} Items Flagged for Correction</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Re-upload Feedback</span>
+
+                                        <div className="space-y-3 mb-6">
+                                            <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest px-1">Detailed Field Remarks</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {reuploadFields.map(field => (
+                                                    <div key={field} className="bg-white/80 backdrop-blur-sm border border-rose-100 p-3 rounded-2xl flex flex-col gap-2 group transition-all hover:border-rose-300">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.replace(/_/g, ' ')}</span>
+                                                            {reuploadRemarks[field] ? (
+                                                                <CheckCircle2 size={12} className="text-emerald-500" />
+                                                            ) : (
+                                                                <AlertCircle size={12} className="text-amber-500" />
+                                                            )}
+                                                        </div>
+                                                        <textarea 
+                                                            value={reuploadRemarks[field] || ''}
+                                                            onChange={(e) => updateFieldRemark(field, e.target.value)}
+                                                            placeholder="Click to add specific instruction..."
+                                                            className="text-xs font-bold text-rose-900 border-none focus:ring-0 p-0 w-full bg-transparent placeholder:text-rose-200 resize-none"
+                                                            rows={2}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white border border-rose-100 rounded-2xl p-4 shadow-sm">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <MessageSquare size={14} className="text-rose-500" />
+                                                <span className="text-[10px] font-black text-rose-700 uppercase tracking-widest">General Closing Note (Optional)</span>
+                                            </div>
+                                            <textarea
+                                                value={generalRemarks}
+                                                onChange={(e) => setGeneralRemarks(e.target.value)}
+                                                placeholder="Any final instructions for the customer..."
+                                                className="w-full bg-transparent border-none text-sm font-medium focus:outline-none focus:ring-0 placeholder:text-rose-100 min-h-[60px] p-0"
+                                            />
+                                        </div>
                                     </div>
-                                    <textarea
-                                        value={reuploadRemarks}
-                                        onChange={(e) => setReuploadRemarks(e.target.value)}
-                                        placeholder="Explain why these fields need re-upload (e.g. 'Images are blurred', 'Address mismatch')..."
-                                        className="w-full bg-white border border-rose-200 rounded-2xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-500/20 placeholder:text-rose-200 min-h-[100px]"
-                                    />
-                                </div>
-                                <div className="flex justify-end p-6 pt-0">
-                                    <button
-                                        disabled={actionLoading === 'reupload'}
-                                        onClick={handleRequestReupload}
-                                        className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/30 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
-                                    >
-                                        {actionLoading === 'reupload' ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
-                                        Request KYC Update ({reuploadFields.length} Items)
-                                    </button>
+                                )}
+                                <div className="flex items-center justify-end gap-4 p-6 pt-0">
+                                    {(loan.reupload_fields && loan.reupload_fields.length > 0) && (
+                                        <button
+                                            disabled={actionLoading === 'reverify'}
+                                            onClick={handleReverifyKyc}
+                                            className="px-6 py-4 bg-emerald-100 text-emerald-700 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-200 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 border border-emerald-200/50"
+                                        >
+                                            {actionLoading === 'reverify' ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                                            Re-verify & Clear Flags
+                                        </button>
+                                    )}
+                                    {reuploadFields.length > 0 && (
+                                        <button
+                                            disabled={actionLoading === 'reupload'}
+                                            onClick={handleRequestReupload}
+                                            className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/30 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
+                                        >
+                                            {actionLoading === 'reupload' ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
+                                            Request Update ({reuploadFields.length} Items)
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}

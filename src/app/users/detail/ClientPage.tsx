@@ -239,7 +239,8 @@ export default function UserDetailsPage() {
             permanent_city: user.permanent_city || '',
             permanent_state: user.permanent_state || '',
             permanent_pincode: user.permanent_pincode || '',
-            is_permanent_same: user.is_permanent_same ?? true
+            is_permanent_same: user.is_permanent_same ?? true,
+            date_of_birth: user.date_of_birth ? user.date_of_birth.split('T')[0] : ''
         });
         setIsEditModalOpen(true);
     };
@@ -309,6 +310,7 @@ export default function UserDetailsPage() {
                                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500 font-bold text-sm">
                                     <span className="flex items-center gap-1.5"><Phone className="w-4 h-4" /> {user.mobile_number}</span>
                                     {user.email && <span className="flex items-center gap-1.5"><Mail className="w-4 h-4" /> {user.email}</span>}
+                                    {user.date_of_birth && <span className="flex items-center gap-2 text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100"><Calendar className="w-3.5 h-3.5" /> DOB: {new Date(user.date_of_birth).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
                                     <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Joined {new Date(user.created_at).toLocaleDateString()}</span>
                                     {user.referred_by && (
                                         <span className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
@@ -1031,6 +1033,15 @@ export default function UserDetailsPage() {
                                             className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
                                             value={editFormData.mobile_number}
                                             onChange={e => setEditFormData({ ...editFormData, mobile_number: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth</label>
+                                        <input
+                                            type="date"
+                                            className="w-full bg-slate-50 border-none rounded-xl p-4 text-sm font-bold text-slate-900"
+                                            value={editFormData.date_of_birth || ''}
+                                            onChange={e => setEditFormData({ ...editFormData, date_of_birth: e.target.value })}
                                         />
                                     </div>
 
