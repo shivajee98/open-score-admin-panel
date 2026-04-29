@@ -101,7 +101,7 @@ export default function KycVerificationSidebar({ onClose }: KycVerificationSideb
                             <Shield size={24} className="stroke-[2.5]" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Identity Center <span className='text-red-500'>(Insufficient Credits)</span></h4>
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Identity Center</h4>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sandbox Verification</p>
                         </div>
                     </div>

@@ -353,6 +353,10 @@ export default function AgentsPage() {
         to_date: '',
         min_balance: '',
         max_balance: '',
+        min_available: '',
+        max_available: '',
+        min_upcoming: '',
+        max_upcoming: '',
         min_signup: '',
         max_signup: '',
         pincode: '',
@@ -676,7 +680,7 @@ export default function AgentsPage() {
                 {/* Advanced Filters Panel */}
                 {showFilters && (
                     <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 animate-in slide-in-from-top-4 duration-300">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Joining Date Range</label>
                                 <div className="flex items-center gap-2">
@@ -717,6 +721,46 @@ export default function AgentsPage() {
                             </div>
 
                             <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Available Earnings Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_available}
+                                        onChange={(e) => { setFilters({ ...filters, min_available: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_available}
+                                        onChange={(e) => { setFilters({ ...filters, max_available: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Upcoming Earnings Range</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.min_upcoming}
+                                        onChange={(e) => { setFilters({ ...filters, min_upcoming: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={filters.max_upcoming}
+                                        onChange={(e) => { setFilters({ ...filters, max_upcoming: e.target.value }); setCurrentPage(1); }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN</label>
                                 <input
                                     type="text"
@@ -739,6 +783,8 @@ export default function AgentsPage() {
                                         <option value="name">Name</option>
                                         <option value="daily_turnover">Turnover</option>
                                         <option value="pincode">Postal PIN</option>
+                                        <option value="available_earnings">Available Earnings</option>
+                                        <option value="upcoming_earnings">Upcoming Earnings</option>
                                     </select>
                                     <select
                                         className="w-24 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"

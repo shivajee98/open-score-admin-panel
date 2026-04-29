@@ -95,6 +95,46 @@ export default function LoanApprovals() {
     });
     const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
+    const [currentTime, setCurrentTime] = useState(Date.now());
+
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const CountdownTimer = ({ updatedAt, delayMinutes, label }: { updatedAt: string, delayMinutes: number, label: string }) => {
+        if (!autoPilotSettings.enabled || delayMinutes <= 0) return null;
+        
+        const startTime = new Date(updatedAt).getTime();
+        const endTime = startTime + (delayMinutes * 60 * 1000);
+        const remaining = Math.max(0, endTime - currentTime);
+        
+        if (remaining === 0) return (
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-500 animate-pulse bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
+                <Zap size={10} />
+                AUTO-EXECUTING...
+            </div>
+        );
+
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        const progress = Math.min(100, (1 - (remaining / (delayMinutes * 60 * 1000))) * 100);
+
+        return (
+            <div className="flex flex-col gap-1 min-w-[80px]">
+                <div className="flex items-center justify-between gap-2">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+                    <span className="text-[9px] font-mono font-bold text-slate-600">{minutes}:{seconds.toString().padStart(2, '0')}</span>
+                </div>
+                <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                    <div 
+                        className="h-full bg-amber-400 transition-all duration-1000" 
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+            </div>
+        );
+    };
 
     // Confirmation Dialog State
     const [confirmModal, setConfirmModal] = useState<{
@@ -868,29 +908,63 @@ export default function LoanApprovals() {
                                         <td className="p-6 pr-8 text-right">
                                             <div className="flex justify-end items-center gap-2">
                                                 {['PENDING', 'APPLIED'].includes(loan.status) && (
-                                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                        {loan.form_data && Object.keys(loan.form_data).length > 0 && (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
-                                                                className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
-                                                                title="Preview KYC / Request Re-upload"
-                                                            >
-                                                                <Search size={18} />
-                                                            </button>
+                                                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                                                        {!loan.is_auto_pilot_risk && (
+                                                            <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.proceed} label="Auto Proceed" />
                                                         )}
-                                                        <button
-                                                            disabled={!!actionLoading}
-                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'proceed', 'Loan Proceeded!'); }}
-                                                            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-mono"
-                                                        >
-                                                            Proceed
-                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
+                                                                    className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
+                                                                    title="Preview KYC / Request Re-upload"
+                                                                >
+                                                                    <Search size={18} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                disabled={!!actionLoading}
+                                                                onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'proceed', 'Loan Proceeded!'); }}
+                                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-mono"
+                                                            >
+                                                                Proceed
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 )}
 
                                                 {['PROCEEDED', 'VETTING'].includes(loan.status) && (
-                                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                        {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                                                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                                                        {!loan.is_auto_pilot_risk && (
+                                                            <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.send_kyc} label="Auto KYC" />
+                                                        )}
+                                                        <div className="flex gap-2">
+                                                            {loan.form_data && Object.keys(loan.form_data).length > 0 && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
+                                                                    className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
+                                                                    title="Preview KYC / Request Re-upload"
+                                                                >
+                                                                    <Search size={18} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                disabled={!!actionLoading}
+                                                                onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'send-kyc', 'KYC Link Sent!'); }}
+                                                                className="px-5 py-2.5 bg-amber-400 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 shadow-xl shadow-amber-500/20 transition-all font-mono"
+                                                            >
+                                                                Send KYC
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
+                                                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                                                        {!loan.is_auto_pilot_risk && (
+                                                            <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.approve} label="Auto Approve" />
+                                                        )}
+                                                        <div className="flex gap-2">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
                                                                 className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
@@ -898,27 +972,6 @@ export default function LoanApprovals() {
                                                             >
                                                                 <Search size={18} />
                                                             </button>
-                                                        )}
-                                                        <button
-                                                            disabled={!!actionLoading}
-                                                            onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'send-kyc', 'KYC Link Sent!'); }}
-                                                            className="px-5 py-2.5 bg-amber-400 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 shadow-xl shadow-amber-500/20 transition-all font-mono"
-                                                        >
-                                                            Send KYC
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {['FORM_SUBMITTED', 'KYC_SUBMITTED', 'APPROVED', 'DISBURSED', 'CLOSED'].includes(loan.status) && (
-                                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
-                                                            className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
-                                                            title="Preview KYC / Request Re-upload"
-                                                        >
-                                                            <Search size={18} />
-                                                        </button>
-                                                        {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
                                                             <button
                                                                 disabled={!!actionLoading}
                                                                 onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'approve', 'Loan Approved!'); }}
@@ -926,7 +979,7 @@ export default function LoanApprovals() {
                                                             >
                                                                 Approve
                                                             </button>
-                                                        )}
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -958,6 +1011,18 @@ export default function LoanApprovals() {
                                                                 {getPendingPlatformFee(loan) ? 'Awaiting Approval' : 'Fee unpaid'}
                                                             </span>
                                                         )}
+                                                    </div>
+                                                )}
+
+                                                {['DISBURSED', 'CLOSED'].includes(loan.status) && (
+                                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
+                                                            className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
+                                                            title="Preview KYC / Request Re-upload"
+                                                        >
+                                                            <Search size={18} />
+                                                        </button>
                                                     </div>
                                                 )}
 

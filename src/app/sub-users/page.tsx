@@ -62,6 +62,10 @@ export default function SubUsersPage() {
         to_date: '',
         min_balance: '',
         max_balance: '',
+        min_available: '',
+        max_available: '',
+        min_upcoming: '',
+        max_upcoming: '',
         min_signup: '',
         max_signup: '',
         pincode: '',
@@ -613,6 +617,46 @@ export default function SubUsersPage() {
                         </div>
 
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-1">Available Earnings Range</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="Min"
+                                    className="flex-1 px-4 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                                    value={filters.min_available}
+                                    onChange={(e) => setFilters({ ...filters, min_available: e.target.value })}
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Max"
+                                    className="flex-1 px-4 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                                    value={filters.max_available}
+                                    onChange={(e) => setFilters({ ...filters, max_available: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest ml-1">Upcoming Earnings Range</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="Min"
+                                    className="flex-1 px-4 py-2 bg-amber-50/50 border border-amber-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500"
+                                    value={filters.min_upcoming}
+                                    onChange={(e) => setFilters({ ...filters, min_upcoming: e.target.value })}
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Max"
+                                    className="flex-1 px-4 py-2 bg-amber-50/50 border border-amber-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500"
+                                    value={filters.max_upcoming}
+                                    onChange={(e) => setFilters({ ...filters, max_upcoming: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Postal PIN</label>
                             <input
                                 type="text"
@@ -648,6 +692,8 @@ export default function SubUsersPage() {
                                     <option value="created_at">Joining Date</option>
                                     <option value="name">Name</option>
                                     <option value="credit_balance">Wallet Balance</option>
+                                    <option value="available_earnings">Available Earnings</option>
+                                    <option value="upcoming_earnings">Upcoming Earnings</option>
                                     <option value="default_signup_amount">Signup Amount</option>
                                     <option value="pincode">Postal PIN</option>
                                 </select>
@@ -670,6 +716,10 @@ export default function SubUsersPage() {
                                     to_date: '',
                                     min_balance: '',
                                     max_balance: '',
+                                    min_available: '',
+                                    max_available: '',
+                                    min_upcoming: '',
+                                    max_upcoming: '',
                                     min_signup: '',
                                     max_signup: '',
                                     pincode: '',
