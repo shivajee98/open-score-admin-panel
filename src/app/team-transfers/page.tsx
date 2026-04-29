@@ -808,80 +808,79 @@ export default function TeamTransfersPage() {
             )}
 
 
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mt-8">
-                    <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
-                                <History size={20} />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-black text-slate-900 tracking-tight">Consolidated Settlement History</h2>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Complete records of all Wallet & Bank transfers</p>
-                            </div>
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mt-8">
+                <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <History size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-900 tracking-tight">Consolidated Settlement History</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Complete records of all Wallet & Bank transfers</p>
                         </div>
                     </div>
-                    
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/30">
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vendor (Sender)</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {loadingHistoryItems ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold italic animate-pulse">Loading execution logs...</td>
-                                    </tr>
-                                ) : history.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold italic">No historical records found.</td>
-                                    </tr>
-                                ) : history.map((item) => (
-                                    <tr key={`${item.type}-${item.id}`} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-tight ${
-                                                item.type === 'WALLET_TRANSFER' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'
-                                            }`}>
-                                                {item.type === 'WALLET_TRANSFER' ? 'Wallet' : 'Bank'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-900">{item.type === 'WALLET_TRANSFER' ? (item.source_sub_user?.name || 'Unknown') : (item.sub_user?.name || 'Unknown')}</span>
-                                                <span className="text-[10px] text-slate-400 font-mono tracking-tighter">#{item.type === 'WALLET_TRANSFER' ? item.source_id : item.sub_user_id}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-900">
-                                                    {item.type === 'WALLET_TRANSFER' ? (item.user?.name || 'Wallet System') : (item.account_holder_name || 'N/A')}
-                                                </span>
-                                                <span className="text-[10px] text-slate-400 font-mono">
-                                                    {item.type === 'WALLET_TRANSFER' ? (item.user?.mobile_number || '') : (item.account_number || item.upi_id || 'N/A')}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 font-black text-slate-900 tracking-tighter">
-                                            ₹{parseFloat(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <StatusBadge status={item.status} />
-                                        </td>
-                                        <td className="px-6 py-4 text-[11px] font-bold text-slate-400 font-mono">
-                                            {new Date(item.created_at).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50/30">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vendor (Sender)</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {loadingHistoryItems ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold italic animate-pulse">Loading execution logs...</td>
+                                </tr>
+                            ) : history.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold italic">No historical records found.</td>
+                                </tr>
+                            ) : history.map((item) => (
+                                <tr key={`${item.type}-${item.id}`} className="hover:bg-slate-50/50 transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-tight ${item.type === 'WALLET_TRANSFER' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'
+                                            }`}>
+                                            {item.type === 'WALLET_TRANSFER' ? 'Wallet' : 'Bank'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-900">{item.type === 'WALLET_TRANSFER' ? (item.source_sub_user?.name || 'Unknown') : (item.sub_user?.name || 'Unknown')}</span>
+                                            <span className="text-[10px] text-slate-400 font-mono tracking-tighter">#{item.type === 'WALLET_TRANSFER' ? item.source_id : item.sub_user_id}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-900">
+                                                {item.type === 'WALLET_TRANSFER' ? (item.user?.name || 'Wallet System') : (item.account_holder_name || 'N/A')}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 font-mono">
+                                                {item.type === 'WALLET_TRANSFER' ? (item.user?.mobile_number || '') : (item.account_number || item.upi_id || 'N/A')}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 font-black text-slate-900 tracking-tighter">
+                                        ₹{parseFloat(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <StatusBadge status={item.status} />
+                                    </td>
+                                    <td className="px-6 py-4 text-[11px] font-bold text-slate-400 font-mono">
+                                        {new Date(item.created_at).toLocaleString()}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
         </AdminLayout>
     );
