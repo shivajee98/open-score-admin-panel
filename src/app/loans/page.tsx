@@ -1109,7 +1109,10 @@ export default function LoanApprovals() {
                 {(showKycSidebar || (locationClusters.length > 0 && showRiskSidebar)) && (
                     <div className="w-full lg:w-96 shrink-0 space-y-8 animate-in slide-in-from-right duration-300">
                         {showKycSidebar && (
-                            <KycVerificationSidebar onClose={() => setShowKycSidebar(false)} />
+                            <KycVerificationSidebar 
+                                onClose={() => setShowKycSidebar(false)} 
+                                loan={previewLoan}
+                            />
                         )}
 
                         {/* Risk Sidebar (Location Clashes) */}

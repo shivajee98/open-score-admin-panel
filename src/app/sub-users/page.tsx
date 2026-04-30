@@ -883,13 +883,13 @@ export default function SubUsersPage() {
                                                 <td className="p-6 text-center">
                                                     <div className="flex flex-col">
                                                         <span className="font-mono font-black text-emerald-600 text-sm">₹{parseFloat((subUser as any).available_earnings || '0').toLocaleString('en-IN')}</span>
-                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Balance</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Ready to Transfer</span>
                                                     </div>
                                                 </td>
                                                 <td className="p-6 text-center">
                                                     <div className="flex flex-col">
                                                         <span className="font-mono font-black text-amber-600 text-sm">₹{parseFloat((subUser as any).upcoming_earnings || '0').toLocaleString('en-IN')}</span>
-                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Agents Pending</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Upcoming Earning</span>
                                                     </div>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">

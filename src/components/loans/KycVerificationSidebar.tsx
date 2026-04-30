@@ -2,16 +2,17 @@
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Shield, Fingerprint, CreditCard, ChevronRight, Loader2, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
+import { Shield, Fingerprint, CreditCard, ChevronRight, Loader2, CheckCircle2, XCircle, AlertCircle, X, MapPin, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 type Tab = 'PAN' | 'AADHAAR';
 
 interface KycVerificationSidebarProps {
-    onClose?: () => void;
+    loan?: any;
+    onClose: () => void;
 }
 
-export default function KycVerificationSidebar({ onClose }: KycVerificationSidebarProps) {
+export default function KycVerificationSidebar({ loan, onClose }: KycVerificationSidebarProps) {
     const [activeTab, setActiveTab] = useState<Tab>('PAN');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
@@ -92,6 +93,10 @@ export default function KycVerificationSidebar({ onClose }: KycVerificationSideb
         }
     };
 
+    const user = loan?.user || {};
+    const formData = loan?.form_data || {};
+    const locationUrl = formData.location_url || user.location_url;
+
     return (
         <aside className="w-full lg:w-96 shrink-0 space-y-6">
             <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 sticky top-8">
@@ -115,6 +120,27 @@ export default function KycVerificationSidebar({ onClose }: KycVerificationSideb
                         </button>
                     )}
                 </div>
+
+                {/* Location Section */}
+                {locationUrl && (
+                    <div className="mb-8 p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100/50">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+                                <MapPin size={16} className="text-blue-600" />
+                            </div>
+                            <span className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Live Location</span>
+                        </div>
+                        <a 
+                            href={locationUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-4 bg-white rounded-2xl border border-blue-100 shadow-sm hover:border-blue-300 transition-all group"
+                        >
+                            <span className="text-sm font-bold text-slate-900">View on Google Maps</span>
+                            <ExternalLink size={16} className="text-blue-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        </a>
+                    </div>
+                )}
 
                 {/* Tabs */}
                 <div className="flex p-1 bg-slate-100 rounded-2xl mb-8">

@@ -94,7 +94,7 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
         'auto_approved', 'auto_approved_at'
     ];
 
-    const photoFields = ['aadhar_front', 'aadhar_back', 'pan_front', 'applicant_selfie', 'selfie', 'agent_selfie', 'prop_1', 'prop_2', 'prop_3'];
+    const photoFields = ['aadhar_front', 'aadhar_back', 'pan_front', 'pan_card', 'applicant_selfie', 'selfie', 'agent_selfie', 'selfie_with_agent', 'prop_1', 'prop_2', 'prop_3'];
     const bankFields = ['bank_name', 'ifsc_code', 'account_holder_name', 'account_number', 'location_url'];
 
     // Extract data categories
@@ -254,6 +254,22 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
                                                 <Field label="Permanent PIN Code" value={contactInfo.permanent_postal_code} />
                                             </>
                                         )}
+                                        
+                                        {/* Google Map Link */}
+                                        {(formData.location_url || user.location_url) && (
+                                            <div className="col-span-2 pt-4 border-t border-slate-100/50 mt-2">
+                                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Geolocation Information</p>
+                                                <a 
+                                                    href={formData.location_url || user.location_url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 hover:border-blue-300 transition-all group"
+                                                >
+                                                    <span className="text-sm font-bold text-slate-900">View Live Location on Google Maps</span>
+                                                    <ExternalLink size={16} className="text-blue-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                 </Section>
                             )}
@@ -292,14 +308,6 @@ export default function FormDetailsModal({ loan, onClose }: FormDetailsModalProp
                                         <Field label="IFSC Code" value={bankInfo.ifsc_code} />
                                         <Field label="Account Holder" value={bankInfo.account_holder_name} />
                                         <Field label="Account Number" value={bankInfo.account_number} />
-                                        {bankInfo.location_url && (
-                                            <div className="col-span-2">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</p>
-                                                <a href={bankInfo.location_url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                                                    View on Map <ExternalLink size={12} />
-                                                </a>
-                                            </div>
-                                        )}
                                     </div>
                                 </Section>
                             )}
