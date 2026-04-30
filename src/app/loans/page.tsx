@@ -549,9 +549,9 @@ export default function LoanApprovals() {
             ws['!cols'] = colWidths;
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, activeTab === 'requests' ? 'Pending Loans' : 'Loan History');
+            XLSX.utils.book_append_sheet(wb, ws, activeTab === 'requests' ? 'Pending Loans' : activeTab === 'cancelled' ? 'Cancelled Loans' : 'Loan History');
 
-            const fileName = `openscore_${activeTab === 'requests' ? 'pending_loans' : 'loan_history'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const fileName = `openscore_${activeTab === 'requests' ? 'pending_loans' : activeTab === 'cancelled' ? 'cancelled_loans' : 'loan_history'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, fileName);
         } catch (err) {
             console.error('Export failed', err);
@@ -587,6 +587,15 @@ export default function LoanApprovals() {
                     >
                         Loan History
                     </button>
+                    <button
+                        onClick={() => { setActiveTab('cancelled'); setStatusFilter('CANCELLED'); setPage(1); }}
+                        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'cancelled'
+                            ? 'bg-white text-rose-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                    >
+                        Cancelled
+                    </button>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -609,12 +618,13 @@ export default function LoanApprovals() {
                                     <option value="KYC_SUBMITTED">KYC Submitted</option>
                                     <option value="APPROVED">Approved</option>
                                 </>
+                            ) : activeTab === 'cancelled' ? (
+                                <option value="CANCELLED">Cancelled Loans Only</option>
                             ) : (
                                 <>
                                     <option value="DISBURSED">Disbursed</option>
                                     <option value="CLOSED">Closed</option>
                                     <option value="REJECTED">Rejected</option>
-                                    <option value="CANCELLED">Cancelled</option>
                                 </>
                             )}
                         </select>
@@ -633,7 +643,17 @@ export default function LoanApprovals() {
                             <option value={100}>100</option>
                         </select>
                     </div>
+                    <div className="relative flex-1 md:flex-none">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search by ID, Name or Mobile..."
+                            className="pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-medium w-full md:w-64 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        />
                     </div>
+
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                         className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${
@@ -833,17 +853,19 @@ export default function LoanApprovals() {
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                     <div>
                         <h3 className="text-xl font-black text-slate-900">
-                            {activeTab === 'requests' ? 'Live Loan Pipeline' : 'Historical Loan Records'}
+                            {activeTab === 'requests' ? 'Live Loan Pipeline' : activeTab === 'cancelled' ? 'Cancelled Loan Repository' : 'Historical Loan Records'}
                         </h3>
                         <p className="text-slate-500 font-medium text-sm mt-1">
                             {activeTab === 'requests'
                                 ? 'Review applicant details, manage KYC and approve disbursals.'
-                                : 'Audit logs and records of closed, cancelled or previously rejected requests.'}
+                                : activeTab === 'cancelled' 
+                                    ? 'Detailed logs of applications that were cancelled by the user or system.'
+                                    : 'Audit logs and records of disbursed, closed or previously rejected requests.'}
                         </p>
                     </div>
                 </div>
 
-                {activeTab === 'history' && selectedLoanIds.length > 0 && (
+                {(activeTab === 'history' || activeTab === 'cancelled') && selectedLoanIds.length > 0 && (
                     <div className="mx-8 mb-4 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">

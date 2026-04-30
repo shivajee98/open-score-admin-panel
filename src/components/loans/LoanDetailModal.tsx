@@ -27,6 +27,10 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
     const [rejectingId, setRejectingId] = useState<number | null>(null);
     const [rejectReason, setRejectReason] = useState('');
 
+    // Re-ask Proof Modal State
+    const [reaskingId, setReaskingId] = useState<number | null>(null);
+    const [reaskReason, setReaskReason] = useState('');
+
     // Image Upload State
     const [uploadingField, setUploadingField] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,6 +185,30 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
             onUpdate();
         } catch (e: any) {
             alert(e.message || 'Failed to reject');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleReaskRepayment = async () => {
+        if (!reaskingId || !reaskReason.trim()) {
+            alert('Please provide a reason for re-upload');
+            return;
+        }
+
+        setActionLoading(`reask-${reaskingId}`);
+        try {
+            await apiFetch(`/admin/repayments/${reaskingId}/reask-proof`, {
+                method: 'POST',
+                body: JSON.stringify({ reason: reaskReason })
+            });
+            setReaskingId(null);
+            setReaskReason('');
+            setViewingProof(null);
+            loadDetails();
+            onUpdate();
+        } catch (e: any) {
+            alert(e.message || 'Failed to request re-upload');
         } finally {
             setActionLoading(null);
         }
@@ -1340,12 +1368,20 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
 
                                                 {/* Show proof thumbnail for PAID with proof */}
                                                 {emi.status === 'PAID' && emi.proof_image && (
-                                                    <button
-                                                        onClick={() => setViewingProof(emi)}
-                                                        className="inline-flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:text-indigo-600 transition-colors"
-                                                    >
-                                                        <Eye size={10} /> Receipt
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setViewingProof(emi)}
+                                                            className="inline-flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:text-indigo-600 transition-colors"
+                                                        >
+                                                            <Eye size={10} /> Receipt
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { setReaskingId(emi.id); setReaskReason(''); }}
+                                                            className="inline-flex items-center gap-1.5 text-rose-400 text-[10px] font-bold uppercase tracking-wider hover:text-rose-600 transition-colors"
+                                                        >
+                                                            <Camera size={10} /> Re-ask Proof
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
@@ -1498,7 +1534,7 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                         )}
 
                         {viewingProof.status === 'PAID' && (
-                            <div className="pt-6 mt-auto">
+                            <div className="pt-6 mt-auto space-y-3">
                                 <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
                                     <CheckCircle2 size={24} className="text-emerald-500 mx-auto mb-2" />
                                     <p className="text-xs font-black text-emerald-700 uppercase tracking-widest">Payment Verified</p>
@@ -1508,8 +1544,74 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         </p>
                                     )}
                                 </div>
+                                <button
+                                    onClick={() => { setReaskingId(viewingProof.id); setReaskReason(''); }}
+                                    disabled={!!actionLoading}
+                                    className="w-full py-3 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black hover:bg-rose-100 transition-all uppercase tracking-widest flex items-center justify-center gap-2 border border-rose-100"
+                                >
+                                    <Camera size={12} /> Re-ask for Payment Proof
+                                </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    {/* ===== Re-ask Reason Modal ===== */}
+    {
+        reaskingId && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setReaskingId(null)}>
+                <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+                            <Camera size={24} className="text-amber-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-900">Request Re-upload</h3>
+                            <p className="text-xs text-slate-400 font-bold">Explain why you need a new proof screenshot</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                            {['Blurry screenshot', 'Wrong transaction proof', 'Incomplete details', 'Fake screenshot detected'].map(reason => (
+                                <button
+                                    key={reason}
+                                    onClick={() => setReaskReason(reason)}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${reaskReason === reason
+                                        ? 'bg-amber-600 text-white border-amber-600'
+                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-amber-200 hover:bg-amber-50'
+                                        }`}
+                                >
+                                    {reason}
+                                </button>
+                            ))}
+                        </div>
+
+                        <textarea
+                            value={reaskReason}
+                            onChange={e => setReaskReason(e.target.value)}
+                            placeholder="Enter reason for re-upload request..."
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none min-h-[100px] resize-none"
+                        />
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                        <button
+                            onClick={() => { setReaskingId(null); setReaskReason(''); }}
+                            className="flex-1 py-3.5 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleReaskRepayment}
+                            disabled={!reaskReason.trim() || !!actionLoading}
+                            className="flex-1 py-3.5 bg-amber-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-600/20 hover:bg-amber-700 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {actionLoading?.startsWith('reask') ? 'Requesting...' : 'Request Re-upload'}
+                        </button>
                     </div>
                 </div>
             </div>
