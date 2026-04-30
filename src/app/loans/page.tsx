@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
@@ -55,6 +55,15 @@ export default function LoanApprovals() {
     const [reuploadFields, setReuploadFields] = useState<string[]>([]);
     const [reuploadRemarks, setReuploadRemarks] = useState<Record<string, string>>({});
     const [generalRemarks, setGeneralRemarks] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [kycDateFrom, setKycDateFrom] = useState('');
+    const [kycDateTo, setKycDateTo] = useState('');
+    const [emiDateFrom, setEmiDateFrom] = useState('');
+    const [emiDateTo, setEmiDateTo] = useState('');
+    const [emiCount, setEmiCount] = useState('');
+    const [overdueFilter, setOverdueFilter] = useState('ALL');
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     const toggleReuploadField = (field: string) => {
         setReuploadFields(prev => {
@@ -144,8 +153,9 @@ export default function LoanApprovals() {
         customerName: string;
         amount: string;
         successMsg: string;
-        endpoint?: string;
-        method?: string;
+        endpoint: string;
+        method: string;
+        isRisk?: boolean;
         repaymentId?: number;
     }>({
         isOpen: false,
@@ -153,7 +163,9 @@ export default function LoanApprovals() {
         loanId: 0,
         customerName: '',
         amount: '',
-        successMsg: ''
+        successMsg: '',
+        endpoint: '',
+        method: ''
     });
 
 
@@ -269,7 +281,15 @@ export default function LoanApprovals() {
                 page: page.toString(),
                 per_page: itemsPerPage.toString(),
                 sort_by: 'updated_at',
-                order: 'desc'
+                order: 'desc',
+                ...(dateFrom && { date_from: dateFrom }),
+                ...(dateTo && { date_to: dateTo }),
+                ...(kycDateFrom && { kyc_date_from: kycDateFrom }),
+                ...(kycDateTo && { kyc_date_to: kycDateTo }),
+                ...(emiDateFrom && { emi_date_from: emiDateFrom }),
+                ...(emiDateTo && { emi_date_to: emiDateTo }),
+                ...(emiCount && { emi_count: emiCount }),
+                ...(overdueFilter !== 'ALL' && { overdue: overdueFilter })
             });
             const response = await apiFetch(`${endpoint}?${query}`);
             if (response && response.data) {
@@ -291,7 +311,7 @@ export default function LoanApprovals() {
     useEffect(() => {
         const timeout = setTimeout(loadLoans, 300);
         return () => clearTimeout(timeout);
-    }, [activeTab, search, statusFilter, page, itemsPerPage]);
+    }, [activeTab, search, statusFilter, page, itemsPerPage, dateFrom, dateTo, kycDateFrom, kycDateTo, emiDateFrom, emiDateTo, emiCount, overdueFilter]);
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
         const loan = loans.find(l => l.id === id);
@@ -303,7 +323,8 @@ export default function LoanApprovals() {
             amount: loan?.amount || '0',
             successMsg,
             endpoint,
-            method
+            method,
+            isRisk: !!loan?.is_auto_pilot_risk
         });
     };
 
@@ -350,6 +371,8 @@ export default function LoanApprovals() {
             customerName: loan.user?.name || 'Customer',
             amount: loan.amount,
             successMsg: 'Fee approved successfully!',
+            endpoint: '',
+            method: '',
             repaymentId
         });
     };
@@ -610,16 +633,18 @@ export default function LoanApprovals() {
                             <option value={100}>100</option>
                         </select>
                     </div>
-                    <div className="relative flex-1 md:flex-none">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                        <input
-                            type="text"
-                            placeholder="Search by ID, Name or Mobile..."
-                            className="pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-medium w-full md:w-64 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        />
                     </div>
+                    <button
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${
+                            showAdvancedFilters 
+                                ? 'bg-indigo-600 text-white shadow-indigo-500/20' 
+                                : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-200 shadow-slate-200/50'
+                        }`}
+                    >
+                        <Sliders size={16} className={showAdvancedFilters ? 'text-white' : 'text-indigo-500'} />
+                        <span className="hidden sm:inline">Advanced Filters</span>
+                    </button>
 
                     <button
                         onClick={() => setShowKycSidebar(!showKycSidebar)}
@@ -681,6 +706,127 @@ export default function LoanApprovals() {
                     </button>
                 </div>
             </div>
+
+            {showAdvancedFilters && (
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 mb-8 shadow-xl animate-in slide-in-from-top-4 duration-300">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* Application Date Range */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Application Date</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="date" 
+                                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={dateFrom}
+                                    onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                                />
+                                <span className="text-slate-300">to</span>
+                                <input 
+                                    type="date" 
+                                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={dateTo}
+                                    onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* KYC Submitted Date Range */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">KYC Submitted Date</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="date" 
+                                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={kycDateFrom}
+                                    onChange={(e) => { setKycDateFrom(e.target.value); setPage(1); }}
+                                />
+                                <span className="text-slate-300">to</span>
+                                <input 
+                                    type="date" 
+                                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={kycDateTo}
+                                    onChange={(e) => { setKycDateTo(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* EMI Payment Date Range */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">EMI Payment Date</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="date" 
+                                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={emiDateFrom}
+                                    onChange={(e) => { setEmiDateFrom(e.target.value); setPage(1); }}
+                                />
+                                <span className="text-slate-300">to</span>
+                                <input 
+                                    type="date" 
+                                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={emiDateTo}
+                                    onChange={(e) => { setEmiDateTo(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* EMI Count & Overdue */}
+                        <div className="flex gap-4">
+                            <div className="flex-1 flex flex-col gap-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tenure (EMIs)</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="e.g. 12"
+                                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={emiCount}
+                                    onChange={(e) => { setEmiCount(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                            <div className="flex-1 flex flex-col gap-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Overdue Status</label>
+                                <select 
+                                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer"
+                                    value={overdueFilter}
+                                    onChange={(e) => { setOverdueFilter(e.target.value); setPage(1); }}
+                                >
+                                    <option value="ALL">All Loans</option>
+                                    <option value="YES">Overdue Only</option>
+                                    <option value="NO">Not Overdue</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-100">
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                                <input
+                                    type="text"
+                                    placeholder="Global search..."
+                                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-64 focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                setDateFrom(''); setDateTo('');
+                                setKycDateFrom(''); setKycDateTo('');
+                                setEmiDateFrom(''); setEmiDateTo('');
+                                setEmiCount(''); setOverdueFilter('ALL');
+                                setSearch(''); setStatusFilter('ALL');
+                                setPage(1);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-bold text-xs transition-all"
+                        >
+                            <X size={14} />
+                            RESET ALL FILTERS
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Pipeline Card - Full width with 8px margin */}
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden -mx-[8px] md:-mx-[24px]">
@@ -909,9 +1055,7 @@ export default function LoanApprovals() {
                                             <div className="flex justify-end items-center gap-2">
                                                 {['PENDING', 'APPLIED'].includes(loan.status) && (
                                                     <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                        {!loan.is_auto_pilot_risk && (
-                                                            <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.proceed} label="Auto Proceed" />
-                                                        )}
+                                                        <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.proceed} label="Auto Proceed" />
                                                         <div className="flex gap-2">
                                                             {loan.form_data && Object.keys(loan.form_data).length > 0 && (
                                                                 <button
@@ -935,9 +1079,7 @@ export default function LoanApprovals() {
 
                                                 {['PROCEEDED', 'VETTING'].includes(loan.status) && (
                                                     <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                        {!loan.is_auto_pilot_risk && (
-                                                            <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.send_kyc} label="Auto KYC" />
-                                                        )}
+                                                        <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.send_kyc} label="Auto KYC" />
                                                         <div className="flex gap-2">
                                                             {loan.form_data && Object.keys(loan.form_data).length > 0 && (
                                                                 <button
@@ -961,9 +1103,7 @@ export default function LoanApprovals() {
 
                                                 {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
                                                     <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                        {!loan.is_auto_pilot_risk && (
-                                                            <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.approve} label="Auto Approve" />
-                                                        )}
+                                                        <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.approve} label="Auto Approve" />
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
@@ -1845,6 +1985,17 @@ export default function LoanApprovals() {
                                                             Re-verify KYC
                                                         </button>
                                                         <button
+                                                            disabled={!!actionLoading}
+                                                            onClick={async () => {
+                                                                handleAction(previewLoan.id, 'approve', 'Loan Approved!');
+                                                                setPreviewLoan(null);
+                                                            }}
+                                                            className="px-10 py-4 bg-emerald-500 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/30 transition-all flex items-center gap-3 active:scale-95 group"
+                                                        >
+                                                            {actionLoading ? 'Processing...' : 'Approve Loan'}
+                                                            <CheckCircle2 size={18} className="group-hover:scale-110 transition-transform" />
+                                                        </button>
+                                                        <button
                                                             disabled={reuploadFields.length === 0}
                                                             onClick={async () => {
                                                                 if (!confirm(`Confirm requesting re-upload for ${reuploadFields.length} items?`)) return;
@@ -2115,6 +2266,7 @@ export default function LoanApprovals() {
                 loanId={confirmModal.loanId}
                 customerName={confirmModal.customerName}
                 amount={confirmModal.amount}
+                isRisk={confirmModal.isRisk}
             />
             </AdminLayout>
         );

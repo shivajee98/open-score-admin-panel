@@ -13,6 +13,7 @@ interface ActionConfirmationDialogProps {
   loanId: string | number;
   customerName?: string;
   amount?: string | number;
+  isRisk?: boolean;
 }
 
 const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
@@ -23,6 +24,7 @@ const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
   loanId,
   customerName,
   amount,
+  isRisk,
 }) => {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -162,13 +164,15 @@ const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
           </div>
 
           {/* Warning Card */}
-          <div className={`group bg-[#161b2a] border border-slate-800/50 rounded-2xl p-4 mb-8 transition-all hover:border-${config.color}-500/30`}>
+          <div className={`group bg-[#161b2a] border ${isRisk ? 'border-rose-500/50 bg-rose-500/5' : 'border-slate-800/50'} rounded-2xl p-4 mb-8 transition-all hover:border-${config.color}-500/30`}>
             <div className="flex gap-3">
-              <ShieldAlert className={`w-5 h-5 text-${config.color}-400 shrink-0 mt-0.5`} />
+              <ShieldAlert className={`w-5 h-5 ${isRisk ? 'text-rose-500' : `text-${config.color}-400`} shrink-0 mt-0.5`} />
               <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Secure Protocol</p>
-                <p className="text-sm text-slate-300 leading-relaxed italic">
-                  "{config.warning}"
+                <p className={`text-xs font-black uppercase tracking-widest ${isRisk ? 'text-rose-500' : 'text-slate-500'}`}>
+                  {isRisk ? 'Risk Override Protocol' : 'Secure Protocol'}
+                </p>
+                <p className={`text-sm ${isRisk ? 'text-rose-200 font-bold' : 'text-slate-300'} leading-relaxed italic`}>
+                  {isRisk ? "ATTENTION: This loan has been flagged by Auto-Pilot for potential risk. Manual approval will bypass all safety checks." : `"${config.warning}"`}
                 </p>
               </div>
             </div>
