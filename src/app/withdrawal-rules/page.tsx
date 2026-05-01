@@ -27,7 +27,7 @@ export default function WithdrawalRulesPage() {
 
     // Form State
     const [formData, setFormData] = useState({
-        user_type: 'CUSTOMER',
+        user_type: ['CUSTOMER'],
         min_withdrawal_amount: '',
         max_withdrawal_amount: '',
         min_spend_amount: '',
@@ -71,11 +71,11 @@ export default function WithdrawalRulesPage() {
     }, []);
 
     // Dynamic User Fetching
-    const fetchUsers = async (role: string, search: string) => {
+    const fetchUsers = async (roles: string[], search: string) => {
         setUserLoading(true);
         try {
             const params = new URLSearchParams({
-                type: role.toLowerCase(),
+                type: roles.join(',').toLowerCase(),
                 search: search,
                 per_page: '50' // Fetch more for selection
             });
@@ -152,7 +152,7 @@ export default function WithdrawalRulesPage() {
             fetchData();
             // Reset form
             setFormData({
-                user_type: 'CUSTOMER',
+                user_type: ['CUSTOMER'],
                 min_withdrawal_amount: '',
                 max_withdrawal_amount: '',
                 min_spend_amount: '',
@@ -176,7 +176,7 @@ export default function WithdrawalRulesPage() {
     const handleEdit = (rule: any) => {
         setEditingId(rule.id);
         setFormData({
-            user_type: rule.user_type,
+            user_type: Array.isArray(rule.user_type) ? rule.user_type : [rule.user_type],
             min_withdrawal_amount: rule.min_withdrawal_amount?.toString() || '',
             max_withdrawal_amount: rule.max_withdrawal_amount?.toString() || '',
             min_spend_amount: rule.min_spend_amount?.toString() || '',
@@ -236,12 +236,18 @@ export default function WithdrawalRulesPage() {
                                 </div>
 
                                 <div className="flex items-start gap-4 mb-6">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${rule.user_type === 'MERCHANT' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                        {rule.user_type === 'MERCHANT' ? <Activity className="w-6 h-6" /> : <Users className="w-6 h-6" />}
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${(Array.isArray(rule.user_type) ? rule.user_type.includes('MERCHANT') : rule.user_type === 'MERCHANT') ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {(Array.isArray(rule.user_type) ? rule.user_type.includes('MERCHANT') : rule.user_type === 'MERCHANT') ? <Activity className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{rule.user_type}</span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {Array.isArray(rule.user_type) ? rule.user_type.map((type: string) => (
+                                                    <span key={type} className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{type}</span>
+                                                )) : (
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{rule.user_type}</span>
+                                                )}
+                                            </div>
                                             <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Withdrawal Range: ₹{rule.min_withdrawal_amount} - ₹{rule.max_withdrawal_amount}</span>
                                         </div>
                                         <h3 className="text-lg font-black text-slate-900">
@@ -297,15 +303,25 @@ export default function WithdrawalRulesPage() {
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">User Type</label>
                                     <div className="grid grid-cols-3 gap-3">
-                                        {['CUSTOMER', 'MERCHANT', 'STUDENT'].map(type => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setFormData({ ...formData, user_type: type })}
-                                                className={`py-3 rounded-xl text-[10px] font-black transition-all ${formData.user_type === type ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
+                                        {['CUSTOMER', 'MERCHANT', 'STUDENT', 'AGENT'].map(type => {
+                                            const isSelected = formData.user_type.includes(type);
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => {
+                                                        const newTypes = isSelected
+                                                            ? formData.user_type.filter(t => t !== type)
+                                                            : [...formData.user_type, type];
+                                                        if (newTypes.length > 0) {
+                                                            setFormData({ ...formData, user_type: newTypes });
+                                                        }
+                                                    }}
+                                                    className={`py-3 rounded-xl text-[10px] font-black transition-all ${isSelected ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                                                >
+                                                    {type}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -466,7 +482,7 @@ export default function WithdrawalRulesPage() {
                                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                                 <input
                                                     type="text"
-                                                    placeholder={`Search ${formData.user_type.toLowerCase()}s...`}
+                                                    placeholder={`Search users...`}
                                                     value={userSearch}
                                                     onChange={(e) => setUserSearch(e.target.value)}
                                                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
@@ -480,7 +496,7 @@ export default function WithdrawalRulesPage() {
                                                     </div>
                                                 )}
                                                 {Array.isArray(allUsers) && allUsers
-                                                .filter(u => u.role === formData.user_type)
+                                                .filter(u => formData.user_type.includes(u.role) || (formData.user_type.includes('CUSTOMER') && u.role === 'STUDENT'))
                                                 .map(user => {
                                                     const isSelected = formData.target_users_input
                                                         .split(',')
@@ -506,8 +522,8 @@ export default function WithdrawalRulesPage() {
                                                     );
                                                 })
                                             }
-                                            {allUsers.filter(u => u.role === formData.user_type).length === 0 && !userLoading && (
-                                                <p className="text-center text-xs text-slate-400 font-bold py-4">No {formData.user_type.toLowerCase()}s found.</p>
+                                            {allUsers.filter(u => formData.user_type.includes(u.role) || (formData.user_type.includes('CUSTOMER') && u.role === 'STUDENT')).length === 0 && !userLoading && (
+                                                <p className="text-center text-xs text-slate-400 font-bold py-4">No users found for selected types.</p>
                                             )}
                                         </div>
                                     </div>
