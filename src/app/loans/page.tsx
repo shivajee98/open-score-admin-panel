@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
@@ -48,6 +48,7 @@ export default function LoanApprovals() {
 
     // Filters & Pagination
     const [search, setSearch] = useState('');
+    const [referralSearch, setReferralSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -277,6 +278,7 @@ export default function LoanApprovals() {
             const endpoint = activeTab === 'requests' ? '/admin/loans' : '/admin/loans/history';
             const query = new URLSearchParams({
                 search: search,
+                referral_search: referralSearch,
                 status: statusFilter,
                 page: page.toString(),
                 per_page: itemsPerPage.toString(),
@@ -311,7 +313,7 @@ export default function LoanApprovals() {
     useEffect(() => {
         const timeout = setTimeout(loadLoans, 300);
         return () => clearTimeout(timeout);
-    }, [activeTab, search, statusFilter, page, itemsPerPage, dateFrom, dateTo, kycDateFrom, kycDateTo, emiDateFrom, emiDateTo, emiCount, overdueFilter]);
+    }, [activeTab, search, referralSearch, statusFilter, page, itemsPerPage, dateFrom, dateTo, kycDateFrom, kycDateTo, emiDateFrom, emiDateTo, emiCount, overdueFilter]);
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
         const loan = loans.find(l => l.id === id);
@@ -815,6 +817,21 @@ export default function LoanApprovals() {
                                 </select>
                             </div>
                         </div>
+
+                        {/* Referral Search */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Agent/Referrer Search</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                                <input
+                                    type="text"
+                                    placeholder="Agent name or referral code..."
+                                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={referralSearch}
+                                    onChange={(e) => { setReferralSearch(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-100">
@@ -836,7 +853,7 @@ export default function LoanApprovals() {
                                 setKycDateFrom(''); setKycDateTo('');
                                 setEmiDateFrom(''); setEmiDateTo('');
                                 setEmiCount(''); setOverdueFilter('ALL');
-                                setSearch(''); setStatusFilter('ALL');
+                                setSearch(''); setReferralSearch(''); setStatusFilter('ALL');
                                 setPage(1);
                             }}
                             className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-bold text-xs transition-all"
@@ -992,6 +1009,11 @@ export default function LoanApprovals() {
                                                     ) : null}
 
                                                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                                        {(loan.status === 'APPROVED' || (hasPlatformFee(loan) && !isPlatformFeePaid(loan)) || loan.status === 'KYC_SENT') && activeTab === 'requests' && (
+                                                            <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-sm uppercase tracking-widest border border-rose-500 flex items-center gap-1">
+                                                                <Star size={8} fill="white" /> Priority
+                                                            </span>
+                                                        )}
                                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide border shadow-sm ${loan.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                             loan.status === 'DISBURSED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                                                                 (loan.status === 'KYC_SENT' || loan.status === 'FORM_SUBMITTED' || loan.status === 'KYC_SUBMITTED') ? 'bg-amber-50 text-amber-600 border-amber-100' :

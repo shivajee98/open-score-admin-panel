@@ -633,7 +633,7 @@ export default function UsersPage() {
 
         try {
             await apiFetch(`/admin/users/${user.id}/status`, {
-                method: 'PUT',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });

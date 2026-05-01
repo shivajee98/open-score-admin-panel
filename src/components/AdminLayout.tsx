@@ -74,7 +74,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Field KYC Agent', href: '/team/kyc-agents', icon: <Shield className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Field KYC Leads', href: '/team/kyc-leads', icon: <ListFilter className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
-        
+
         // Nested Vendors inside User & Team
         { label: 'Vendor List', href: '/sub-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
         { label: 'Agents', href: '/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
@@ -215,17 +215,17 @@ export default function AdminLayout({ children, title }: { children: React.React
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-200 group ${isActive ? (user?.role === 'SUB_USER' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/50') : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
                                         >
-                                        <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'} relative`}>
-                                            {item.icon}
-                                            {item.href === '/monitoring' && monitoring?.unread > 0 && (
-                                                <span className="absolute -top-1 -right-3 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                                                    {monitoring.unread}
-                                                </span>
-                                            )}
-                                            {((item.href === '/loans' && counts.loans > 0) || (item.href === '/sub-users' && counts.kyc > 0)) && (
-                                                <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border border-slate-900"></span>
-                                            )}
-                                        </div>
+                                            <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'} relative`}>
+                                                {item.icon}
+                                                {item.href === '/monitoring' && monitoring?.unread > 0 && (
+                                                    <span className="absolute -top-1 -right-3 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                                                        {monitoring.unread}
+                                                    </span>
+                                                )}
+                                                {((item.href === '/loans' && counts.loans > 0) || (item.href === '/sub-users' && counts.kyc > 0)) && (
+                                                    <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border border-slate-900"></span>
+                                                )}
+                                            </div>
                                             {item.label}
                                         </Link>
                                     );
@@ -366,49 +366,49 @@ export default function AdminLayout({ children, title }: { children: React.React
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h2>
                     </div>
 
-                        <div className="flex items-center gap-3">
-                            <button 
-                                onClick={() => {
-                                    const event = new KeyboardEvent('keydown', {
-                                        key: 'i',
-                                        ctrlKey: true,
-                                        bubbles: true,
-                                        cancelable: true
-                                    });
-                                    window.dispatchEvent(event);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full border border-slate-200 transition-all group"
-                                title="Press Ctrl + I to search"
-                            >
-                                <Search className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Search</span>
-                                <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-slate-200 hidden lg:inline">CTRL+I</span>
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    const event = new KeyboardEvent('keydown', {
-                                        key: 's',
-                                        ctrlKey: true,
-                                        shiftKey: true,
-                                        bubbles: true,
-                                        cancelable: true
-                                    });
-                                    window.dispatchEvent(event);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full border border-indigo-200 transition-all group"
-                                title="Press Ctrl + Shift + S for Utils"
-                            >
-                                <Key className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Utils</span>
-                                <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-indigo-200 hidden lg:inline">CTRL+⇧+S</span>
-                            </button>
-                            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
-                                <Verified className="w-4 h-4 text-blue-600 fill-blue-100" />
-                                <span className="text-sm font-bold text-slate-700">
-                                    {user?.role === 'SUB_USER' ? 'Credit Agent' : 'Administrator'}
-                                </span>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                const event = new KeyboardEvent('keydown', {
+                                    key: 'i',
+                                    ctrlKey: true,
+                                    bubbles: true,
+                                    cancelable: true
+                                });
+                                window.dispatchEvent(event);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full border border-slate-200 transition-all group"
+                            title="Press Ctrl + I to search"
+                        >
+                            <Search className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Search</span>
+                            <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-slate-200 hidden lg:inline">CTRL+I</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                const event = new KeyboardEvent('keydown', {
+                                    key: 's',
+                                    ctrlKey: true,
+                                    shiftKey: true,
+                                    bubbles: true,
+                                    cancelable: true
+                                });
+                                window.dispatchEvent(event);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full border border-indigo-200 transition-all group"
+                            title="Press Ctrl + Shift + S for Utils"
+                        >
+                            <Key className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Utils</span>
+                            <span className="px-1.5 py-0.5 bg-white rounded text-[8px] font-black border border-indigo-200 hidden lg:inline">CTRL+⇧+S</span>
+                        </button>
+                        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
+                            <Verified className="w-4 h-4 text-blue-600 fill-blue-100" />
+                            <span className="text-sm font-bold text-slate-700">
+                                {user?.role === 'SUB_USER' ? 'Credit Agent' : 'Administrator'}
+                            </span>
                         </div>
+                    </div>
                 </header>
 
                 <div className="p-4 md:p-8 w-full">

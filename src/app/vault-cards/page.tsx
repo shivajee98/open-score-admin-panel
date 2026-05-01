@@ -7,7 +7,8 @@ import {
     Search, CreditCard, Clock, CheckCircle, XCircle, 
     MoreVertical, Eye, IndianRupee, ShieldCheck, 
     Filter, ChevronLeft, ChevronRight, Calendar,
-    AlertCircle, Check, X, Camera, Save, Settings
+    AlertCircle, Check, X, Camera, Save, Settings,
+    Plus, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -22,6 +23,17 @@ export default function VaultCardsPage() {
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [isSavingConfig, setIsSavingConfig] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
+    const [activeTab, setActiveTab] = useState<'REQUESTS' | 'CONFIG'>('REQUESTS');
+
+    // Global Rates State
+    const [globalRates, setGlobalRates] = useState<any[]>([]);
+    const [isAddingRate, setIsAddingRate] = useState(false);
+    const [newRate, setNewRate] = useState({
+        tenure_days: '',
+        interest_rate: '',
+        penalty_flat: '',
+        penalty_rate: ''
+    });
 
     // Modal State
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -38,7 +50,6 @@ export default function VaultCardsPage() {
         setLoading(true);
         try {
             const data = await apiFetch(`/admin/vault-cards?status=${statusFilter}&page=${page}&search=${searchQuery}`);
-            // Assuming data is an array or paginated object
             if (Array.isArray(data)) {
                 setRequests(data);
             } else {
@@ -46,12 +57,15 @@ export default function VaultCardsPage() {
                 setTotalPages(data.last_page || 1);
             }
 
-            // Also fetch current activation fee
             const settings = await apiFetch('/admin/referral-settings');
             setActivationFee(settings.vault_card_activation_fee || 0);
+
+            // Load global rates
+            const ratesData = await apiFetch('/admin/vault-rates/global');
+            setGlobalRates(ratesData || []);
         } catch (error) {
-            console.error('Failed to load requests:', error);
-            toast.error('Failed to load requests');
+            console.error('Failed to load data:', error);
+            toast.error('Failed to load data');
         } finally {
             setLoading(false);
         }
@@ -120,6 +134,35 @@ export default function VaultCardsPage() {
         }
     };
 
+    const handleSaveGlobalRate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsProcessing(true);
+        try {
+            await apiFetch('/admin/vault-rates/global', {
+                method: 'POST',
+                body: JSON.stringify(newRate)
+            });
+            toast.success('Global rate saved');
+            setNewRate({ tenure_days: '', interest_rate: '', penalty_flat: '', penalty_rate: '' });
+            loadRequests();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to save rate');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleDeleteGlobalRate = async (id: number) => {
+        if (!confirm('Delete this global rate?')) return;
+        try {
+            await apiFetch(`/admin/vault-rates/global/${id}`, { method: 'DELETE' });
+            toast.success('Rate deleted');
+            loadRequests();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to delete');
+        }
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'ACTIVATED': return 'bg-emerald-100 text-emerald-700';
@@ -133,19 +176,30 @@ export default function VaultCardsPage() {
 
     return (
         <AdminLayout title="Vault Card Management">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Vault Card Management</h1>
-                    <p className="text-slate-400 text-sm font-medium">Manage and configure card activation requests</p>
+                <div className="flex items-center gap-3 bg-slate-100 p-1 rounded-2xl">
+                    <button
+                        onClick={() => setActiveTab('REQUESTS')}
+                        className={cn(
+                            "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            activeTab === 'REQUESTS' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        )}
+                    >
+                        Requests
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('CONFIG')}
+                        className={cn(
+                            "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            activeTab === 'CONFIG' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        )}
+                    >
+                        Global Config
+                    </button>
                 </div>
-                <button
-                    onClick={() => setIsConfigModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
-                >
-                    <Settings className="w-4 h-4" />
-                    Configure Card
-                </button>
             </div>
+
+            {activeTab === 'REQUESTS' ? (
+                <>
 
             {/* Stats Header */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -340,8 +394,146 @@ export default function VaultCardsPage() {
                             </button>
                         </div>
                     </div>
-                )}
-            </div>
+                </>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Global Tenure Rates</h3>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Default interest and penalty plans</p>
+                                </div>
+                                <ShieldCheck className="w-8 h-8 text-indigo-100" />
+                            </div>
+
+                            <div className="space-y-4">
+                                {globalRates.length === 0 ? (
+                                    <div className="p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                        <p className="text-slate-400 font-bold italic text-sm">No global rates defined yet.</p>
+                                    </div>
+                                ) : (
+                                    globalRates.map((rate) => (
+                                        <div key={rate.id} className="flex items-center justify-between bg-slate-50 p-6 rounded-3xl border border-slate-100 group">
+                                            <div className="flex items-center gap-8">
+                                                <div className="text-center">
+                                                    <span className="text-2xl font-black text-slate-900">{rate.tenure_days}</span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase block tracking-widest">Days</span>
+                                                </div>
+                                                <div className="h-10 w-px bg-slate-200" />
+                                                <div>
+                                                    <span className="text-xl font-black text-emerald-600">{rate.interest_rate}%</span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase block tracking-widest">Interest</span>
+                                                </div>
+                                                <div className="h-10 w-px bg-slate-200" />
+                                                <div>
+                                                    <span className="text-sm font-black text-rose-500">
+                                                        {rate.penalty_flat > 0 ? `₹${rate.penalty_flat} Flat` : ''}
+                                                        {rate.penalty_rate > 0 ? `${rate.penalty_rate}%` : ''}
+                                                        {!rate.penalty_flat && !rate.penalty_rate ? 'No Penalty' : ''}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase block tracking-widest">Early Penalty</span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleDeleteGlobalRate(rate.id)}
+                                                className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                            <h3 className="text-lg font-black uppercase tracking-tight mb-6">Add New Global Rate</h3>
+                            <form onSubmit={handleSaveGlobalRate} className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tenure (Days)</label>
+                                    <input 
+                                        type="number" required
+                                        value={newRate.tenure_days}
+                                        onChange={(e) => setNewRate({...newRate, tenure_days: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-all font-bold"
+                                        placeholder="e.g. 30"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Interest Rate (%)</label>
+                                    <input 
+                                        type="number" step="0.01" required
+                                        value={newRate.interest_rate}
+                                        onChange={(e) => setNewRate({...newRate, interest_rate: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-all font-bold"
+                                        placeholder="e.g. 5.5"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Flat Penalty (₹)</label>
+                                        <input 
+                                            type="number"
+                                            value={newRate.penalty_flat}
+                                            onChange={(e) => setNewRate({...newRate, penalty_flat: e.target.value})}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-all font-bold"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Penalty Rate (%)</label>
+                                        <input 
+                                            type="number"
+                                            value={newRate.penalty_rate}
+                                            onChange={(e) => setNewRate({...newRate, penalty_rate: e.target.value})}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-all font-bold"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+                                <button 
+                                    type="submit"
+                                    disabled={isProcessing}
+                                    className="w-full py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    {isProcessing ? <Clock className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                    Save Rate Plan
+                                </button>
+                            </form>
+                        </div>
+
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight mb-2">Activation Fee</h3>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-6">Current Global Fee</p>
+                            
+                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+                                        <IndianRupee className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-2xl font-black text-slate-900">₹{activationFee}</span>
+                                </div>
+                                <button 
+                                    onClick={() => setIsConfigModalOpen(true)}
+                                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl transition-all"
+                                >
+                                    <Settings className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <p className="text-[10px] text-blue-600 font-bold leading-relaxed">
+                                    Global rates are applied to all users who don't have custom rates configured.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Action Modal */}
             {isActionModalOpen && selectedRequest && (

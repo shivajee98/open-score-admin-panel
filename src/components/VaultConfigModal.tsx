@@ -16,6 +16,7 @@ export default function VaultConfigModal({ isOpen, onClose, user, onSuccess }: V
     const [loading, setLoading] = useState(true);
     const [vault, setVault] = useState<any>(null);
     const [rates, setRates] = useState<any[]>([]);
+    const [globalRates, setGlobalRates] = useState<any[]>([]);
     const [deposits, setDeposits] = useState<any[]>([]);
 
     // Enable form
@@ -32,12 +33,15 @@ export default function VaultConfigModal({ isOpen, onClose, user, onSuccess }: V
 
     const fetchVault = async () => {
         if (!user) return;
-        setLoading(true);
         try {
             const data = await apiFetch(`/admin/users/${user.id}/vault`);
             setVault(data.vault);
             setRates(data.rates || []);
             setDeposits(data.deposits || []);
+
+            // Fetch global rates
+            const gRates = await apiFetch('/admin/vault-rates/global');
+            setGlobalRates(gRates || []);
         } catch (e) {
             console.error(e);
         } finally {
@@ -116,6 +120,30 @@ export default function VaultConfigModal({ isOpen, onClose, user, onSuccess }: V
             await fetchVault();
         } catch (e: any) {
             alert(e.message || 'Error');
+        }
+    };
+
+    const handleApplyGlobalRates = async () => {
+        if (!confirm('This will copy all global rate plans to this user. Continue?')) return;
+        setAddingRate(true);
+        try {
+            for (const gr of globalRates) {
+                await apiFetch(`/admin/users/${user.id}/vault/rate`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        tenure_days: gr.tenure_days,
+                        interest_rate: gr.interest_rate,
+                        penalty_flat: gr.penalty_flat,
+                        penalty_rate: gr.penalty_rate,
+                        hide_penalty: false,
+                    }),
+                });
+            }
+            await fetchVault();
+        } catch (e: any) {
+            alert(e.message || 'Error applying global rates');
+        } finally {
+            setAddingRate(false);
         }
     };
 
@@ -221,6 +249,37 @@ export default function VaultConfigModal({ isOpen, onClose, user, onSuccess }: V
                             {/* Rate Configuration */}
                             <div>
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Tenure & Rate Plans</h4>
+
+                                {rates.length === 0 && globalRates.length > 0 && (
+                                    <div className="mb-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-50 px-2 py-1 rounded-lg">No custom rates. Using Global Defaults:</p>
+                                            <button 
+                                                onClick={handleApplyGlobalRates}
+                                                className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline"
+                                            >
+                                                Customize for this user
+                                            </button>
+                                        </div>
+                                        <div className="space-y-2 opacity-60 grayscale-[0.5]">
+                                            {globalRates.map((rate: any) => (
+                                                <div key={rate.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-center">
+                                                            <span className="text-lg font-black text-slate-900">{rate.tenure_days}</span>
+                                                            <span className="text-[8px] font-bold text-slate-400 uppercase block">days</span>
+                                                        </div>
+                                                        <div className="h-6 w-px bg-slate-200" />
+                                                        <div>
+                                                            <span className="text-sm font-black text-emerald-600">{rate.interest_rate}%</span>
+                                                            <span className="text-[8px] font-bold text-slate-400 uppercase block">interest</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {rates.length > 0 && (
                                     <div className="space-y-2 mb-4">
