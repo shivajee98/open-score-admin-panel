@@ -5,9 +5,9 @@ import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { 
     Search, CreditCard, Clock, CheckCircle, XCircle, 
-    MoreVertical, Eye, IndianRupee, ShieldCheck, 
-    Filter, ChevronLeft, ChevronRight, Calendar,
-    AlertCircle, Check, X, Camera, Save, Settings,
+    Eye, IndianRupee, ShieldCheck, 
+    ChevronLeft, ChevronRight,
+    X, Camera, Save, Settings,
     Plus, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,14 @@ export default function VaultCardsPage() {
     const [isSavingConfig, setIsSavingConfig] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
     const [activeTab, setActiveTab] = useState<'REQUESTS' | 'CONFIG'>('REQUESTS');
+    const [stats, setStats] = useState<any>({
+        INITIATED: 0,
+        PENDING_CHARGE: 0,
+        PENDING_PAYMENT: 0,
+        PENDING_APPROVAL: 0,
+        ACTIVATED: 0,
+        TOTAL: 0
+    });
 
     // Global Rates State
     const [globalRates, setGlobalRates] = useState<any[]>([]);
@@ -49,12 +57,21 @@ export default function VaultCardsPage() {
     const loadRequests = async () => {
         setLoading(true);
         try {
-            const data = await apiFetch(`/admin/vault-cards?status=${statusFilter}&page=${page}&search=${searchQuery}`);
-            if (Array.isArray(data)) {
-                setRequests(data);
+            const response = await apiFetch(`/admin/vault-cards?status=${statusFilter}&page=${page}&search=${encodeURIComponent(searchQuery)}`);
+            console.log("Vault Cards API Response:", response);
+            
+            // Handle the new response format: { requests: { data: [], ... }, stats: { ... } }
+            const requestsData = response.requests || response;
+            
+            if (Array.isArray(requestsData)) {
+                setRequests(requestsData);
             } else {
-                setRequests(data.data || []);
-                setTotalPages(data.last_page || 1);
+                setRequests(requestsData.data || []);
+                setTotalPages(requestsData.last_page || 1);
+            }
+
+            if (response.stats) {
+                setStats(response.stats);
             }
 
             const settings = await apiFetch('/admin/referral-settings');
@@ -176,6 +193,12 @@ export default function VaultCardsPage() {
 
     return (
         <AdminLayout title="Vault Card Management">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Vault Card Management</h1>
+                    <p className="text-slate-400 text-sm font-medium">Manage and configure card activation requests</p>
+                </div>
+
                 <div className="flex items-center gap-3 bg-slate-100 p-1 rounded-2xl">
                     <button
                         onClick={() => setActiveTab('REQUESTS')}
@@ -202,7 +225,18 @@ export default function VaultCardsPage() {
                 <>
 
             {/* Stats Header */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
+                            <Clock className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Initiated</p>
+                            <h3 className="text-2xl font-black text-slate-900">{stats.INITIATED}</h3>
+                        </div>
+                    </div>
+                </div>
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
@@ -210,18 +244,29 @@ export default function VaultCardsPage() {
                         </div>
                         <div>
                             <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Pending Charge</p>
-                            <h3 className="text-2xl font-black text-slate-900">{requests.filter(r => r.status === 'PENDING_CHARGE').length}</h3>
+                            <h3 className="text-2xl font-black text-slate-900">{stats.PENDING_CHARGE}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                            <IndianRupee className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Pending Pay</p>
+                            <h3 className="text-2xl font-black text-slate-900">{stats.PENDING_PAYMENT}</h3>
                         </div>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                            <IndianRupee className="w-6 h-6" />
+                            <CheckCircle className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Pending Payments</p>
-                            <h3 className="text-2xl font-black text-slate-900">{requests.filter(r => r.status === 'PENDING_APPROVAL').length}</h3>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">To Approve</p>
+                            <h3 className="text-2xl font-black text-slate-900">{stats.PENDING_APPROVAL}</h3>
                         </div>
                     </div>
                 </div>
@@ -231,8 +276,8 @@ export default function VaultCardsPage() {
                             <BadgeCheck className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Activated Cards</p>
-                            <h3 className="text-2xl font-black text-slate-900">{requests.filter(r => r.status === 'ACTIVATED').length}</h3>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Activated</p>
+                            <h3 className="text-2xl font-black text-slate-900">{stats.ACTIVATED}</h3>
                         </div>
                     </div>
                 </div>
@@ -242,8 +287,8 @@ export default function VaultCardsPage() {
                             <CreditCard className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Requests</p>
-                            <h3 className="text-2xl font-black text-slate-900">{requests.length}</h3>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total</p>
+                            <h3 className="text-2xl font-black text-slate-900">{stats.TOTAL}</h3>
                         </div>
                     </div>
                 </div>
@@ -263,7 +308,7 @@ export default function VaultCardsPage() {
                 </form>
 
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-                    {['ALL', 'PENDING_CHARGE', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'ACTIVATED', 'REJECTED'].map((stat) => (
+                    {['ALL', 'INITIATED', 'PENDING_CHARGE', 'PENDING_PAYMENT', 'PENDING_APPROVAL', 'ACTIVATED', 'REJECTED'].map((stat) => (
                         <button
                             key={stat}
                             onClick={() => { setStatusFilter(stat); setPage(1); }}
@@ -286,7 +331,7 @@ export default function VaultCardsPage() {
                             <tr className="bg-slate-50/50">
                                 <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Agent / Requested For</th>
                                 <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Charge</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment</th>
                                 <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Requested Date</th>
                                 <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
@@ -301,11 +346,11 @@ export default function VaultCardsPage() {
                                     <tr key={req.id} className="hover:bg-slate-50/80 transition-colors group">
                                         <td className="p-4 pl-8">
                                             <div className="flex flex-col gap-0.5">
-                                                <p className="text-sm font-black text-slate-900">{req.agent_name}</p>
+                                                <p className="text-sm font-black text-slate-900">{req.agent?.name || 'Unknown Agent'}</p>
                                                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                                                    <span>Agent: {req.agent_mobile}</span>
+                                                    <span>Agent: {req.agent?.mobile_number || 'N/A'}</span>
                                                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                                                    <span className="text-indigo-600">Customer: {req.customer_mobile}</span>
+                                                    <span className="text-indigo-600">Customer: {req.customer_number}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -318,18 +363,31 @@ export default function VaultCardsPage() {
                                             </span>
                                         </td>
                                         <td className="p-4">
-                                            {req.activation_charge ? (
-                                                <p className="text-sm font-black text-slate-900">₹{req.activation_charge}</p>
-                                            ) : (
-                                                <span className="text-[10px] font-bold text-slate-300 italic">Not set</span>
-                                            )}
+                                            <div className="flex flex-col gap-0.5">
+                                                {req.activation_charge ? (
+                                                    <p className="text-sm font-black text-slate-900">₹{req.activation_charge}</p>
+                                                ) : (
+                                                    <span className="text-[10px] font-bold text-slate-300 italic">Not set</span>
+                                                )}
+                                                {req.payment_mode && (
+                                                    <div className="flex items-center gap-1 text-[9px] font-black text-blue-500 uppercase tracking-widest">
+                                                        <span>{req.payment_mode}</span>
+                                                        {req.cashback_amount > 0 && (
+                                                            <>
+                                                                <span className="w-1 h-1 bg-blue-200 rounded-full" />
+                                                                <span className="text-emerald-500">₹{req.cashback_amount} Cashback</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="p-4 text-xs font-bold text-slate-400">
                                             {new Date(req.created_at).toLocaleString()}
                                         </td>
                                         <td className="p-4 text-right pr-8">
                                             <div className="flex items-center justify-end gap-2">
-                                                {req.status === 'PENDING_CHARGE' && (
+                                                {(req.status === 'PENDING_CHARGE' || req.status === 'INITIATED') && (
                                                     <button
                                                         onClick={() => {
                                                             setSelectedRequest(req);
@@ -394,7 +452,9 @@ export default function VaultCardsPage() {
                             </button>
                         </div>
                     </div>
-                </>
+                )}
+            </div>
+        </>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
@@ -553,7 +613,7 @@ export default function VaultCardsPage() {
                             <h2 className="text-2xl font-black uppercase tracking-tight">
                                 {actionType === 'CHARGE' ? 'Set Activation Charge' : actionType === 'APPROVE_PAYMENT' ? 'Review Payment' : 'Request Registry'}
                             </h2>
-                            <p className="text-blue-300 text-xs font-bold uppercase tracking-widest mt-1">ID #{selectedRequest.id} • {selectedRequest.agent_name}</p>
+                            <p className="text-blue-300 text-xs font-bold uppercase tracking-widest mt-1">ID #{selectedRequest.id} • {selectedRequest.agent?.name || 'Agent'}</p>
                         </div>
 
                         <div className="p-8 space-y-6">
@@ -588,16 +648,16 @@ export default function VaultCardsPage() {
                                 <div className="space-y-6">
                                     <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <Camera className="w-3 h-3" /> Payment Screenshot
+                                            <Camera className="w-3 h-3" /> Payment Proof
                                         </p>
                                         <div className="rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-white aspect-[9/16] relative group">
                                             <img 
-                                                src={`${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${selectedRequest.payment_screenshot}`} 
+                                                src={`${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${selectedRequest.payment_proof}`} 
                                                 className="w-full h-full object-contain"
                                                 alt="Payment Proof"
                                             />
                                             <a 
-                                                href={`${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${selectedRequest.payment_screenshot}`} 
+                                                href={`${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${selectedRequest.payment_proof}`} 
                                                 target="_blank" 
                                                 className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]"
                                             >
@@ -644,14 +704,25 @@ export default function VaultCardsPage() {
                                         </div>
                                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-50">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Agent</p>
-                                            <p className="text-sm font-black text-slate-900">{selectedRequest.agent_name}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 font-mono italic">{selectedRequest.agent_mobile}</p>
+                                            <p className="text-sm font-black text-slate-900">{selectedRequest.agent?.name || 'N/A'}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 font-mono italic">{selectedRequest.agent?.mobile_number || 'N/A'}</p>
                                         </div>
                                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-50">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p>
-                                            <p className="text-sm font-black text-indigo-600">{selectedRequest.customer_mobile}</p>
+                                            <p className="text-sm font-black text-indigo-600">{selectedRequest.customer_number}</p>
                                             <p className="text-[10px] font-bold text-slate-400">Created: {new Date(selectedRequest.created_at).toLocaleDateString()}</p>
                                         </div>
+                                        {selectedRequest.payment_mode && (
+                                            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-50 col-span-2">
+                                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Payment Method & Cashback</p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm font-black text-blue-900">{selectedRequest.payment_mode}</p>
+                                                    {selectedRequest.cashback_amount > 0 && (
+                                                        <p className="text-sm font-black text-emerald-600">₹{selectedRequest.cashback_amount} Cashback</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     
                                     {selectedRequest.status === 'REJECTED' && (
@@ -661,7 +732,7 @@ export default function VaultCardsPage() {
                                         </div>
                                     )}
 
-                                    {selectedRequest.payment_screenshot && (
+                                    {selectedRequest.payment_proof && (
                                         <div className="p-4 bg-slate-900 rounded-2xl">
                                             <button 
                                                 onClick={() => {
@@ -671,7 +742,7 @@ export default function VaultCardsPage() {
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Camera className="w-5 h-5 text-blue-400" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">View Payment Screenshot</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">View Payment Proof</span>
                                                 </div>
                                                 <ChevronRight className="w-4 h-4" />
                                             </button>

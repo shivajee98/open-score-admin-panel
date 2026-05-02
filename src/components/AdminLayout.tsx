@@ -99,6 +99,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Agent Cashouts', href: '/agent-payouts', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Team Transfers', href: '/team-transfers', icon: <Banknote className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Agent & Vendor History', href: '/agent-history', icon: <Archive className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
+        { label: 'Recovery Funds', href: '/held-recovery', icon: <Wallet className="w-5 h-5 text-indigo-400" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Global Transactions', href: '/transactions', icon: <TrendingUp className="w-5 h-5" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Cashback Usage', href: '/cashback-usage', icon: <Percent className="w-5 h-5 text-blue-400" />, roles: ['ADMIN'], group: 'Financial Operations' },
         { label: 'Cashback Thresholds', href: '/cashback-transfer', icon: <Wallet className="w-5 h-5 text-amber-400" />, roles: ['ADMIN'], group: 'Financial Operations' },
