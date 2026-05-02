@@ -818,7 +818,16 @@ export default function AgentsPage() {
                                         </button>
                                     )}
                                 </th>
-                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Agent Details</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">
+                                    <div className="flex items-center gap-3">
+                                        <span>Agent Details</span>
+                                        {selectedIds.length > 0 && (
+                                            <div className="px-2.5 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black animate-in fade-in zoom-in duration-300 shadow-lg shadow-indigo-200 ring-2 ring-indigo-50">
+                                                {selectedIds.length} SELECTED
+                                            </div>
+                                        )}
+                                    </div>
+                                </th>
                                 <th className="p-6 text-xs font-bold text-indigo-500 uppercase tracking-widest">Refer Code</th>
                                 <th className="p-6 text-xs font-bold text-teal-500 uppercase tracking-widest">Parent Vendor</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Wallet</th>

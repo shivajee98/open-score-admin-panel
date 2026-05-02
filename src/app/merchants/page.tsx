@@ -303,8 +303,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                     </div>
                 ) : (
                     <div className="flex flex-col text-[10px] font-mono">
-                        <span className="text-emerald-600">P: ₹{user.cashback_flat_amount || 0}</span>
-                        <span className="text-indigo-600">R: ₹{user.receive_cashback_flat_amount || 0}</span>
+                        <span className="text-emerald-600">P: ₹{parseFloat(user.cashback_flat_amount || '0').toLocaleString('en-IN')}</span>
+                        <span className="text-indigo-600">R: ₹{parseFloat(user.receive_cashback_flat_amount || '0').toLocaleString('en-IN')}</span>
                     </div>
                 )}
             </td>
@@ -524,8 +524,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                                     : "bg-slate-50 text-slate-300 cursor-not-allowed"
                             )}
                             title={user.cashback_balance >= (currentUser?.cashback_threshold_amount || 0) 
-                                ? `Transfer Cashback to Wallet (₹${user.cashback_balance})` 
-                                : `Cashback too low (Min ₹${currentUser?.cashback_threshold_amount || 0})`}
+                                ? `Transfer Cashback to Wallet (₹${parseFloat(user.cashback_balance || '0').toLocaleString('en-IN')})` 
+                                : `Cashback too low (Min ₹${parseFloat(currentUser?.cashback_threshold_amount || '0').toLocaleString('en-IN')})`}
                         >
                             <ReceiptIndianRupee className="w-5 h-5" />
                         </button>

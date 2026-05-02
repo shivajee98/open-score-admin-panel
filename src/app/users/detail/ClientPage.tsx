@@ -41,17 +41,17 @@ export default function UserDetailsPage() {
 
     // Filter Logic
     const filteredTransactions = (data?.transactions || []).filter((tx: any) => {
-        const matchesSearch = txSearch === '' || 
+        const matchesSearch = txSearch === '' ||
             tx.description?.toLowerCase().includes(txSearch.toLowerCase()) ||
             tx.source_type?.toLowerCase().includes(txSearch.toLowerCase()) ||
             tx.paid_to?.name?.toLowerCase().includes(txSearch.toLowerCase()) ||
             tx.paid_to?.mobile?.includes(txSearch);
 
-        const matchesRole = txRoleFilter === 'ALL' || 
-                           (txRoleFilter === 'SYSTEM' ? !tx.paid_to : tx.paid_to?.role === txRoleFilter);
-        
+        const matchesRole = txRoleFilter === 'ALL' ||
+            (txRoleFilter === 'SYSTEM' ? !tx.paid_to : tx.paid_to?.role === txRoleFilter);
+
         const matchesAmt = (txMinAmt === '' || parseFloat(tx.amount) >= parseFloat(txMinAmt)) &&
-                         (txMaxAmt === '' || parseFloat(tx.amount) <= parseFloat(txMaxAmt));
+            (txMaxAmt === '' || parseFloat(tx.amount) <= parseFloat(txMaxAmt));
 
         return matchesSearch && matchesRole && matchesAmt;
     });
@@ -61,7 +61,7 @@ export default function UserDetailsPage() {
 
     const handleExportCSV = () => {
         if (!data?.user || !data?.transactions) return;
-        
+
         const headers = ["ID", "Date", "Type", "Source", "Amount", "Description", "Interaction Name", "Interaction Mobile", "Interaction Role"];
         const rows = filteredTransactions.map((tx: any) => [
             tx.id,
@@ -209,7 +209,7 @@ export default function UserDetailsPage() {
 
     const openEditModal = () => {
         let decodedPin = user.visible_pin || '';
-        try { if (user.visible_pin) decodedPin = atob(user.visible_pin); } catch (e) {}
+        try { if (user.visible_pin) decodedPin = atob(user.visible_pin); } catch (e) { }
 
         setEditFormData({
             name: user.name || '',
@@ -300,9 +300,9 @@ export default function UserDetailsPage() {
                                     </span>
                                     <span className={cn(
                                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                                        user.role === 'MERCHANT' ? "bg-indigo-100 text-indigo-700" : 
-                                        user.role === 'STUDENT' ? "bg-purple-100 text-purple-700" : 
-                                        user.role === 'AGENT' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                                        user.role === 'MERCHANT' ? "bg-indigo-100 text-indigo-700" :
+                                            user.role === 'STUDENT' ? "bg-purple-100 text-purple-700" :
+                                                user.role === 'AGENT' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
                                     )}>
                                         {user.role}
                                     </span>
@@ -353,12 +353,12 @@ export default function UserDetailsPage() {
                                 <div className="mt-4 flex items-center justify-between">
                                     <div className={cn(
                                         "flex items-center gap-2 text-xs font-bold",
-                                        user.kyc_status === 'FULL_VERIFIED' ? "text-emerald-400" : 
-                                        user.kyc_status === 'FIELD_VERIFIED' ? "text-amber-400" : "text-slate-400 opacity-50"
+                                        user.kyc_status === 'FULL_VERIFIED' ? "text-emerald-400" :
+                                            user.kyc_status === 'FIELD_VERIFIED' ? "text-amber-400" : "text-slate-400 opacity-50"
                                     )}>
                                         {user.kyc_status === 'FULL_VERIFIED' ? <BadgeCheck className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                                        {user.kyc_status === 'FULL_VERIFIED' ? 'Verified Merchant' : 
-                                         user.kyc_status === 'FIELD_VERIFIED' ? 'Field Verified' : 'Pending KYC'}
+                                        {user.kyc_status === 'FULL_VERIFIED' ? 'Verified Merchant' :
+                                            user.kyc_status === 'FIELD_VERIFIED' ? 'Field Verified' : 'Pending KYC'}
                                     </div>
                                     <button
                                         onClick={openEditModal}
@@ -401,10 +401,10 @@ export default function UserDetailsPage() {
                                         <p className="text-sm font-bold text-slate-900">{user.business_address || 'Not Provided'}</p>
                                         <p className="text-xs text-slate-500 mt-1">{user.city ? `${user.city}, ` : ''}{user.state ? `${user.state} ` : ''}{user.pincode ? `- ${user.pincode}` : ''}</p>
                                         {(user.location_url || user.map_location_url) && (
-                                            <a 
-                                                href={user.location_url || user.map_location_url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
+                                            <a
+                                                href={user.location_url || user.map_location_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors uppercase tracking-wider"
                                             >
                                                 <ExternalLink size={10} /> View on Google Maps
@@ -832,9 +832,9 @@ export default function UserDetailsPage() {
                             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-wrap items-center gap-6">
                                 <div className="flex-1 min-w-[280px] relative">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input 
+                                    <input
                                         value={txSearch}
-                                        onChange={e => {setTxSearch(e.target.value); setTxPage(1);}}
+                                        onChange={e => { setTxSearch(e.target.value); setTxPage(1); }}
                                         placeholder="Search by name, ID or description..."
                                         className="w-full pl-12 pr-6 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-100 transition-all"
                                     />
@@ -842,9 +842,9 @@ export default function UserDetailsPage() {
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type:</label>
-                                        <select 
+                                        <select
                                             value={txRoleFilter}
-                                            onChange={e => {setTxRoleFilter(e.target.value); setTxPage(1);}}
+                                            onChange={e => { setTxRoleFilter(e.target.value); setTxPage(1); }}
                                             className="bg-slate-50 border-none rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 focus:ring-1 focus:ring-slate-100"
                                         >
                                             <option value="ALL">ALL ENTITIES</option>
@@ -856,17 +856,17 @@ export default function UserDetailsPage() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Min Amount:</label>
-                                        <input 
+                                        <input
                                             type="number"
                                             value={txMinAmt}
-                                            onChange={e => {setTxMinAmt(e.target.value); setTxPage(1);}}
+                                            onChange={e => { setTxMinAmt(e.target.value); setTxPage(1); }}
                                             className="w-24 bg-slate-50 border-none rounded-2xl px-4 py-3 text-[10px] font-black text-slate-900 focus:ring-1 focus:ring-slate-100"
                                             placeholder="₹"
                                         />
                                     </div>
                                     {(txSearch || txRoleFilter !== 'ALL' || txMinAmt) && (
-                                        <button 
-                                            onClick={() => {setTxSearch(''); setTxRoleFilter('ALL'); setTxMinAmt(''); setTxPage(1);}}
+                                        <button
+                                            onClick={() => { setTxSearch(''); setTxRoleFilter('ALL'); setTxMinAmt(''); setTxPage(1); }}
                                             className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 px-4 py-3 rounded-2xl transition-all"
                                         >
                                             Clear Trace
@@ -898,8 +898,8 @@ export default function UserDetailsPage() {
                                                         </div>
                                                         <div>
                                                             <p className="font-black text-slate-900 text-sm italic">
-                                                                {(tx.source_type === 'MAINTENANCE_CHARGE' && tx.description?.match(/^\[(.*?)\]/)) 
-                                                                    ? tx.description.match(/^\[(.*?)\]/)[1] 
+                                                                {(tx.source_type === 'MAINTENANCE_CHARGE' && tx.description?.match(/^\[(.*?)\]/))
+                                                                    ? tx.description.match(/^\[(.*?)\]/)[1]
                                                                     : tx.source_type.replace(/_/g, ' ')}
                                                             </p>
                                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter opacity-70">{tx.description?.replace(/^\[.*?\]\s*/, '')}</p>
