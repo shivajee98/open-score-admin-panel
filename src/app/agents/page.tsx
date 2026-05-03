@@ -822,7 +822,7 @@ export default function AgentsPage() {
                                     <div className="flex items-center gap-3">
                                         <span>Agent Details</span>
                                         {selectedIds.length > 0 && (
-                                            <div className="px-2.5 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black animate-in fade-in zoom-in duration-300 shadow-lg shadow-indigo-200 ring-2 ring-indigo-50">
+                                            <div className="px-2.5 py-1 bg-indigo-600 text-white text-[10px] font-black animate-in fade-in zoom-in duration-300 shadow-lg shadow-indigo-200 ring-2 ring-indigo-50">
                                                 {selectedIds.length} SELECTED
                                             </div>
                                         )}
@@ -1175,7 +1175,6 @@ export default function AgentsPage() {
                 </div>
             )}
 
-            {/* Footer */}
             <footer className="mt-12 py-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p className="text-slate-400 text-sm font-medium">© 2026 Admin Panel • MSME Loan Systems</p>
                 <div className="flex gap-8">
@@ -1184,6 +1183,43 @@ export default function AgentsPage() {
                     <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors text-sm font-medium">Help Center</a>
                 </div>
             </footer>
+
+            {/* Bulk Actions Bar */}
+            {selectedIds.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] animate-in slide-in-from-bottom-10 duration-500">
+                    <div className="bg-slate-900 text-white rounded-[2rem] px-8 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.4)] border border-white/10 flex items-center gap-8 backdrop-blur-xl">
+                        <div className="flex items-center gap-4 border-r border-white/10 pr-8">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-lg">
+                                {selectedIds.length}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest leading-none mb-1">Agents</p>
+                                <p className="text-sm font-black uppercase tracking-tight">Selected</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => {
+                                    if (confirm(`Send broadcast notification to ${selectedIds.length} agents?`)) {
+                                        toast.info("Notification engine coming soon");
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 hover:bg-white/10 rounded-xl transition-all text-xs font-black uppercase tracking-widest"
+                            >
+                                <Bell className="w-4 h-4" /> Notify
+                            </button>
+                            <button 
+                                onClick={() => setSelectedIds([])}
+                                className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+                            >
+                                <X className="w-4 h-4" /> Deselect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </AdminLayout>
     );
 }

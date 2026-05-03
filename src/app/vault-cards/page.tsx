@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { 
     Search, CreditCard, Clock, CheckCircle, XCircle, 
@@ -652,12 +652,12 @@ export default function VaultCardsPage() {
                                         </p>
                                         <div className="rounded-2xl overflow-hidden border-2 border-white shadow-xl bg-white aspect-[9/16] relative group">
                                             <img 
-                                                src={`${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${selectedRequest.payment_proof}`} 
+                                                src={getStorageUrl(selectedRequest.payment_proof) || ''} 
                                                 className="w-full h-full object-contain"
                                                 alt="Payment Proof"
                                             />
                                             <a 
-                                                href={`${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${selectedRequest.payment_proof}`} 
+                                                href={getStorageUrl(selectedRequest.payment_proof) || ''} 
                                                 target="_blank" 
                                                 className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]"
                                             >

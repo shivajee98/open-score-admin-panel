@@ -3,11 +3,17 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 // Trigger redeploy to bake in new API URL: https://api.msmeloan.sbs/api
 
-export const getStorageUrl = (path: string | null) => {
-    if (!path) return null;
+export const getStorageUrl = (path: string | null | undefined): string => {
+    if (!path) return '';
     if (path.startsWith('http')) return path;
-    const apiHost = BASE_URL.split('/api')[0];
-    return `${apiHost}${path.startsWith('/') ? '' : '/'}${path}`;
+    
+    // Normalize BASE_URL by removing trailing slashes and the /api suffix
+    const apiHost = BASE_URL.replace(/\/+$/, '').replace(/\/api$/, '');
+    
+    // Remove 'storage/' prefix if it exists to avoid duplication
+    const cleanPath = path.replace(/^storage\//, '').replace(/^\//, '');
+    
+    return `${apiHost}/storage/${cleanPath}`;
 };
 
 const getToken = async (): Promise<string | null> => {
