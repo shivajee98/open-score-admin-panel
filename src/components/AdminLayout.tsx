@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare, Phone, PhoneCall } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -107,6 +107,8 @@ export default function AdminLayout({ children, title }: { children: React.React
 
         // System & Support
         { label: 'Support Inbox', href: '/support/tickets', icon: <Ticket className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'Call Agents', href: '/call-agents', icon: <Phone className="w-5 h-5 text-emerald-400" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'Call Logs', href: '/call-logs', icon: <PhoneCall className="w-5 h-5 text-emerald-400" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Expense Limits', href: '/barring-settings', icon: <Archive className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Maintenance Mode', href: '/maintenance-settings', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Monitoring Alerts', href: '/monitoring', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },

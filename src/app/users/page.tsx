@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck, MessageSquare, Send, FileText, Wallet, IndianRupee } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, ShieldCheck, Filter, Calendar, Users as UsersIcon, ShieldAlert, ChevronDown, Database, BadgeCheck, MessageSquare, Send, FileText, Wallet, IndianRupee, Phone, PhoneOff } from 'lucide-react';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import VaultConfigModal from '@/components/VaultConfigModal';
@@ -90,6 +90,16 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
             alert(e.message || 'Failed to fetch PIN');
         } finally {
             setIsFetchingPin(false);
+        }
+    };
+
+    const handleToggleCall = async () => {
+        if (!confirm(`Are you sure you want to ${user.can_make_calls ? 'disable' : 'enable'} calls for this user?`)) return;
+        try {
+            await apiFetch(`/admin/users/${user.id}/toggle-call-feature`, { method: 'POST' });
+            reloadUsers();
+        } catch (e) {
+            alert('Failed to toggle call feature');
         }
     };
 
@@ -347,6 +357,16 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                             title="Configure Vault"
                         >
                             <ShieldAlert className="w-5 h-5" />
+                        </button>
+                    )}
+
+                    {isAdmin && (
+                        <button
+                            onClick={handleToggleCall}
+                            className={`p-2 rounded-lg transition-colors ${user.can_make_calls ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                            title={user.can_make_calls ? 'Disable Calls' : 'Enable Calls'}
+                        >
+                            {user.can_make_calls ? <Phone className="w-5 h-5" /> : <PhoneOff className="w-5 h-5" />}
                         </button>
                     )}
                 </div>
