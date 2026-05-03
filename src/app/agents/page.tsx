@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Filter, Eye, Trash2, CheckCircle, Ban, ChevronLeft, ChevronRight, Download, CheckSquare, X, Users, TrendingUp, Store, FileText, CreditCard, ArrowRight, ChevronDown, Database } from 'lucide-react';
+import { Search, Plus, Filter, Eye, Trash2, CheckCircle, Ban, ChevronLeft, ChevronRight, Download, CheckSquare, X, Users, TrendingUp, Store, FileText, CreditCard, ArrowRight, ChevronDown, Database, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
