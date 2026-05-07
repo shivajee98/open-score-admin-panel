@@ -26,6 +26,7 @@ interface Rule {
     target_type: 'ALL_USERS' | 'SPECIFIC_ROLES' | 'SPECIFIC_USERS';
     roles: string[] | null;
     user_ids: string[] | null;
+    users?: TargetedUser[];
     message: string;
     is_active: boolean;
     created_at: string;
@@ -66,6 +67,8 @@ export default function LateWithdrawalsPage() {
 
     // User search state
     const [userSearch, setUserSearch] = useState('');
+    const [minTurnover, setMinTurnover] = useState('');
+    const [minBalance, setMinBalance] = useState('');
     const [searchResults, setSearchResults] = useState<TargetedUser[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<TargetedUser[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -86,15 +89,23 @@ export default function LateWithdrawalsPage() {
         }
     };
 
-    const handleSearchUsers = async (val: string) => {
+    const handleSearchUsers = async (val: string, turnover?: string, balance?: string) => {
         setUserSearch(val);
-        if (val.length < 3) {
+        const searchVal = val;
+        const turnoverVal = turnover !== undefined ? turnover : minTurnover;
+        const balanceVal = balance !== undefined ? balance : minBalance;
+
+        if (searchVal.length < 3 && !turnoverVal && !balanceVal) {
             setSearchResults([]);
             return;
         }
         setIsSearching(true);
         try {
-            const data = await apiFetch(`/admin/users/search-for-rules?search=${val}`);
+            let url = `/admin/users/search-for-rules?search=${searchVal}`;
+            if (turnoverVal) url += `&min_turnover=${turnoverVal}`;
+            if (balanceVal) url += `&min_balance=${balanceVal}`;
+            
+            const data = await apiFetch(url);
             setSearchResults(data || []);
         } catch (error) {
             console.error('Search failed', error);
@@ -156,6 +167,8 @@ export default function LateWithdrawalsPage() {
         });
         setSelectedUsers([]);
         setUserSearch('');
+        setMinTurnover('');
+        setMinBalance('');
         setSearchResults([]);
     };
 
@@ -170,11 +183,14 @@ export default function LateWithdrawalsPage() {
             is_active: rule.is_active
         });
         
-        // If it has user_ids, we should ideally fetch their basic info
-        // For simplicity now, we just show IDs or you could add an endpoint to fetch user names
-        if (rule.user_ids && rule.user_ids.length > 0) {
-            // Placeholder: we'll just show IDs as selected
+        // Use the user details returned from the backend if available
+        if (rule.users && rule.users.length > 0) {
+            setSelectedUsers(rule.users);
+        } else if (rule.user_ids && rule.user_ids.length > 0) {
+            // Fallback to placeholder if backend hasn't been updated or failed to load
             setSelectedUsers(rule.user_ids.map(id => ({ id: Number(id), name: `User ID: ${id}`, mobile_number: '', role: '' })));
+        } else {
+            setSelectedUsers([]);
         }
         
         setIsModalOpen(true);
@@ -418,18 +434,43 @@ export default function LateWithdrawalsPage() {
                                     {/* User Search & Selection */}
                                     {formData.target_type === 'SPECIFIC_USERS' && (
                                         <div className="space-y-4 animate-in slide-in-from-top-2">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Search Users</label>
-                                                <div className="relative">
-                                                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                                    <input 
-                                                        type="text"
-                                                        value={userSearch}
-                                                        onChange={e => handleSearchUsers(e.target.value)}
-                                                        placeholder="Name or Mobile Number..."
-                                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-14 pr-6 py-4 font-bold text-slate-900 focus:outline-none focus:border-slate-900 transition-all"
-                                                    />
-                                                    {isSearching && <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 animate-spin" />}
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Search Users</label>
+                                                    <div className="relative">
+                                                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                                        <input 
+                                                            type="text"
+                                                            value={userSearch}
+                                                            onChange={e => handleSearchUsers(e.target.value)}
+                                                            placeholder="Name or Mobile Number..."
+                                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-14 pr-6 py-4 font-bold text-slate-900 focus:outline-none focus:border-slate-900 transition-all"
+                                                        />
+                                                        {isSearching && <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 animate-spin" />}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Min Daily Turnover</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={minTurnover}
+                                                            onChange={e => { setMinTurnover(e.target.value); handleSearchUsers(userSearch, e.target.value); }}
+                                                            placeholder="e.g. 5000"
+                                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-3 font-bold text-slate-900 focus:outline-none focus:border-slate-900 transition-all text-sm"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Min Wallet Balance</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={minBalance}
+                                                            onChange={e => { setMinBalance(e.target.value); handleSearchUsers(userSearch, undefined, e.target.value); }}
+                                                            placeholder="e.g. 1000"
+                                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-3 font-bold text-slate-900 focus:outline-none focus:border-slate-900 transition-all text-sm"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -470,7 +511,7 @@ export default function LateWithdrawalsPage() {
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedUsers.map(user => (
                                                         <span key={user.id} className="flex items-center gap-1.5 bg-rose-50 text-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-100">
-                                                            {user.name}
+                                                            {user.name} {user.role && <span className="opacity-60 text-[10px]">({user.role})</span>}
                                                             <X className="w-3.5 h-3.5 cursor-pointer hover:scale-125 transition-transform" onClick={() => toggleUser(user)} />
                                                         </span>
                                                     ))}

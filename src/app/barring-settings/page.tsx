@@ -79,7 +79,7 @@ export default function BarringSettings() {
     const [rules, setRules] = useState<BarringRule[]>([]);
     const [groupedTargets, setGroupedTargets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    
+
     // Wizard State
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [wizardStep, setWizardStep] = useState(1);
@@ -92,9 +92,9 @@ export default function BarringSettings() {
     const [userCategory, setUserCategory] = useState('CUSTOMER');
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [assignedUserIds, setAssignedUserIds] = useState<number[]>([]);
-    
+
     // New Barring Type State
-    const [ruleSide, setRuleSide] = useState('SENDER'); 
+    const [ruleSide, setRuleSide] = useState('SENDER');
     const [selectedLoanPlanId, setSelectedLoanPlanId] = useState<number | null>(null);
     const [dayNumber, setDayNumber] = useState<string>('0');
     const [minBalance, setMinBalance] = useState<string>('0');
@@ -122,7 +122,7 @@ export default function BarringSettings() {
     // Rule Definition State
     const [ruleForms, setRuleForms] = useState<any>({});
     const [expandedCats, setExpandedCats] = useState<string[]>([]);
-    
+
     // NEW: Per-Receiver-Sender Rules State
     // Format: { 'USER_123': { globalLimit: '1000', senderLimits: [{ senderId: 456, amount: '500' }] } }
     const [receiverSenderRules, setReceiverSenderRules] = useState<any>({});
@@ -130,7 +130,7 @@ export default function BarringSettings() {
     const [activeReceiverForSender, setActiveReceiverForSender] = useState<string | null>(null);
 
     const toggleCat = (name: string) => {
-        setExpandedCats(prev => 
+        setExpandedCats(prev =>
             prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
         );
     };
@@ -146,7 +146,7 @@ export default function BarringSettings() {
     // Rule Name for wizard
     const [ruleName, setRuleName] = useState('');
 
-    const categories = ['CUSTOMER', 'MERCHANT', 'STUDENT'];
+    const categories = ['CUSTOMER', 'MERCHANT', 'STUDENT', 'AGENT'];
 
     useEffect(() => {
         fetchRules();
@@ -167,14 +167,14 @@ export default function BarringSettings() {
         try {
             const data = await apiFetch('/admin/barring-rules');
             setRules(data);
-            
+
             // Phase 1: Group rules by individual target user
             const byTarget: any = {};
             data.forEach((rule: BarringRule) => {
-                const key = rule.target_type === 'ALL_USERS' 
-                    ? `ALL_${rule.user_category}` 
+                const key = rule.target_type === 'ALL_USERS'
+                    ? `ALL_${rule.user_category}`
                     : `USER_${rule.target_user_id}`;
-                
+
                 if (!byTarget[key]) {
                     byTarget[key] = {
                         target_type: rule.target_type,
@@ -194,11 +194,11 @@ export default function BarringSettings() {
                     .map((r: any) => `${r.rule_side}|${r.limit_type}|${r.limit_value}|${r.min_balance}|${r.day_number}|${r.business_nature}|${r.business_segment}|${r.loan_plan_id}|${r.is_total_cap}|${r.rule_name || ''}|${JSON.stringify(r.allowed_merchants || [])}`)
                     .sort()
                     .join('::');
-                
+
                 const mergeKey = group.target_type === 'ALL_USERS'
                     ? `ALL_${group.user_category}_${fingerprint}`
                     : `SPECIFIC_${fingerprint}`;
-                
+
                 if (!merged[mergeKey]) {
                     merged[mergeKey] = {
                         target_type: group.target_type,
@@ -212,7 +212,7 @@ export default function BarringSettings() {
                         updated_at: group.rules[0]?.updated_at,
                     };
                 }
-                
+
                 if (group.target_type === 'SPECIFIC_USER') {
                     merged[mergeKey].target_user_ids.push(group.target_user_id);
                     if (group.targetUser) {
@@ -228,7 +228,7 @@ export default function BarringSettings() {
                     merged[mergeKey].created_at = group.rules[0]?.created_at;
                 }
             });
-            
+
             setGroupedTargets(Object.values(merged));
         } catch (error) {
             toast.error("Failed to load rules");
@@ -281,7 +281,7 @@ export default function BarringSettings() {
 
     const handleSaveTieredRules = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Validate tiers for duplicates and valid numbers
         const daySet = new Set();
         for (const tier of tieredTiers) {
@@ -370,26 +370,26 @@ export default function BarringSettings() {
     };
 
     const filteredUsersList = targetableUsers.filter(user => {
-        const matchesSearch = !userFilters.search || 
+        const matchesSearch = !userFilters.search ||
             user.name?.toLowerCase().includes(userFilters.search.toLowerCase()) ||
             user.mobile_number?.includes(userFilters.search) ||
             user.business_name?.toLowerCase().includes(userFilters.search.toLowerCase());
-        
+
         // Force profile filtering for RECEIVER rules as requested
         const matchesProfile = ruleSide === 'SENDER' || selectedProfile === 'ALL' || user.role === selectedProfile;
-        
+
         return matchesSearch && matchesProfile;
     });
 
     // Separate search for Mapped Senders (Payers)
     const filteredSendersList = targetableUsers.filter(user => {
-        const matchesSearch = !senderSearch || 
+        const matchesSearch = !senderSearch ||
             user.name?.toLowerCase().includes(senderSearch.toLowerCase()) ||
             user.mobile_number?.includes(senderSearch) ||
             user.business_name?.toLowerCase().includes(senderSearch.toLowerCase());
-        
+
         const matchesProfile = selectedProfile === 'ALL' || user.role === selectedProfile;
-        
+
         return matchesSearch && matchesProfile;
     });
 
@@ -436,11 +436,11 @@ export default function BarringSettings() {
     const handleOpenWizardForEdit = (targetData: any) => {
         // Detect if this is a Tiered Capacity Rule Group 
         // Created via "Manage Capacity Settings" (percentage based global rules)
-        const isTieredCapacity = targetData.rules.length > 0 && 
-            targetData.rules.every((r: any) => 
-                r.rule_side === 'SENDER' && 
-                !r.business_nature && 
-                !r.business_segment && 
+        const isTieredCapacity = targetData.rules.length > 0 &&
+            targetData.rules.every((r: any) =>
+                r.rule_side === 'SENDER' &&
+                !r.business_nature &&
+                !r.business_segment &&
                 r.limit_type === 'PERCENTAGE_OF_WALLET'
             );
 
@@ -453,13 +453,13 @@ export default function BarringSettings() {
             setSelectedTieredLoanPlanId(targetData.rules[0].loan_plan_id || '');
             setTieredUserCategory(targetData.user_category || 'CUSTOMER');
             setTieredRuleName(targetData.rule_name || '');
-            
+
             if (targetData.target_type === 'SPECIFIC_USER') {
                 setSelectedTargetUserIds(targetData.target_user_ids || []);
             } else {
                 setSelectedTargetUserIds([]);
             }
-            
+
             setCapacityModal(true);
             return;
         }
@@ -472,7 +472,7 @@ export default function BarringSettings() {
             setSelectedUser(targetData.targetUsers?.[0] || null);
             setAssignedUserIds(targetData.target_user_ids || []);
         }
-        
+
         // Populate existing rules
         initEmptyRules();
         const firstRule = targetData.rules[0];
@@ -483,12 +483,12 @@ export default function BarringSettings() {
             setDayNumber(String(firstRule.day_number || '0'));
             setMinBalance(String(firstRule.min_balance || '0'));
             setMaxReceivePerUser(String(firstRule.max_receive_per_user || ''));
-            
+
             if (side === 'RECEIVER') {
                 const initialRSR: any = {};
                 const globalRule = targetData.rules.find((r: any) => !r.allowed_merchants || r.allowed_merchants.length === 0);
                 const senderRules = targetData.rules.filter((r: any) => r.allowed_merchants && r.allowed_merchants.length > 0);
-                
+
                 const ruleConfig = {
                     globalLimit: globalRule ? String(globalRule.max_receive_per_user || '') : '',
                     senderLimits: senderRules.map((r: any) => ({
@@ -503,7 +503,7 @@ export default function BarringSettings() {
                 if (targetData.target_type === 'ALL_USERS') {
                     initialRSR[`ALL_${targetData.user_category}`] = ruleConfig;
                 }
-                
+
                 setReceiverSenderRules(initialRSR);
             } else {
                 // Find if there's a total cap rule
@@ -531,7 +531,7 @@ export default function BarringSettings() {
         });
         setRuleForms(newForms);
         setExpandedCats(Array.from(new Set(expanded)));
-        
+
         setWizardStep(2);
         setSaveSuccess(false);
         setRuleName(targetData.rule_name || '');
@@ -553,11 +553,11 @@ export default function BarringSettings() {
 
     const handleDeleteTarget = async (targetData: any) => {
         const userCount = targetData.target_user_ids?.length || 0;
-        const msg = userCount > 1 
-            ? `Delete rules for ${userCount} users in this group?` 
+        const msg = userCount > 1
+            ? `Delete rules for ${userCount} users in this group?`
             : 'Are you sure you want to delete all rules for this target?';
         if (!confirm(msg)) return;
-        
+
         try {
             // Delete ALL rules across all users in this merged group
             const rulesToDelete = targetData.allRules || targetData.rules;
@@ -596,11 +596,11 @@ export default function BarringSettings() {
 
     const handleDuplicateGroup = (group: any) => {
         // Detect if tiered capacity
-        const isTiered = group.rules.length > 0 && 
-            group.rules.every((r: any) => 
-                r.rule_side === 'SENDER' && 
-                !r.business_nature && 
-                !r.business_segment && 
+        const isTiered = group.rules.length > 0 &&
+            group.rules.every((r: any) =>
+                r.rule_side === 'SENDER' &&
+                !r.business_nature &&
+                !r.business_segment &&
                 r.limit_type === 'PERCENTAGE_OF_WALLET'
             );
 
@@ -651,7 +651,7 @@ export default function BarringSettings() {
             toast.error("Please select at least one user");
             return;
         }
-        
+
         if (ruleSide === 'RECEIVER') {
             const initial: any = { ...receiverSenderRules };
             if (targetType === 'SPECIFIC_USER') {
@@ -734,16 +734,16 @@ export default function BarringSettings() {
                 // RECEIVER RULES - Refined group processing
                 const targets = Object.keys(receiverSenderRules);
                 const isSpecificUser = targetType === 'SPECIFIC_USER';
-                
+
                 if (isSpecificUser) {
                     // For Specific Users, we apply the same rule set to ALL selected users in one batch
                     // We take the rule configuration from the first selected user in receiverSenderRules
                     const firstTargetKey = targets[0];
                     if (!firstTargetKey) return;
-                    
+
                     const ruleSet = receiverSenderRules[firstTargetKey];
                     const targetRules: any[] = [];
-                    
+
                     if (ruleSet.globalLimit) {
                         targetRules.push({
                             rule_side: 'RECEIVER',
@@ -755,7 +755,7 @@ export default function BarringSettings() {
                             is_active: true
                         });
                     }
-                    
+
                     (ruleSet.senderLimits || []).forEach((sl: any) => {
                         if (sl.amount) {
                             targetRules.push({
@@ -789,7 +789,7 @@ export default function BarringSettings() {
                     for (const targetKey of targets) {
                         const ruleSet = receiverSenderRules[targetKey];
                         const targetRules: any[] = [];
-                        
+
                         if (ruleSet.globalLimit) {
                             targetRules.push({
                                 rule_side: 'RECEIVER',
@@ -801,7 +801,7 @@ export default function BarringSettings() {
                                 is_active: true
                             });
                         }
-                        
+
                         (ruleSet.senderLimits || []).forEach((sl: any) => {
                             if (sl.amount) {
                                 targetRules.push({
@@ -889,13 +889,13 @@ export default function BarringSettings() {
                         const userCount = group.target_user_ids?.length || 0;
                         const targetLabel = group.target_type === 'ALL_USERS'
                             ? `All ${group.user_category}s`
-                            : userCount > 1 
-                                ? `${userCount} Users` 
+                            : userCount > 1
+                                ? `${userCount} Users`
                                 : (group.targetUsers?.[0]?.name || 'Specific User');
 
                         return (
-                            <div 
-                                key={idx} 
+                            <div
+                                key={idx}
                                 className="bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-slate-300 transition-colors group/card"
                             >
                                 {/* Compact Header Row */}
@@ -948,23 +948,23 @@ export default function BarringSettings() {
                                 <div className="flex items-center justify-between px-3 py-1.5 border-t border-slate-100 bg-slate-50/30">
                                     <span className="text-[9px] text-slate-400">{formatDate(group.created_at)}</span>
                                     <div className="flex gap-1 opacity-50 group-hover/card:opacity-100 transition-opacity">
-                                        <button 
-                                            onClick={() => handleOpenWizardForEdit(group)} 
-                                            title="Edit" 
+                                        <button
+                                            onClick={() => handleOpenWizardForEdit(group)}
+                                            title="Edit"
                                             className="p-1 text-slate-400 hover:text-blue-600 rounded transition"
                                         >
                                             <Edit2 className="w-3 h-3" />
                                         </button>
-                                        <button 
-                                            onClick={() => handleDuplicateGroup(group)} 
-                                            title="Duplicate without users" 
+                                        <button
+                                            onClick={() => handleDuplicateGroup(group)}
+                                            title="Duplicate without users"
                                             className="p-1 text-slate-400 hover:text-violet-600 rounded transition"
                                         >
                                             <Copy className="w-3 h-3" />
                                         </button>
-                                        <button 
-                                            onClick={() => handleDeleteTarget(group)} 
-                                            title="Delete" 
+                                        <button
+                                            onClick={() => handleDeleteTarget(group)}
+                                            title="Delete"
                                             className="p-1 text-slate-400 hover:text-red-500 rounded transition"
                                         >
                                             <Trash2 className="w-3 h-3" />
@@ -980,7 +980,7 @@ export default function BarringSettings() {
             {/* WIZARD OVERLAY */}
             {isWizardOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-                    
+
                     {saveSuccess ? (
                         <div className="bg-white rounded-2xl p-10 flex flex-col items-center justify-center animate-in zoom-in shadow-2xl">
                             <CheckCircle className="w-20 h-20 text-green-500 mb-4 animate-bounce" />
@@ -1017,11 +1017,11 @@ export default function BarringSettings() {
                                         {/* Rule Name */}
                                         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                                             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Rule Name <span className="text-slate-400 font-medium normal-case">(optional, like a policy name)</span></label>
-                                            <input 
-                                                type="text" 
-                                                value={ruleName} 
+                                            <input
+                                                type="text"
+                                                value={ruleName}
                                                 onChange={(e) => setRuleName(e.target.value)}
-                                                placeholder="e.g. Student Daily Cap, Merchant Tier-B"
+                                                placeholder="e.g. Student Daily Cap, Agent Weekly Limit"
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-4 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder:font-medium placeholder:text-slate-300"
                                             />
                                         </div>
@@ -1030,14 +1030,14 @@ export default function BarringSettings() {
                                         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                                             <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">I want to set a limit for:</label>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div 
+                                                <div
                                                     onClick={() => setRuleSide('SENDER')}
                                                     className={`p-4 border-2 rounded-xl cursor-pointer transition ${ruleSide === 'SENDER' ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-white hover:border-blue-300'}`}
                                                 >
                                                     <div className="font-bold text-slate-800 mb-1">Sender (The Payer)</div>
                                                     <p className="text-[10px] text-slate-500">Limit how much a vendor/user can send</p>
                                                 </div>
-                                                <div 
+                                                <div
                                                     onClick={() => setRuleSide('RECEIVER')}
                                                     className={`p-4 border-2 rounded-xl cursor-pointer transition ${ruleSide === 'RECEIVER' ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 bg-white hover:border-emerald-300'}`}
                                                 >
@@ -1049,32 +1049,32 @@ export default function BarringSettings() {
 
                                         {ruleSide === 'SENDER' && (
                                             <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 space-y-4">
-                                                    <div>
-                                                        <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Rule Effective Day (Day 1, 2...):</label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">D</span>
-                                                            <input 
-                                                                type="number"
-                                                                className="w-full p-2.5 pl-7 bg-white border border-blue-200 rounded-lg outline-none font-bold text-sm text-slate-700 focus:ring-2 focus:ring-blue-500"
-                                                                placeholder="e.g. 1"
-                                                                value={dayNumber}
-                                                                onChange={(e) => setDayNumber(e.target.value)}
-                                                            />
-                                                        </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Rule Effective Day (Day 1, 2...):</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">D</span>
+                                                        <input
+                                                            type="number"
+                                                            className="w-full p-2.5 pl-7 bg-white border border-blue-200 rounded-lg outline-none font-bold text-sm text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                                            placeholder="e.g. 1"
+                                                            value={dayNumber}
+                                                            onChange={(e) => setDayNumber(e.target.value)}
+                                                        />
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Apply when Balance is below (Fallback):</label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                                            <input 
-                                                                type="number"
-                                                                className="w-full p-2.5 pl-7 bg-white border border-blue-200 rounded-lg outline-none font-bold text-sm text-slate-700 focus:ring-2 focus:ring-blue-500"
-                                                                placeholder="e.g. 10000"
-                                                                value={minBalance}
-                                                                onChange={(e) => setMinBalance(e.target.value)}
-                                                            />
-                                                        </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-black text-blue-600 uppercase mb-2">Apply when Balance is below (Fallback):</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            className="w-full p-2.5 pl-7 bg-white border border-blue-200 rounded-lg outline-none font-bold text-sm text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                                            placeholder="e.g. 10000"
+                                                            value={minBalance}
+                                                            onChange={(e) => setMinBalance(e.target.value)}
+                                                        />
                                                     </div>
+                                                </div>
                                                 <p className="text-[10px] text-slate-400 font-medium italic">*Leave Balance as 0 and Loan as "Any" to apply globally to the selected target.</p>
                                             </div>
                                         )}
@@ -1096,14 +1096,14 @@ export default function BarringSettings() {
                                         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                                             <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">Target {ruleSide === 'SENDER' ? 'Sender' : 'Receiver'}</label>
                                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                                <div 
+                                                <div
                                                     onClick={() => setTargetType('ALL_USERS')}
                                                     className={`p-4 border-2 rounded-xl cursor-pointer transition ${targetType === 'ALL_USERS' ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-white hover:border-blue-300'}`}
                                                 >
                                                     <div className="font-bold text-slate-800 mb-1">Group of Users</div>
                                                     <p className="text-xs text-slate-500">Apply to all users of a specific role</p>
                                                 </div>
-                                                <div 
+                                                <div
                                                     onClick={() => setTargetType('SPECIFIC_USER')}
                                                     className={`p-4 border-2 rounded-xl cursor-pointer transition ${targetType === 'SPECIFIC_USER' ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-white hover:border-blue-300'}`}
                                                 >
@@ -1114,7 +1114,7 @@ export default function BarringSettings() {
 
                                             {targetType === 'ALL_USERS' && (
                                                 <div className="animate-in fade-in slide-in-from-top-2">
-                                                    <select 
+                                                    <select
                                                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium"
                                                         value={userCategory}
                                                         onChange={(e) => setUserCategory(e.target.value)}
@@ -1131,7 +1131,7 @@ export default function BarringSettings() {
                                             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
                                                 {ruleSide === 'RECEIVER' && (
                                                     <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
-                                                        {['MERCHANT', 'CUSTOMER', 'STUDENT'].map(profile => (
+                                                        {['MERCHANT', 'CUSTOMER', 'STUDENT', 'AGENT'].map(profile => (
                                                             <button
                                                                 key={profile}
                                                                 type="button"
@@ -1145,8 +1145,8 @@ export default function BarringSettings() {
                                                 )}
                                                 <div className="relative">
                                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                                                    <input 
-                                                        type="text" 
+                                                    <input
+                                                        type="text"
                                                         className="w-full p-3 pl-10 bg-slate-100 border border-slate-200 rounded-xl outline-none font-medium text-sm focus:border-blue-500 focus:bg-white transition-all"
                                                         placeholder="Search user by name or mobile..."
                                                         value={userFilters.search}
@@ -1163,14 +1163,14 @@ export default function BarringSettings() {
                                                                 {assignedUserIds.map(id => {
                                                                     const u = targetableUsers.find(u => u.id === id);
                                                                     return (
-                                                                        <span 
-                                                                            key={id} 
+                                                                        <span
+                                                                            key={id}
                                                                             className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded-lg text-[10px] font-bold text-slate-700 group/chip"
                                                                         >
                                                                             {u?.name || `User #${id}`}
-                                                                            <button 
-                                                                                type="button" 
-                                                                                onClick={() => toggleUser(id)} 
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => toggleUser(id)}
                                                                                 className="text-slate-300 hover:text-red-500 transition-colors"
                                                                             >
                                                                                 <X className="w-3 h-3" />
@@ -1214,8 +1214,8 @@ export default function BarringSettings() {
                                                             <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Fetching users...</div>
                                                         ) : filteredUsersList.length > 0 ? (
                                                             filteredUsersList.map(user => (
-                                                                <div 
-                                                                    key={user.id} 
+                                                                <div
+                                                                    key={user.id}
                                                                     onClick={() => toggleUser(user.id)}
                                                                     className={`p-3 flex items-center justify-between cursor-pointer rounded-xl transition-all ${assignedUserIds.includes(user.id) ? 'bg-blue-50/80 border-blue-100 shadow-sm' : 'hover:bg-white bg-transparent border-transparent'}`}
                                                                 >
@@ -1252,8 +1252,8 @@ export default function BarringSettings() {
                                                 {ruleSide === 'SENDER' ? 'Define Category Limits' : 'Define Receiving Limits'}
                                             </h2>
                                             <p className="text-slate-500 mt-1">
-                                                {ruleSide === 'SENDER' 
-                                                    ? 'Set specific limits for transactions made to different business categories.' 
+                                                {ruleSide === 'SENDER'
+                                                    ? 'Set specific limits for transactions made to different business categories.'
                                                     : 'Set specific limits for how much this receiver can get from one sender per category.'}
                                                 If a category is left disabled, <strong className="text-green-600">no limits will apply</strong> for that category.
                                             </p>
@@ -1274,9 +1274,9 @@ export default function BarringSettings() {
                                                     </div>
                                                     <div className="flex items-center gap-4">
                                                         <label className="relative inline-flex items-center cursor-pointer">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                className="sr-only peer" 
+                                                            <input
+                                                                type="checkbox"
+                                                                className="sr-only peer"
                                                                 checked={isTotalCapEnabled}
                                                                 onChange={(e) => setIsTotalCapEnabled(e.target.checked)}
                                                             />
@@ -1285,7 +1285,7 @@ export default function BarringSettings() {
                                                         {isTotalCapEnabled && (
                                                             <div className="relative animate-in zoom-in-95 duration-200">
                                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-bold">₹</span>
-                                                                <input 
+                                                                <input
                                                                     type="number"
                                                                     className="w-32 p-2.5 pl-7 bg-white/10 border border-white/20 rounded-xl outline-none font-black text-sm text-white focus:bg-white/20 transition-all placeholder:text-white/40"
                                                                     placeholder="Limit"
@@ -1311,12 +1311,12 @@ export default function BarringSettings() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         <div className="flex items-center gap-6">
                                                             <label className="relative inline-flex items-center cursor-pointer">
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    className="sr-only peer" 
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="sr-only peer"
                                                                     checked={ruleForms['null:null']?.enabled || false}
                                                                     onChange={(e) => {
                                                                         setRuleForms({
@@ -1330,7 +1330,7 @@ export default function BarringSettings() {
 
                                                             {ruleForms['null:null']?.enabled && (
                                                                 <div className="flex gap-2 animate-in zoom-in-95 duration-200">
-                                                                    <select 
+                                                                    <select
                                                                         className="p-2.5 border border-blue-200 bg-white rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
                                                                         value={ruleForms['null:null'].limit_type}
                                                                         onChange={(e) => setRuleForms({ ...ruleForms, ['null:null']: { ...ruleForms['null:null'], limit_type: e.target.value } })}
@@ -1338,7 +1338,7 @@ export default function BarringSettings() {
                                                                         <option value="FLAT_AMOUNT">Flat ₹</option>
                                                                         <option value="PERCENTAGE_OF_WALLET">% Wallet</option>
                                                                     </select>
-                                                                    <input 
+                                                                    <input
                                                                         type="number"
                                                                         className="p-2.5 border border-blue-200 bg-white rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 w-24"
                                                                         placeholder="Amount"
@@ -1377,7 +1377,7 @@ export default function BarringSettings() {
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                
+
                                                                 <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
                                                                     {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                                                                 </div>
@@ -1394,9 +1394,9 @@ export default function BarringSettings() {
                                                                         </div>
                                                                         <div className="flex items-center gap-4">
                                                                             <label className="relative inline-flex items-center cursor-pointer">
-                                                                                <input 
-                                                                                    type="checkbox" 
-                                                                                    className="sr-only peer" 
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    className="sr-only peer"
                                                                                     checked={isParentEnabled}
                                                                                     onChange={(e) => {
                                                                                         setRuleForms({
@@ -1409,11 +1409,11 @@ export default function BarringSettings() {
                                                                             </label>
                                                                             {isParentEnabled && (
                                                                                 <div className="flex gap-2">
-                                                                                    <select className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[parentKey].limit_type} onChange={(e) => setRuleForms({...ruleForms, [parentKey]: {...ruleForms[parentKey], limit_type: e.target.value}})}>
+                                                                                    <select className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[parentKey].limit_type} onChange={(e) => setRuleForms({ ...ruleForms, [parentKey]: { ...ruleForms[parentKey], limit_type: e.target.value } })}>
                                                                                         <option value="FLAT_AMOUNT">₹</option>
                                                                                         <option value="PERCENTAGE_OF_WALLET">%</option>
                                                                                     </select>
-                                                                                    <input type="number" className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[parentKey].limit_value} onChange={(e) => setRuleForms({...ruleForms, [parentKey]: {...ruleForms[parentKey], limit_value: e.target.value}})} />
+                                                                                    <input type="number" className="p-1.5 border border-blue-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[parentKey].limit_value} onChange={(e) => setRuleForms({ ...ruleForms, [parentKey]: { ...ruleForms[parentKey], limit_value: e.target.value } })} />
                                                                                 </div>
                                                                             )}
                                                                         </div>
@@ -1422,15 +1422,15 @@ export default function BarringSettings() {
                                                                     {cat.subcategories.map(sub => {
                                                                         const subKey = `${cat.name}:${sub}`;
                                                                         const isSubEnabled = ruleForms[subKey]?.enabled || false;
-                                                                        
+
                                                                         return (
                                                                             <div key={sub} className={`p-4 flex items-center justify-between pl-16 hover:bg-white transition-colors ${isSubEnabled ? 'bg-emerald-50/10' : ''}`}>
                                                                                 <div className="font-medium text-slate-700 text-sm">{sub}</div>
                                                                                 <div className="flex items-center gap-4">
                                                                                     <label className="relative inline-flex items-center cursor-pointer">
-                                                                                        <input 
-                                                                                            type="checkbox" 
-                                                                                            className="sr-only peer" 
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            className="sr-only peer"
                                                                                             checked={isSubEnabled}
                                                                                             onChange={(e) => {
                                                                                                 setRuleForms({
@@ -1443,11 +1443,11 @@ export default function BarringSettings() {
                                                                                     </label>
                                                                                     {isSubEnabled && (
                                                                                         <div className="flex gap-2 animate-in zoom-in-95 duration-200">
-                                                                                            <select className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[subKey].limit_type} onChange={(e) => setRuleForms({...ruleForms, [subKey]: {...ruleForms[subKey], limit_type: e.target.value}})}>
+                                                                                            <select className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none" value={ruleForms[subKey].limit_type} onChange={(e) => setRuleForms({ ...ruleForms, [subKey]: { ...ruleForms[subKey], limit_type: e.target.value } })}>
                                                                                                 <option value="FLAT_AMOUNT">₹</option>
                                                                                                 <option value="PERCENTAGE_OF_WALLET">%</option>
                                                                                             </select>
-                                                                                            <input type="number" className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[subKey].limit_value} onChange={(e) => setRuleForms({...ruleForms, [subKey]: {...ruleForms[subKey], limit_value: e.target.value}})} />
+                                                                                            <input type="number" className="p-1.5 border border-emerald-200 bg-white rounded-lg text-xs outline-none w-20 font-bold" value={ruleForms[subKey].limit_value} onChange={(e) => setRuleForms({ ...ruleForms, [subKey]: { ...ruleForms[subKey], limit_value: e.target.value } })} />
                                                                                         </div>
                                                                                     )}
                                                                                 </div>
@@ -1486,13 +1486,13 @@ export default function BarringSettings() {
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                    
+
                                                                     <div className="flex items-center gap-4">
                                                                         <div className="text-right">
                                                                             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Default Receiving Limit (from all)</p>
                                                                             <div className="relative">
                                                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                                                                                <input 
+                                                                                <input
                                                                                     type="number"
                                                                                     className="p-2.5 pl-7 bg-white border border-slate-200 rounded-xl text-sm font-black outline-none focus:ring-2 focus:ring-emerald-500 w-32"
                                                                                     placeholder="Limit"
@@ -1515,7 +1515,7 @@ export default function BarringSettings() {
                                                                 <div className="p-6 space-y-4">
                                                                     <div className="flex items-center justify-between">
                                                                         <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Sender-Specific Exceptions ({ruleSet.senderLimits.length})</h4>
-                                                                        <button 
+                                                                        <button
                                                                             onClick={() => {
                                                                                 setActiveReceiverForSender(key);
                                                                                 setIsSenderSelectionOpen(true);
@@ -1548,7 +1548,7 @@ export default function BarringSettings() {
                                                                                         <div className="flex items-center gap-3">
                                                                                             <div className="relative">
                                                                                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">₹</span>
-                                                                                                <input 
+                                                                                                <input
                                                                                                     type="number"
                                                                                                     className="p-1.5 pl-5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 w-20"
                                                                                                     value={sr.amount}
@@ -1566,7 +1566,7 @@ export default function BarringSettings() {
                                                                                                     }}
                                                                                                 />
                                                                                             </div>
-                                                                                            <button 
+                                                                                            <button
                                                                                                 onClick={() => {
                                                                                                     setReceiverSenderRules((prev: any) => {
                                                                                                         const currentRuleSet = prev[key] || { globalLimit: '', senderLimits: [] };
@@ -1609,7 +1609,7 @@ export default function BarringSettings() {
                                         <ArrowLeft className="w-4 h-4" /> Back
                                     </button>
                                 )}
-                                
+
                                 <div className="flex flex-col items-end gap-3">
                                     {saveError && (
                                         <div className="text-red-500 text-xs font-bold bg-red-50 border border-red-100 px-4 py-2 rounded-xl flex items-center gap-2 animate-in slide-in-from-right-2">
@@ -1621,8 +1621,8 @@ export default function BarringSettings() {
                                             Continue <ArrowRight className="w-4 h-4" />
                                         </button>
                                     ) : (
-                                        <button 
-                                            onClick={handleSaveRules} 
+                                        <button
+                                            onClick={handleSaveRules}
                                             disabled={isSaving}
                                             className="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-green-700 shadow-lg border border-green-500 transition disabled:opacity-50"
                                         >
@@ -1641,12 +1641,12 @@ export default function BarringSettings() {
                     <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
                             <div>
-                                 <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
-                                     <Clock size={22} className="text-emerald-600" /> Day-Wise Tiered Rules
-                                 </h3>
-                                 <p className="text-sm text-slate-500 mt-1">Restrict spending based on Rule Day (Day 1 = Assignment Date) and carry-over unused limits.</p>
+                                <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
+                                    <Clock size={22} className="text-emerald-600" /> Day-Wise Tiered Rules
+                                </h3>
+                                <p className="text-sm text-slate-500 mt-1">Restrict spending based on Rule Day (Day 1 = Assignment Date) and carry-over unused limits.</p>
                             </div>
-                            <button onClick={() => setCapacityModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X size={20}/></button>
+                            <button onClick={() => setCapacityModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-100"><X size={20} /></button>
                         </div>
 
                         <div className="p-6 overflow-y-auto space-y-8 flex-1">
@@ -1654,22 +1654,22 @@ export default function BarringSettings() {
                                 {/* Rule Name */}
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Rule Name <span className="text-slate-400 font-medium normal-case">(optional, like a policy name)</span></label>
-                                    <input 
-                                        type="text" 
-                                        value={tieredRuleName} 
+                                    <input
+                                        type="text"
+                                        value={tieredRuleName}
                                         onChange={(e) => setTieredRuleName(e.target.value)}
-                                        placeholder="e.g. Conservative Spend Policy, Student Tier A"
+                                        placeholder="e.g. Conservative Spend Policy, Agent Tier A"
                                         className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all placeholder:font-medium placeholder:text-slate-300"
                                     />
                                 </div>
 
                                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Configure Rule Parameters</h4>
-                                
+
                                 <div className="grid grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Target Role</label>
-                                        <select 
-                                            value={tieredUserCategory} 
+                                        <select
+                                            value={tieredUserCategory}
                                             onChange={(e) => setTieredUserCategory(e.target.value)}
                                             className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-3 px-4 font-bold text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
                                         >
@@ -1681,8 +1681,8 @@ export default function BarringSettings() {
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Select Loan Plan</label>
-                                        <select 
-                                            value={selectedTieredLoanPlanId} 
+                                        <select
+                                            value={selectedTieredLoanPlanId}
                                             onChange={(e) => setSelectedTieredLoanPlanId(e.target.value)}
                                             className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-3 px-4 font-bold text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
                                         >
@@ -1698,8 +1698,8 @@ export default function BarringSettings() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Defined Tiers</h4>
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             onClick={addTieredTier}
                                             className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1 hover:text-emerald-700"
                                         >
@@ -1742,8 +1742,8 @@ export default function BarringSettings() {
                                                     </div>
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <button 
-                                                        type="button" 
+                                                    <button
+                                                        type="button"
                                                         onClick={() => removeTieredTier(idx)}
                                                         disabled={tieredTiers.length === 1}
                                                         className="w-full bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-0"
@@ -1776,7 +1776,7 @@ export default function BarringSettings() {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                         <input
@@ -1793,7 +1793,7 @@ export default function BarringSettings() {
                                             <div className="p-8 text-center text-slate-400 font-bold animate-pulse">Loading users...</div>
                                         ) : filteredUsersList.length > 0 ? (
                                             filteredUsersList.map(user => (
-                                                <div 
+                                                <div
                                                     key={user.id}
                                                     onClick={() => toggleTargetUser(user.id)}
                                                     className={`p-3 flex items-center justify-between cursor-pointer rounded-xl transition-all ${selectedTargetUserIds.includes(user.id) ? 'bg-emerald-50 border border-emerald-100' : 'hover:bg-white border border-transparent'}`}
@@ -1825,8 +1825,8 @@ export default function BarringSettings() {
                                                 <span className="text-[10px] font-black text-emerald-600 uppercase">
                                                     {selectedTargetUserIds.length} Users Selected
                                                 </span>
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     onClick={() => setSelectedTargetUserIds([])}
                                                     className="text-[10px] font-black text-red-500 uppercase hover:underline"
                                                 >
@@ -1839,8 +1839,8 @@ export default function BarringSettings() {
                                                     return (
                                                         <span key={uid} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-md border border-emerald-100">
                                                             {user?.name || `#${uid}`}
-                                                            <button 
-                                                                type="button" 
+                                                            <button
+                                                                type="button"
                                                                 onClick={(e) => { e.stopPropagation(); setSelectedTargetUserIds(prev => prev.filter(id => id !== uid)); }}
                                                                 className="text-emerald-400 hover:text-red-500 transition"
                                                             >
@@ -1876,7 +1876,7 @@ export default function BarringSettings() {
                                 <h3 className="text-lg font-bold text-slate-800">Select Senders</h3>
                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Map specific users to this receiver</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsSenderSelectionOpen(false)}
                                 className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
                             >
@@ -1888,8 +1888,8 @@ export default function BarringSettings() {
                         <div className="p-4 bg-white border-b border-slate-100 space-y-3">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     className="w-full p-2.5 pl-9 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm focus:border-blue-500 focus:bg-white transition-all"
                                     placeholder="Search by name, mobile, or business..."
                                     value={senderSearch}
@@ -1899,7 +1899,7 @@ export default function BarringSettings() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <div className="flex gap-2">
-                                    {['ALL', 'MERCHANT', 'CUSTOMER', 'STUDENT'].map(role => (
+                                    {['ALL', 'MERCHANT', 'CUSTOMER', 'STUDENT', 'AGENT'].map(role => (
                                         <button
                                             key={role}
                                             onClick={() => setSelectedProfile(role)}
@@ -1910,19 +1910,19 @@ export default function BarringSettings() {
                                     ))}
                                 </div>
                                 <div className="flex gap-3">
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             if (!activeReceiverForSender) return;
                                             setReceiverSenderRules((prev: any) => {
                                                 const currentRuleSet = prev[activeReceiverForSender];
                                                 const currentLimits = [...currentRuleSet.senderLimits];
-                                                
+
                                                 filteredSendersList.forEach(u => {
                                                     if (!currentLimits.find(sl => sl.senderId === u.id)) {
                                                         currentLimits.push({ senderId: u.id, amount: '' });
                                                     }
                                                 });
-                                                
+
                                                 return {
                                                     ...prev,
                                                     [activeReceiverForSender]: { ...currentRuleSet, senderLimits: currentLimits }
@@ -1933,7 +1933,7 @@ export default function BarringSettings() {
                                     >
                                         Select All
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             if (!activeReceiverForSender) return;
                                             setReceiverSenderRules((prev: any) => {
@@ -1961,16 +1961,16 @@ export default function BarringSettings() {
                             {filteredSendersList.length > 0 ? (
                                 filteredSendersList.map(user => {
                                     const isSelected = activeReceiverForSender && receiverSenderRules[activeReceiverForSender]?.senderLimits?.some((sl: any) => sl.senderId === user.id);
-                                    
+
                                     return (
-                                        <div 
-                                            key={user.id} 
+                                        <div
+                                            key={user.id}
                                             onClick={() => {
                                                 if (!activeReceiverForSender) return;
                                                 setReceiverSenderRules((prev: any) => {
                                                     const currentRuleSet = prev[activeReceiverForSender];
                                                     const exists = currentRuleSet.senderLimits.find((sl: any) => sl.senderId === user.id);
-                                                    
+
                                                     let updatedLimits;
                                                     if (exists) {
                                                         updatedLimits = currentRuleSet.senderLimits.filter((sl: any) => sl.senderId !== user.id);
@@ -2013,7 +2013,7 @@ export default function BarringSettings() {
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                 {activeReceiverForSender && receiverSenderRules[activeReceiverForSender]?.senderLimits ? receiverSenderRules[activeReceiverForSender].senderLimits.length : 0} Selected
                             </span>
-                            <button 
+                            <button
                                 onClick={() => setIsSenderSelectionOpen(false)}
                                 className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition"
                             >

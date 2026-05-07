@@ -7,7 +7,7 @@ import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar, ChevronDown, Database, CheckSquare } from 'lucide-react';
+import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar, ChevronDown, Database, CheckSquare, Phone } from 'lucide-react';
 
 interface SubUser {
     id: number;
@@ -45,6 +45,262 @@ const normalizeKycStatus = (status?: string): 'approved' | 'pending' | 'rejected
         return normalized as 'approved' | 'pending' | 'rejected';
     }
     return undefined;
+};
+
+const SubUserRow = ({ 
+    subUser, 
+    selectedIds, 
+    toggleSelect, 
+    handleEditSubUser, 
+    setSelectedSubUser, 
+    fetchSubUsers, 
+    handleKycAction, 
+    creditAmount, 
+    setCreditAmount, 
+    handleAddCredit 
+}: any) => {
+    const [supportNumber, setSupportNumber] = useState(subUser.support_number ?? '');
+    const [isSavingSupport, setIsSavingSupport] = useState(false);
+
+    useEffect(() => {
+        setSupportNumber(subUser.support_number ?? '');
+    }, [subUser.support_number]);
+
+    const handleSaveSupportNumber = async () => {
+        const isValidLength = supportNumber.length === 10 || (supportNumber.length === 11 && supportNumber.startsWith('0'));
+        if (supportNumber && !isValidLength) {
+            toast.error('Support number must be 10 digits or 11 digits starting with 0');
+            return;
+        }
+        setIsSavingSupport(true);
+        try {
+            await apiFetch(`/admin/sub-users/${subUser.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ support_number: supportNumber || null })
+            });
+            toast.success('Support number updated!');
+            fetchSubUsers();
+        } catch (e) {
+            toast.error('Error updating support number');
+        } finally {
+            setIsSavingSupport(false);
+        }
+    };
+
+    const normalizedKycStatus = subUser.kyc_verification?.status?.trim().toLowerCase();
+    const showPendingDot = normalizedKycStatus === 'pending';
+
+    return (
+        <tr className={cn(
+            "hover:bg-slate-50/80 transition-colors group",
+            selectedIds.includes(subUser.id) && "bg-blue-50/30"
+        )}>
+            <td className="p-6 pl-8">
+                <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    checked={selectedIds.includes(subUser.id)}
+                    onChange={() => toggleSelect(subUser.id)}
+                />
+            </td>
+            <td className="p-6">
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm border-2 border-indigo-100 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                            {subUser.name[0]}
+                        </div>
+                        {showPendingDot && (
+                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
+                        )}
+                    </div>
+                    <div>
+                        <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
+                        <div className="flex flex-col gap-1 mt-1">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                <UsersIcon className="w-3 h-3 text-blue-500" />
+                                Agent #{subUser.id} • {subUser.mobile_number}
+                            </div>
+                            {subUser.pincode && (
+                                <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded-md">
+                                    <Calendar className="w-3 h-3" />
+                                    Postal PIN: {subUser.pincode}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td className="p-6">
+                {normalizedKycStatus === 'approved' ? (
+                    <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Approved</span>
+                ) : normalizedKycStatus === 'pending' ? (
+                    <div className="flex flex-col gap-2 items-start">
+                        <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pending</span>
+                        <div className="flex gap-1">
+                            <button onClick={() => handleKycAction(subUser.id, 'approve')} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 font-bold">Approve</button>
+                            <button onClick={() => handleKycAction(subUser.id, 'reject')} className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded hover:bg-rose-600 font-bold">Reject</button>
+                        </div>
+                    </div>
+                ) : normalizedKycStatus === 'rejected' ? (
+                    <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Rejected / Wait</span>
+                ) : (
+                    <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Not Submitted</span>
+                )}
+            </td>
+            <td className="p-6">
+                <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
+                    {subUser.referral_code}
+                </span>
+            </td>
+            <td className="p-6">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Vendors:</span>
+                        <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{subUser.vendors_count || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Agents:</span>
+                        <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">{subUser.agents_count || 0}</span>
+                    </div>
+                </div>
+            </td>
+            <td className="p-6">
+                <div className="flex items-center gap-2">
+                    <span className="font-black text-slate-900">₹{(subUser.credit_balance ?? 0).toLocaleString()}</span>
+                    <span className="text-slate-300">/</span>
+                    <span className="text-xs font-bold text-slate-400">₹{(subUser.credit_limit ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <input
+                        type="number"
+                        placeholder="Add..."
+                        className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={creditAmount}
+                        onChange={(e) => {
+                            setSelectedSubUser(subUser);
+                            setCreditAmount(e.target.value);
+                        }}
+                    />
+                    <button
+                        onClick={() => handleAddCredit(subUser.id)}
+                        className="p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shadow-md"
+                        title="Add Credit"
+                    >
+                        <Plus size={14} />
+                    </button>
+                </div>
+            </td>
+            <td className="p-6">
+                <div className="flex flex-col gap-1">
+                    <span className="font-black text-emerald-600 text-sm">₹{(subUser.admin_loan_commission ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase">(Disburse)</span></span>
+                    <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
+                </div>
+            </td>
+            <td className="p-6">
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center gap-2 border-2 border-slate-50 rounded-xl p-1.5 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+                            <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 shrink-0">
+                                <Phone size={14} />
+                            </div>
+                            <input
+                                type="text"
+                                maxLength={11}
+                                placeholder="Support No"
+                                className="w-full bg-transparent border-none outline-none text-xs font-black text-slate-900 placeholder:text-slate-300 p-0"
+                                value={supportNumber}
+                                onChange={(e) => setSupportNumber(e.target.value)}
+                            />
+                            <button
+                                className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+                                    isSavingSupport ? "bg-slate-100 text-slate-400 cursor-wait" : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200"
+                                )}
+                                onClick={handleSaveSupportNumber}
+                                disabled={isSavingSupport}
+                                title="Update Support Number"
+                            >
+                                <ArrowRight size={14} className={cn(isSavingSupport && "animate-pulse")} />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2 px-1">
+                            <button 
+                                onClick={async () => {
+                                    setIsSavingSupport(true);
+                                    try {
+                                        await apiFetch(`/admin/sub-users/${subUser.id}`, {
+                                            method: 'PUT',
+                                            body: JSON.stringify({ show_support: !subUser.show_support })
+                                        });
+                                        toast.success(`Support ${!subUser.show_support ? 'Enabled' : 'Disabled'}`);
+                                        fetchSubUsers();
+                                    } catch (e) {
+                                        toast.error('Failed to toggle support');
+                                    } finally {
+                                        setIsSavingSupport(false);
+                                    }
+                                }}
+                                className={cn(
+                                    "text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md transition-all",
+                                    subUser.show_support ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-200"
+                                )}
+                            >
+                                {subUser.show_support ? 'Visible' : 'Hidden'}
+                            </button>
+                        </div>
+                    </div>
+            </td>
+            <td className="p-6 text-center">
+                <div className="flex flex-col">
+                    <span className="font-mono font-black text-emerald-600 text-sm">₹{parseFloat((subUser as any).available_earnings || '0').toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Ready to Transfer</span>
+                </div>
+            </td>
+            <td className="p-6 text-center">
+                <div className="flex flex-col">
+                    <span className="font-mono font-black text-amber-600 text-sm">₹{parseFloat((subUser as any).upcoming_earnings || '0').toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Upcoming Earning</span>
+                </div>
+            </td>
+            <td className="p-6 pr-8 text-right">
+                <div className="flex justify-end gap-2 flex-wrap">
+                    {subUser.kyc_verification?.status?.trim().toLowerCase() === 'approved' && (
+                        <button
+                            onClick={() => handleKycAction(subUser.id, 're_kyc')}
+                            className="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all border border-amber-100 shadow-sm"
+                            title="Request Re-KYC"
+                        >
+                            <UserPlus size={18} />
+                        </button>
+                    )}
+                    <button
+                        onClick={() => handleEditSubUser(subUser)}
+                        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all border border-blue-100 shadow-sm"
+                        title="Edit Details"
+                    >
+                        <Shield size={18} />
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (confirm('Are you sure you want to delete this sub-user? This action cannot be undone.')) {
+                                try {
+                                    await apiFetch(`/admin/sub-users/${subUser.id}`, { method: 'DELETE' });
+                                    toast.success('Sub-user deleted');
+                                    fetchSubUsers();
+                                } catch (e) {
+                                    toast.error('Failed to delete sub-user');
+                                }
+                            }
+                        }}
+                        className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100 shadow-sm"
+                        title="Delete Sub-User"
+                    >
+                        <Plus size={18} className="rotate-45" />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
 };
 
 export default function SubUsersPage() {
@@ -512,20 +768,21 @@ export default function SubUsersPage() {
                         </div>
 
                         <div className="relative flex-1 max-w-[200px]">
-                            <input
-                                type="text"
-                                maxLength={10}
-                                placeholder="10 Digit Support Number"
-                                className="w-full pl-6 pr-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-sm font-black text-white placeholder:text-white/40 outline-none focus:bg-white/20 focus:scale-[1.02] transition-all"
-                                value={formData.bulk_support_number || ''}
-                                onChange={(e) => setFormData((f: any) => ({ ...f, bulk_support_number: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                            />
+                                <input
+                                    type="text"
+                                    maxLength={11}
+                                    placeholder="10 or 11 Digit Support Number"
+                                    className="w-full pl-6 pr-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-sm font-black text-white placeholder:text-white/40 outline-none focus:bg-white/20 focus:scale-[1.02] transition-all"
+                                    value={formData.bulk_support_number || ''}
+                                    onChange={(e) => setFormData((f: any) => ({ ...f, bulk_support_number: e.target.value.replace(/\D/g, '').slice(0, 11) }))}
+                                />
                         </div>
 
                         <button
                             onClick={async () => {
-                                if (!formData.bulk_support_number || formData.bulk_support_number.length !== 10) {
-                                    toast.error('Please enter a valid 10-digit support number');
+                                const isValid = formData.bulk_support_number && (formData.bulk_support_number.length === 10 || (formData.bulk_support_number.length === 11 && formData.bulk_support_number.startsWith('0')));
+                                if (!isValid) {
+                                    toast.error('Support number must be 10 digits or 11 digits starting with 0');
                                     return;
                                 }
                                 try {
@@ -761,6 +1018,7 @@ export default function SubUsersPage() {
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Child Accounts</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
+                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Support</th>
                                     <th className="p-6 text-xs font-bold text-emerald-500 uppercase tracking-widest text-center">Available</th>
                                     <th className="p-6 text-xs font-bold text-amber-500 uppercase tracking-widest text-center">Upcoming</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
@@ -769,172 +1027,26 @@ export default function SubUsersPage() {
                             <tbody className="divide-y divide-slate-100">
                                 {subUsers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
+                                        <td colSpan={11} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
                                             No agents created in the system yet.
                                         </td>
                                     </tr>
                                 ) : (
-                                    subUsers.map((subUser) => {
-                                        const normalizedKycStatus = normalizeKycStatus(subUser.kyc_verification?.status);
-                                        const showPendingDot = normalizedKycStatus === 'pending';
-                                        return (
-                                            <tr key={subUser.id} className="hover:bg-slate-50/80 transition-colors group">
-                                                <td className="p-6 pl-8">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                        checked={selectedIds.includes(subUser.id)}
-                                                        onChange={() => toggleSelect(subUser.id)}
-                                                    />
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="relative">
-                                                            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm border-2 border-indigo-100 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
-                                                                {subUser.name[0]}
-                                                            </div>
-                                                            {showPendingDot && (
-                                                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,1)] border-2 border-white"></span>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-black text-slate-900 text-base">{subUser.name}</h3>
-                                                            <div className="flex flex-col gap-1 mt-1">
-                                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                                                    <UsersIcon className="w-3 h-3 text-blue-500" />
-                                                                    Agent #{subUser.id} • {subUser.mobile_number}
-                                                                </div>
-                                                                {subUser.pincode && (
-                                                                    <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 w-fit px-2 py-0.5 rounded-md">
-                                                                        <Calendar className="w-3 h-3" />
-                                                                        Postal PIN: {subUser.pincode}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    {normalizedKycStatus === 'approved' ? (
-                                                        <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Approved</span>
-                                                    ) : normalizedKycStatus === 'pending' ? (
-                                                        <div className="flex flex-col gap-2 items-start">
-                                                            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pending</span>
-                                                            <div className="flex gap-1">
-                                                                <button onClick={() => handleKycAction(subUser.id, 'approve')} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 font-bold">Approve</button>
-                                                                <button onClick={() => handleKycAction(subUser.id, 'reject')} className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded hover:bg-rose-600 font-bold">Reject</button>
-                                                            </div>
-                                                        </div>
-                                                    ) : normalizedKycStatus === 'rejected' ? (
-                                                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Rejected / Wait</span>
-                                                    ) : (
-                                                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Not Submitted</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6">
-                                                    <span className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-black border border-slate-200">
-                                                        {subUser.referral_code}
-                                                    </span>
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Vendors:</span>
-                                                            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{subUser.vendors_count || 0}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Agents:</span>
-                                                            <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">{subUser.agents_count || 0}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-black text-slate-900">₹{(subUser.credit_balance ?? 0).toLocaleString()}</span>
-                                                        <span className="text-slate-300">/</span>
-                                                        <span className="text-xs font-bold text-slate-400">₹{(subUser.credit_limit ?? 0).toLocaleString()}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Add..."
-                                                            className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
-                                                            value={selectedSubUser?.id === subUser.id ? creditAmount : ''}
-                                                            onChange={(e) => {
-                                                                setSelectedSubUser(subUser);
-                                                                setCreditAmount(e.target.value);
-                                                            }}
-                                                        />
-                                                        <button
-                                                            onClick={() => handleAddCredit(subUser.id)}
-                                                            className="p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shadow-md"
-                                                            title="Add Credit"
-                                                        >
-                                                            <Plus size={14} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-black text-emerald-600 text-sm">₹{(subUser.admin_loan_commission ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase">(Disburse)</span></span>
-                                                        <span className="font-bold text-slate-500 text-xs">₹{(subUser.default_signup_amount ?? 0).toLocaleString()} <span className="text-[10px] text-slate-400 ml-1 uppercase">(Signup)</span></span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 text-center">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-mono font-black text-emerald-600 text-sm">₹{parseFloat((subUser as any).available_earnings || '0').toLocaleString('en-IN')}</span>
-                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Ready to Transfer</span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 text-center">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-mono font-black text-amber-600 text-sm">₹{parseFloat((subUser as any).upcoming_earnings || '0').toLocaleString('en-IN')}</span>
-                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Upcoming Earning</span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 pr-8 text-right">
-                                                    <div className="flex justify-end gap-2 flex-wrap">
-                                                        {normalizedKycStatus === 'approved' && (
-                                                            <button
-                                                                onClick={() => handleKycAction(subUser.id, 're_kyc')}
-                                                                className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs hover:bg-amber-100 transition-colors border border-amber-200"
-                                                            >
-                                                                Ask for Re-KYC
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleEditSubUser(subUser)}
-                                                            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (window.confirm(`Are you sure you want to delete ${subUser.name}?`)) {
-                                                                    try {
-                                                                        await apiFetch(`/admin/sub-users/${subUser.id}`, { method: 'DELETE' });
-                                                                        toast.success('Agent deleted successfully');
-                                                                        fetchSubUsers();
-                                                                    } catch (e: any) {
-                                                                        toast.error(e.message || 'Deletion failed');
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs hover:bg-red-100 transition-colors"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                        <button
-                                                            onClick={() => router.push(`/sub-users/detail?id=${subUser.id}`)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors group/btn"
-                                                        >
-                                                            View <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
+                                    subUsers.map((subUser) => (
+                                        <SubUserRow
+                                            key={subUser.id}
+                                            subUser={subUser}
+                                            selectedIds={selectedIds}
+                                            toggleSelect={toggleSelect}
+                                            handleEditSubUser={handleEditSubUser}
+                                            setSelectedSubUser={setSelectedSubUser}
+                                            fetchSubUsers={fetchSubUsers}
+                                            handleKycAction={handleKycAction}
+                                            creditAmount={selectedSubUser?.id === subUser.id ? creditAmount : ''}
+                                            setCreditAmount={setCreditAmount}
+                                            handleAddCredit={handleAddCredit}
+                                        />
+                                    ))
                                 )}
                             </tbody>
                         </table>
@@ -1210,13 +1322,12 @@ export default function SubUsersPage() {
                                         <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Support Contact Number</label>
                                         <input
                                             type="text"
-                                            maxLength={10}
-                                            pattern="[0-9]{10}"
+                                            maxLength={11}
                                             className="w-full px-5 py-4 bg-white border border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-black text-slate-900 transition-all placeholder:text-blue-200"
                                             value={formData.support_number}
-                                            placeholder="10-digit support number"
+                                            placeholder="10 or 11 digit support number"
                                             onChange={(e) => {
-                                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                                const value = e.target.value.replace(/\D/g, '').slice(0, 11);
                                                 setFormData({ ...formData, support_number: value });
                                             }}
                                         />

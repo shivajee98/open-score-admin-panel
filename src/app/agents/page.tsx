@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Filter, Eye, Trash2, CheckCircle, Ban, ChevronLeft, ChevronRight, Download, CheckSquare, X, Users, TrendingUp, Store, FileText, CreditCard, ArrowRight, ChevronDown, Database, Bell } from 'lucide-react';
+import { Search, Plus, Filter, Eye, Trash2, CheckCircle, Ban, ChevronLeft, ChevronRight, Download, CheckSquare, X, Users, TrendingUp, Store, FileText, CreditCard, ArrowRight, ChevronDown, Database, Bell, Save, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -171,6 +171,34 @@ const TeamEarningsCell = ({ agent, apiFetch, onUpdate }: any) => {
 // Sub-component for individual user rows to handle local input state
 const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onViewStats }: any) => {
     const isAdmin = currentUser?.role === 'ADMIN';
+    const [supportNumber, setSupportNumber] = useState(user.support_number ?? '');
+    const [isSavingSupport, setIsSavingSupport] = useState(false);
+
+    useEffect(() => {
+        setSupportNumber(user.support_number ?? '');
+    }, [user.support_number]);
+
+    const handleSaveSupportNumber = async () => {
+        const isValidLength = supportNumber.length === 10 || (supportNumber.length === 11 && supportNumber.startsWith('0'));
+        if (supportNumber && !isValidLength) {
+            alert('Support number must be 10 digits or 11 digits starting with 0');
+            return;
+        }
+        setIsSavingSupport(true);
+        try {
+            await apiFetch(`/admin/users/${user.id}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ support_number: supportNumber || null })
+            });
+            alert('Support number updated!');
+            reloadUsers();
+        } catch (e) {
+            alert('Error updating support number');
+        } finally {
+            setIsSavingSupport(false);
+        }
+    };
 
     return (
         <tr className={cn(
@@ -223,17 +251,6 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, 
                 )}
             </td>
             <td className="p-6">
-                {user.parent_vendor ? (
-                    <div className="flex flex-col">
-                        <p className="text-xs font-black text-teal-700">{user.parent_vendor.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{user.parent_vendor.mobile}</p>
-                        <p className="text-[10px] text-teal-500 font-mono font-bold">{user.parent_vendor.referral_code}</p>
-                    </div>
-                ) : (
-                    <span className="text-xs text-slate-300 font-medium italic">No Parent</span>
-                )}
-            </td>
-            <td className="p-6">
                 <span className="font-mono font-bold text-slate-700">₹{parseFloat(user.wallet_balance || '0').toLocaleString('en-IN')}</span>
             </td>
             <td className="p-6">
@@ -262,8 +279,41 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, 
             </td>
             <td className="p-6">
                 <div className="flex flex-col">
-                    <p className="text-xs font-bold text-slate-700">{new Date(user.date_of_join).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                    <p className="text-[10px] text-slate-400 font-mono italic">{new Date(user.date_of_join).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-xs font-bold text-slate-700">{new Date(user.date_of_join || user.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-[10px] text-slate-400 font-mono italic">{new Date(user.date_of_join || user.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+            </td>
+            <td className="p-6">
+                {user.parent_vendor ? (
+                    <div className="flex flex-col">
+                        <p className="text-xs font-black text-teal-600">{user.parent_vendor.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">
+                            {user.parent_vendor.support_number || user.parent_vendor.mobile}
+                        </p>
+                        <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-tighter w-fit mt-1">{user.parent_vendor.code || user.parent_vendor.referral_code}</span>
+                    </div>
+                ) : (
+                    <span className="text-xs text-slate-300 font-medium italic">Direct Join</span>
+                )}
+            </td>
+            <td className="p-6">
+                <div className="flex items-center gap-2">
+                    <input
+                        type="tel"
+                        maxLength={11}
+                        placeholder="Support No"
+                        className="w-28 bg-slate-100 border-none rounded-lg p-2 font-mono text-xs font-bold text-blue-600 focus:ring-2 focus:ring-blue-200"
+                        value={supportNumber}
+                        onChange={(e) => setSupportNumber(e.target.value)}
+                    />
+                    <button
+                        onClick={handleSaveSupportNumber}
+                        disabled={isSavingSupport}
+                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="Update Support Number"
+                    >
+                        <Save className="w-4 h-4" />
+                    </button>
                 </div>
             </td>
             <td className="p-6">
@@ -384,6 +434,8 @@ export default function AgentsPage() {
 
     // Bulk Select
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+    const [bulkSupportNumber, setBulkSupportNumber] = useState('');
 
     // Agent Stats Panel
     const [statsAgent, setStatsAgent] = useState<any>(null);
@@ -519,6 +571,32 @@ export default function AgentsPage() {
             loadAgents();
         } catch (e) {
             alert('Error adding funds');
+        }
+    };
+
+    const handleBulkSupportUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const isValidLength = bulkSupportNumber.length === 10 || (bulkSupportNumber.length === 11 && bulkSupportNumber.startsWith('0'));
+        if (bulkSupportNumber && !isValidLength) {
+            alert('Support number must be 10 digits or 11 digits starting with 0');
+            return;
+        }
+        try {
+            await apiFetch('/admin/users/bulk-support', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_ids: selectedIds,
+                    support_number: bulkSupportNumber || null
+                })
+            });
+            alert('Support numbers updated successfully!');
+            setIsSupportModalOpen(false);
+            setBulkSupportNumber('');
+            setSelectedIds([]);
+            loadAgents();
+        } catch (e) {
+            alert('Error updating support numbers');
         }
     };
 
@@ -674,6 +752,18 @@ export default function AgentsPage() {
                                 <option value={1000}>1000</option>
                             </select>
                         </div>
+                        {selectedIds.length > 0 && (
+                            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-10">
+                                <span className="text-sm font-bold text-slate-500">{selectedIds.length} Selected</span>
+                                <button
+                                    onClick={() => setIsSupportModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                                >
+                                    <Phone size={20} />
+                                    Set Support No
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -829,7 +919,6 @@ export default function AgentsPage() {
                                     </div>
                                 </th>
                                 <th className="p-6 text-xs font-bold text-indigo-500 uppercase tracking-widest">Refer Code</th>
-                                <th className="p-6 text-xs font-bold text-teal-500 uppercase tracking-widest">Parent Vendor</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Wallet</th>
                                 <th className="p-6 text-xs font-bold text-yellow-500 uppercase tracking-widest">Cashback</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Cashback %</th>
@@ -837,6 +926,8 @@ export default function AgentsPage() {
                                 <th className="p-6 text-xs font-bold text-emerald-500 uppercase tracking-widest">Available</th>
                                 <th className="p-6 text-xs font-bold text-amber-500 uppercase tracking-widest">Upcoming</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Join Date</th>
+                                <th className="p-6 text-xs font-bold text-teal-500 uppercase tracking-widest">Parent Vendor</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Support</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
@@ -844,15 +935,16 @@ export default function AgentsPage() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={11} className="p-20 text-center">
+                                    <td colSpan={14} className="p-20 text-center">
                                         <div className="flex justify-center">
                                             <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
                                         </div>
+                                        <p className="mt-4 text-slate-500 font-medium animate-pulse">Loading amazing agents...</p>
                                     </td>
                                 </tr>
                             ) : displayedUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={11} className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
+                                    <td colSpan={14} className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-sm italic">
                                         No agents found matching your criteria.
                                     </td>
                                 </tr>
@@ -1210,6 +1302,12 @@ export default function AgentsPage() {
                                 <Bell className="w-4 h-4" /> Notify
                             </button>
                             <button 
+                                onClick={() => setIsSupportModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 hover:bg-white/10 rounded-xl transition-all text-xs font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300"
+                            >
+                                <Phone className="w-4 h-4" /> Support No
+                            </button>
+                            <button 
                                 onClick={() => setSelectedIds([])}
                                 className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
                             >
@@ -1220,6 +1318,47 @@ export default function AgentsPage() {
                 </div>
             )}
 
+            {/* Bulk Support Modal */}
+            {isSupportModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <h3 className="text-2xl font-black text-slate-900 mb-2">Support Contact</h3>
+                        <p className="text-slate-500 font-medium mb-6">Set a dedicated support number for <span className="text-slate-900 font-bold">{selectedIds.length} agents</span>.</p>
+
+                        <form onSubmit={handleBulkSupportUpdate}>
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-black text-blue-400 uppercase tracking-widest mb-4">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        maxLength={11}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xl font-black text-slate-900 focus:ring-2 focus:ring-blue-100"
+                                        placeholder="10 or 11-digit number"
+                                        value={bulkSupportNumber}
+                                        onChange={e => setBulkSupportNumber(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSupportModalOpen(false)}
+                                    className="py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                                >
+                                    Update All
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

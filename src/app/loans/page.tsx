@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
@@ -64,6 +64,8 @@ export default function LoanApprovals() {
     const [emiDateTo, setEmiDateTo] = useState('');
     const [emiCount, setEmiCount] = useState('');
     const [overdueFilter, setOverdueFilter] = useState('ALL');
+    const [minAmount, setMinAmount] = useState('');
+    const [maxAmount, setMaxAmount] = useState('');
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     const toggleReuploadField = (field: string) => {
@@ -112,10 +114,15 @@ export default function LoanApprovals() {
         return () => clearInterval(interval);
     }, []);
 
-    const CountdownTimer = ({ updatedAt, delayMinutes, label }: { updatedAt: string, delayMinutes: number, label: string }) => {
+    const CountdownTimer = ({ loan, delayMinutes, label }: { loan: any, delayMinutes: number, label: string }) => {
         if (!autoPilotSettings.enabled || delayMinutes <= 0) return null;
+
+        // Suspend timer if there are pending re-uploads or existing risk flags
+        if ((loan.reupload_fields && loan.reupload_fields.length > 0) || loan.is_auto_pilot_risk) {
+            return null;
+        }
         
-        const startTime = new Date(updatedAt).getTime();
+        const startTime = new Date(loan.updated_at).getTime();
         const endTime = startTime + (delayMinutes * 60 * 1000);
         const remaining = Math.max(0, endTime - currentTime);
         
@@ -271,6 +278,27 @@ export default function LoanApprovals() {
         }
     };
 
+    const handleReverifyKyc = async (loanId: number) => {
+        if (!confirm('This will clear all pending re-upload flags and remarks. Proceed?')) return;
+        
+        setActionLoading(`reverify-${loanId}`);
+        try {
+            await apiFetch(`/admin/loans/${loanId}/reverify-kyc`, {
+                method: 'POST'
+            });
+            toast.success('KYC re-verified successfully!');
+            if (previewLoan && previewLoan.id === loanId) {
+                const updatedLoan = await apiFetch(`/admin/loans/${loanId}/details`);
+                if (updatedLoan) openLoanPreview(updatedLoan);
+            }
+            loadLoans();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to re-verify KYC');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
     const loadLoans = async () => {
         setLoading(true);
         setSelectedLoanIds([]);
@@ -291,7 +319,9 @@ export default function LoanApprovals() {
                 ...(emiDateFrom && { emi_date_from: emiDateFrom }),
                 ...(emiDateTo && { emi_date_to: emiDateTo }),
                 ...(emiCount && { emi_count: emiCount }),
-                ...(overdueFilter !== 'ALL' && { overdue: overdueFilter })
+                ...(overdueFilter !== 'ALL' && { overdue: overdueFilter }),
+                ...(minAmount && { min_amount: minAmount }),
+                ...(maxAmount && { max_amount: maxAmount }),
             });
             const response = await apiFetch(`${endpoint}?${query}`);
             if (response && response.data) {
@@ -841,6 +871,43 @@ export default function LoanApprovals() {
                         </div>
                     </div>
 
+                    {/* Loan Amount Range */}
+                    <div className="flex flex-col gap-2 mt-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loan Amount Range (₹)</label>
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">Min</span>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={minAmount}
+                                    onChange={(e) => { setMinAmount(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                            <span className="text-slate-300 font-bold text-xs shrink-0">—</span>
+                            <div className="relative flex-1">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">Max</span>
+                                <input
+                                    type="number"
+                                    placeholder="∞"
+                                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-indigo-100 outline-none"
+                                    value={maxAmount}
+                                    onChange={(e) => { setMaxAmount(e.target.value); setPage(1); }}
+                                />
+                            </div>
+                            {(minAmount || maxAmount) && (
+                                <button
+                                    onClick={() => { setMinAmount(''); setMaxAmount(''); setPage(1); }}
+                                    className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                                    title="Clear amount filter"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-100">
                         <div className="flex items-center gap-4">
                             <div className="relative">
@@ -861,6 +928,7 @@ export default function LoanApprovals() {
                                 setEmiDateFrom(''); setEmiDateTo('');
                                 setEmiCount(''); setOverdueFilter('ALL');
                                 setSearch(''); setReferralSearch(''); setStatusFilter('ALL');
+                                setMinAmount(''); setMaxAmount('');
                                 setPage(1);
                             }}
                             className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-bold text-xs transition-all"
@@ -1059,6 +1127,30 @@ export default function LoanApprovals() {
                                                                 </div>
                                                             </div>
                                                         )}
+                                                        {/* Re-upload Flagged Tag */}
+                                                        {loan.reupload_fields && loan.reupload_fields.length > 0 && (
+                                                            <div className="group/reupload relative inline-flex">
+                                                                <span className="flex items-center gap-1 text-[8px] font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 uppercase tracking-widest">
+                                                                    <AlertTriangle size={8} />
+                                                                    Flagged: Re-upload ({loan.reupload_fields.length})
+                                                                </span>
+                                                                <div className="absolute bottom-full left-0 mb-2 hidden group-hover/reupload:block z-50 pointer-events-none">
+                                                                    <div className="bg-orange-950 text-orange-100 text-[10px] font-bold p-3 rounded-2xl shadow-2xl border border-orange-800 min-w-[180px] leading-relaxed">
+                                                                        <p className="text-orange-300 mb-1.5 flex items-center gap-1 uppercase tracking-widest text-[8px]">
+                                                                            <AlertTriangle size={9} /> Fields Requested
+                                                                        </p>
+                                                                        <div className="space-y-1">
+                                                                            {loan.reupload_fields.map((f: string, i: number) => (
+                                                                                <div key={i} className="flex items-center gap-1.5 text-orange-200">
+                                                                                    <div className="w-1 h-1 rounded-full bg-orange-400 shrink-0" />
+                                                                                    <span className="capitalize">{f.replace(/_/g, ' ')}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     {/* Quick KYC Access */}
                                                     {loan.form_data && Object.keys(loan.form_data).length > 0 && (
@@ -1106,7 +1198,7 @@ export default function LoanApprovals() {
                                             <div className="flex justify-end items-center gap-2">
                                                 {['PENDING', 'APPLIED'].includes(loan.status) && (
                                                     <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                        <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.proceed} label="Auto Proceed" />
+                                                        <CountdownTimer loan={loan} delayMinutes={autoPilotSettings.delays.proceed} label="Auto Proceed" />
                                                         <div className="flex gap-2">
                                                             {loan.form_data && Object.keys(loan.form_data).length > 0 && (
                                                                 <button
@@ -1130,7 +1222,7 @@ export default function LoanApprovals() {
 
                                                 {['PROCEEDED', 'VETTING'].includes(loan.status) && (
                                                     <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                        <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.send_kyc} label="Auto KYC" />
+                                                        <CountdownTimer loan={loan} delayMinutes={autoPilotSettings.delays.send_kyc} label="Auto KYC" />
                                                         <div className="flex gap-2">
                                                             {loan.form_data && Object.keys(loan.form_data).length > 0 && (
                                                                 <button
@@ -1154,7 +1246,7 @@ export default function LoanApprovals() {
 
                                                 {['FORM_SUBMITTED', 'KYC_SUBMITTED'].includes(loan.status) && (
                                                     <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-                                                        <CountdownTimer updatedAt={loan.updated_at} delayMinutes={autoPilotSettings.delays.approve} label="Auto Approve" />
+                                                        <CountdownTimer loan={loan} delayMinutes={autoPilotSettings.delays.approve} label="Auto Approve" />
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
@@ -1163,19 +1255,44 @@ export default function LoanApprovals() {
                                                             >
                                                                 <Search size={18} />
                                                             </button>
+                                                            {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
+                                                                <button
+                                                                    disabled={actionLoading === `reverify-${loan.id}`}
+                                                                    onClick={(e) => { e.stopPropagation(); handleReverifyKyc(loan.id); }}
+                                                                    className="px-4 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-2"
+                                                                    title="Re-verify KYC & Clear Flags"
+                                                                >
+                                                                    {actionLoading === `reverify-${loan.id}` ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                                                                    Re-verify
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 disabled={!!actionLoading}
                                                                 onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'approve', 'Loan Approved!'); }}
                                                                 className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all font-mono"
                                                             >
                                                                 Approve
-                                                            </button>
+                                                            </button>   
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {loan.status === 'APPROVED' && (
                                                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
+                                                                disabled={actionLoading === `reverify-${loan.id}`}
+                                                                className="relative flex items-center gap-1.5 px-3 py-2.5 bg-amber-400 text-amber-950 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all shadow-lg shadow-amber-400/30 border border-amber-300 animate-pulse hover:animate-none disabled:opacity-60"
+                                                                title={`Re-upload submitted for: ${loan.reupload_fields.join(', ')}`}
+                                                            >
+                                                                <ShieldCheck size={14} />
+                                                                Re-verify
+                                                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[8px] font-black flex items-center justify-center border border-white shadow">
+                                                                    {loan.reupload_fields.length}
+                                                                </span>
+                                                            </button>
+                                                        )}
                                                         {getPendingPlatformFee(loan) && (
                                                             <button
                                                                 disabled={!!actionLoading}
@@ -1207,6 +1324,20 @@ export default function LoanApprovals() {
 
                                                 {['DISBURSED', 'CLOSED'].includes(loan.status) && (
                                                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
+                                                                disabled={actionLoading === `reverify-${loan.id}`}
+                                                                className="relative flex items-center gap-1.5 px-3 py-2.5 bg-amber-400 text-amber-950 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all shadow-lg shadow-amber-400/30 border border-amber-300 animate-pulse hover:animate-none disabled:opacity-60"
+                                                                title={`Re-upload submitted for: ${loan.reupload_fields.join(', ')}`}
+                                                            >
+                                                                <ShieldCheck size={14} />
+                                                                Re-verify
+                                                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[8px] font-black flex items-center justify-center border border-white shadow">
+                                                                    {loan.reupload_fields.length}
+                                                                </span>
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
                                                             className="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all shadow-sm"
@@ -1998,7 +2129,7 @@ export default function LoanApprovals() {
                                     </div>
 
                                     {/* Bulk Re-upload Summary */}
-                                    {reuploadFields.length > 0 && (
+                                    {(reuploadFields.length > 0 || (previewLoan.reupload_fields && previewLoan.reupload_fields.length > 0)) && (
                                         <div className="mt-8 pt-8 border-t-2 border-slate-100 animate-in slide-in-from-bottom-5 duration-500">
                                             <div className="bg-white rounded-[2.5rem] border-2 border-rose-100 p-6 sm:p-8 shadow-2xl shadow-rose-900/10 relative overflow-hidden">
                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full -mr-16 -mt-16 opacity-50" />
@@ -2019,22 +2150,14 @@ export default function LoanApprovals() {
                                                     </div>
                                                     <div className="flex flex-wrap gap-3">
                                                         <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    const data = await apiFetch(`/admin/loans/${previewLoan.id}`);
-                                                                    if (data) {
-                                                                        openLoanPreview(data);
-                                                                        toast.success('KYC data synced from server');
-                                                                    }
-                                                                } catch (err) {
-                                                                    toast.error('Failed to sync updated fields');
-                                                                }
-                                                            }}
-                                                            className="px-6 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-3 active:scale-95 group shadow-sm"
+                                                            disabled={actionLoading === `reverify-${previewLoan.id}`}
+                                                            onClick={() => handleReverifyKyc(previewLoan.id)}
+                                                            className="px-6 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-3 active:scale-95 group shadow-sm disabled:opacity-50"
                                                         >
-                                                            <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-700" />
+                                                            {actionLoading === `reverify-${previewLoan.id}` ? <RefreshCw size={18} className="animate-spin" /> : <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-700" />}
                                                             Re-verify KYC
                                                         </button>
+                                                        {!['APPROVED', 'DISBURSED', 'CLOSED', 'CANCELLED', 'REJECTED'].includes(previewLoan.status) && (
                                                         <button
                                                             disabled={!!actionLoading}
                                                             onClick={async () => {
@@ -2046,6 +2169,7 @@ export default function LoanApprovals() {
                                                             {actionLoading ? 'Processing...' : 'Approve Loan'}
                                                             <CheckCircle2 size={18} className="group-hover:scale-110 transition-transform" />
                                                         </button>
+                                                        )}
                                                         <button
                                                             disabled={reuploadFields.length === 0}
                                                             onClick={async () => {
@@ -2060,7 +2184,7 @@ export default function LoanApprovals() {
                                                                         })
                                                                     });
                                                                     toast.success('Re-upload request sent successfully!');
-                                                                    const data = await apiFetch(`/admin/loans/${previewLoan.id}`);
+                                                                    const data = await apiFetch(`/admin/loans/${previewLoan.id}/details`);
                                                                     if (data) openLoanPreview(data);
                                                                     loadLoans();
                                                                 } catch (err) {

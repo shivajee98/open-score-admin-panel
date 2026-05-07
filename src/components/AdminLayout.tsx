@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare, Phone, PhoneCall } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare, Phone, PhoneCall, Fingerprint, KeyRound } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -113,6 +113,8 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Maintenance Mode', href: '/maintenance-settings', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Monitoring Alerts', href: '/monitoring', icon: <AlertTriangle className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Audit Logs', href: '/logs', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'KYC API Logs', href: '/kyc-logs', icon: <Fingerprint className="w-5 h-5 text-blue-400" />, roles: ['ADMIN'], group: 'System & Support' },
+        { label: 'PIN & OTP Control', href: '/pin-control', icon: <KeyRound className="w-5 h-5 text-amber-500" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Broadcasts', href: '/broadcast-notifications', icon: <Megaphone className="w-5 h-5" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'Direct Messaging', href: '/direct-messaging', icon: <MessageSquare className="w-5 h-5 text-emerald-400" />, roles: ['ADMIN'], group: 'System & Support' },
         { label: 'User Preview', href: '/user-preview', icon: <Smartphone className="w-5 h-5 text-indigo-400" />, roles: ['ADMIN'], group: 'Promotions & Tools' },

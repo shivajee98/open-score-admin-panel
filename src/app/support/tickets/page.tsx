@@ -10,7 +10,7 @@ interface Ticket {
     id: number;
     unique_ticket_id: string;
     subject: string;
-    status: 'OPEN' | 'ACTIVE' | 'RESOLVED' | 'CLOSED';
+    status: string; // 'open' | 'in_progress' | 'closed'
     payment_status?: 'PENDING_VERIFICATION' | 'AGENT_APPROVED' | 'ADMIN_APPROVED' | 'REJECTED';
     payment_amount?: string;
     sub_action?: string;
@@ -254,7 +254,13 @@ export default function SupportTicketsPage() {
             });
             toast.success(`Ticket marked as ${newStatus}`);
             fetchTickets();
-            if (selectedTicket?.id === ticketId) setSelectedTicket(null);
+            if (selectedTicket?.id === ticketId) {
+                if (newStatus.toLowerCase() === 'closed') {
+                    setSelectedTicket(null);
+                } else {
+                    setSelectedTicket(prev => prev ? { ...prev, status: newStatus as any } : null);
+                }
+            }
         } catch {
             toast.error('Failed to update status');
         }
@@ -542,12 +548,19 @@ export default function SupportTicketsPage() {
                                             <button onClick={openProcessModal} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black hover:bg-emerald-700 transition-colors shadow-sm"><Wallet size={14} /> Process Payment</button>
                                         </div>
                                     )}
-                                    {selectedTicket.status !== 'CLOSED' && (
+                                    {selectedTicket.status?.toLowerCase() !== 'closed' ? (
                                         <button
-                                            onClick={() => updateTicketStatus(selectedTicket.id, 'CLOSED')}
+                                            onClick={() => updateTicketStatus(selectedTicket.id, 'closed')}
                                             className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-[10px] font-black hover:bg-slate-50 transition-colors"
                                         >
                                             Complete Chat
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => updateTicketStatus(selectedTicket.id, 'open')}
+                                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-colors shadow-sm"
+                                        >
+                                            Reopen Ticket
                                         </button>
                                     )}
                                 </div>
@@ -570,7 +583,7 @@ export default function SupportTicketsPage() {
                             </div>
 
                             {/* Message Input */}
-                            {selectedTicket.status !== 'CLOSED' && (
+                            {selectedTicket.status?.toLowerCase() !== 'closed' && (
                                 <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-100 bg-white">
                                     <div className="flex gap-2">
                                         <input

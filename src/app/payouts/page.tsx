@@ -18,6 +18,9 @@ import {
     ChevronDown,
     ChevronUp,
     Download,
+    Pencil,
+    Check,
+    X,
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 
@@ -31,6 +34,9 @@ export default function PayoutsAdminPage() {
     const [adminNote, setAdminNote] = useState('');
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
+    const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+    const [draftNote, setDraftNote] = useState('');
+    const [noteLoading, setNoteLoading] = useState(false);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -92,6 +98,22 @@ export default function PayoutsAdminPage() {
         }
     };
 
+    const handleUpdateNote = async (payoutId: number) => {
+        setNoteLoading(true);
+        try {
+            await apiFetch(`/admin/payouts/${payoutId}/update-note`, {
+                method: 'POST',
+                body: JSON.stringify({ admin_note: draftNote }),
+            });
+            toast.success('Remark updated');
+            setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, admin_note: draftNote } : p));
+            setEditingNoteId(null);
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to update remark');
+        } finally {
+            setNoteLoading(false);
+        }
+    };
 
     const handleExport = async () => {
         try {
@@ -347,11 +369,18 @@ export default function PayoutsAdminPage() {
                                                         )}
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wide ${getStatusStyle(payout.status)}`}>
-                                                            {payout.status === 'PENDING' && <Clock className="w-3 h-3" />}
-                                                            {(payout.status === 'PAID' || payout.status === 'APPROVED') && <CheckCircle2 className="w-3 h-3" />}
-                                                            {payout.status === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                                                            {payout.status}
+                                                        <div className="space-y-1.5">
+                                                            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wide ${getStatusStyle(payout.status)}`}>
+                                                                {payout.status === 'PENDING' && <Clock className="w-3 h-3" />}
+                                                                {(payout.status === 'PAID' || payout.status === 'APPROVED') && <CheckCircle2 className="w-3 h-3" />}
+                                                                {payout.status === 'REJECTED' && <XCircle className="w-3 h-3" />}
+                                                                {payout.status}
+                                                            </div>
+                                                            {payout.admin_note && editingNoteId !== payout.id && (
+                                                                <p className="text-[9px] font-bold text-slate-400 max-w-[160px] truncate" title={payout.admin_note}>
+                                                                    📝 {payout.admin_note}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
@@ -359,16 +388,60 @@ export default function PayoutsAdminPage() {
                                                         <p className="text-[10px] font-bold text-slate-400">{formatISTTime(payout.created_at)}</p>
                                                     </td>
                                                     <td className="px-8 py-6 text-right">
-                                                        {payout.status === 'PENDING' && (
-                                                            <button
-                                                                onClick={() => { setSelectedPayout(payout); setIsActionModalOpen(true); }}
-                                                                className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-90"
-                                                            >
-                                                                <ArrowRight className="w-4 h-4" />
-                                                            </button>
-                                                        )}
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {payout.status === 'PENDING' && (
+                                                                <button
+                                                                    onClick={() => { setSelectedPayout(payout); setIsActionModalOpen(true); }}
+                                                                    className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-90"
+                                                                >
+                                                                    <ArrowRight className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            {payout.type !== 'BANK_TRANSFER' && (
+                                                                <button
+                                                                    onClick={() => { setEditingNoteId(payout.id); setDraftNote(payout.admin_note || ''); }}
+                                                                    className="p-2 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg hover:bg-amber-100 transition-all active:scale-90"
+                                                                    title="Edit remark"
+                                                                >
+                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
+
+                                                {/* Inline Note Editor */}
+                                                {editingNoteId === payout.id && (
+                                                    <tr key={`${payout.id}-note-edit`}>
+                                                        <td colSpan={7} className="px-8 pb-5 bg-amber-50/40">
+                                                            <div className="flex items-start gap-3">
+                                                                <textarea
+                                                                    autoFocus
+                                                                    rows={2}
+                                                                    value={draftNote}
+                                                                    onChange={(e) => setDraftNote(e.target.value)}
+                                                                    placeholder="Add or update admin remark..."
+                                                                    className="flex-1 p-3 bg-white border-2 border-amber-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-400 transition-all resize-none"
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleUpdateNote(payout.id)}
+                                                                    disabled={noteLoading}
+                                                                    className="p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-90 disabled:opacity-60"
+                                                                    title="Save remark"
+                                                                >
+                                                                    <Check className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingNoteId(null)}
+                                                                    className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all active:scale-90"
+                                                                    title="Cancel"
+                                                                >
+                                                                    <X className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
 
                                                 {/* Expanded recipients for bank transfers */}
                                                 {payout.type === 'BANK_TRANSFER' && expandedBatch === payout.batch_id && payout.recipients && (
