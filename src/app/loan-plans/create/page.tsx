@@ -132,11 +132,11 @@ export default function CreateLoanPlan() {
         setFormData({ ...formData, amount: val });
     };
 
-    const fetchTargetableUsers = async () => {
+    const fetchTargetableUsers = async (query: string = '') => {
         setSearching(true);
         try {
-            // Fetch ALL targetable users once, then filter on frontend for instant response
-            const data = await apiFetch(`/admin/users/targetable`);
+            // Fetch users from backend with search query to improve performance
+            const data = await apiFetch(`/admin/users/targetable?search=${encodeURIComponent(query)}`);
             setTargetableUsers(data);
         } catch (err) {
             console.error("Failed to fetch targetable users", err);
@@ -145,41 +145,18 @@ export default function CreateLoanPlan() {
         }
     };
 
-    // Fetch once when targeted mode is toggled ON
+    // Debounced search for targetable users
     useEffect(() => {
-        if (!formData.is_public && targetableUsers.length === 0) {
-            fetchTargetableUsers();
+        if (!formData.is_public) {
+            const handler = setTimeout(() => {
+                fetchTargetableUsers(userFilters.search);
+            }, 500);
+            return () => clearTimeout(handler);
         }
-    }, [formData.is_public]);
+    }, [userFilters.search, formData.is_public]);
 
-    const filteredUsersList = targetableUsers.filter(user => {
-        // Search Filter
-        if (userFilters.search) {
-            const s = userFilters.search.toLowerCase();
-            const matchesSearch =
-                user.name?.toLowerCase().includes(s) ||
-                user.mobile_number?.includes(s) ||
-                user.business_name?.toLowerCase().includes(s);
-            if (!matchesSearch) return false;
-        }
+    const filteredUsersList = targetableUsers; // No longer need to filter locally as backend handles it
 
-        // Min Loan Completed Filter
-        if (userFilters.min_loan_completed) {
-            const minAmount = parseFloat(userFilters.min_loan_completed);
-            if ((user.max_loan_completed || 0) < minAmount) return false;
-        }
-
-        // Min Loans Count Filter
-        if (userFilters.min_loans_count) {
-            const minCount = parseInt(userFilters.min_loans_count);
-            if ((user.loans_count || 0) < minCount) return false;
-        }
-
-        // Account Type Filter
-        if (userFilters.account_type && user.role !== userFilters.account_type) return false;
-
-        return true;
-    });
 
     const toggleRole = (field: 'locked_roles' | 'hidden_roles', role: string) => {
         const current = [...(formData[field] as string[])];

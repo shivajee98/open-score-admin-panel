@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink, AlertCircle, Phone } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink, AlertCircle, Phone, Video, Link as LinkIcon, Edit } from 'lucide-react';
+import { toast } from '@/components/ui/Toast';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
 import VaultConfigModal from '@/components/VaultConfigModal';
@@ -25,6 +26,9 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
     const [isFetchingPin, setIsFetchingPin] = useState(false);
     const [supportNumber, setSupportNumber] = useState(user.support_number ?? '');
     const [isSavingSupport, setIsSavingSupport] = useState(false);
+    const [meetingLink, setMeetingLink] = useState(user.meeting_link ?? '');
+    const [isSavingMeeting, setIsSavingMeeting] = useState(false);
+    const [isEditingMeeting, setIsEditingMeeting] = useState(false);
 
     // Sync state if user prop changes (e.g. after reload)
     useEffect(() => {
@@ -33,7 +37,8 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
         setReceivePercent(user.receive_cashback_percentage ?? '');
         setReceiveFlat(user.receive_cashback_flat_amount ?? '');
         setSupportNumber(user.support_number ?? '');
-    }, [user.cashback_percentage, user.cashback_flat_amount, user.receive_cashback_percentage, user.receive_cashback_flat_amount, user.support_number]);
+        setMeetingLink(user.meeting_link ?? '');
+    }, [user.cashback_percentage, user.cashback_flat_amount, user.receive_cashback_percentage, user.receive_cashback_flat_amount, user.support_number, user.meeting_link]);
 
     useEffect(() => {
         setTransferEnabled(user.transfer_enabled ?? false);
@@ -79,6 +84,31 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
         } finally {
             setIsSavingSupport(false);
         }
+    };
+
+    const handleSaveMeetingLink = async (valueOverride?: string | null) => {
+        setIsSavingMeeting(true);
+        const targetLink = valueOverride === undefined ? meetingLink : valueOverride;
+        try {
+            await apiFetch(`/admin/users/${user.id}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ meeting_link: targetLink || null })
+            });
+            toast.success('Meeting link updated!');
+            setIsEditingMeeting(false);
+            reloadUsers();
+        } catch (e: any) {
+            toast.error(e.message || 'Error updating meeting link');
+        } finally {
+            setIsSavingMeeting(false);
+        }
+    };
+
+    const handleCopyMeetingLink = () => {
+        if (!user.meeting_link) return;
+        navigator.clipboard.writeText(user.meeting_link);
+        toast.success('Meeting link copied to clipboard!');
     };
 
     const handleSaveCashback = async () => {
@@ -493,6 +523,75 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 </div>
             </td>
             <td className="p-6">
+                {user.meeting_link && !isEditingMeeting ? (
+                    <div className="flex items-center gap-2 group/meeting">
+                        <div 
+                            onClick={handleCopyMeetingLink}
+                            className="cursor-pointer flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all font-black text-[10px] uppercase tracking-wider shadow-sm"
+                        >
+                            <Video className="w-3.5 h-3.5" />
+                            Meeting Link
+                            <div className="h-3 w-[1px] bg-indigo-200 mx-1" />
+                            <LinkIcon className="w-3 h-3 opacity-50" />
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover/meeting:opacity-100 transition-opacity">
+                            <button 
+                                onClick={() => setIsEditingMeeting(true)}
+                                className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-indigo-600 transition-colors"
+                                title="Edit Link"
+                            >
+                                <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    if(confirm('Clear meeting link?')) {
+                                        setMeetingLink('');
+                                        handleSaveMeetingLink(null);
+                                    }
+                                }}
+                                className="p-1.5 hover:bg-rose-50 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
+                                title="Clear Link"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="url"
+                            placeholder="Paste Link..."
+                            className="w-32 bg-slate-100 border-none rounded-lg p-2 font-mono text-[10px] font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-200 transition-all"
+                            value={meetingLink}
+                            onChange={(e) => setMeetingLink(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveMeetingLink()}
+                        />
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => handleSaveMeetingLink()}
+                                disabled={isSavingMeeting}
+                                className="p-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-all shadow-md shadow-indigo-100 disabled:opacity-50"
+                                title="Save Meeting Link"
+                            >
+                                {isSavingMeeting ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                            </button>
+                            {isEditingMeeting && (
+                                <button
+                                    onClick={() => {
+                                        setIsEditingMeeting(false);
+                                        setMeetingLink(user.meeting_link || '');
+                                    }}
+                                    className="p-2 bg-slate-100 text-slate-400 hover:bg-slate-200 rounded-lg transition-all"
+                                    title="Cancel"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </td>
+            <td className="p-6">
                 <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -663,7 +762,10 @@ export default function MerchantsPage() {
     const [receivePercent, setReceivePercent] = useState('');
     const [receiveFlat, setReceiveFlat] = useState('');
     const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+    const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
     const [bulkSupportNumber, setBulkSupportNumber] = useState('');
+    const [bulkMeetingLink, setBulkMeetingLink] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
     const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
     const loadUsers = async () => {
@@ -775,6 +877,7 @@ export default function MerchantsPage() {
             alert('Support number must be 10 digits or 11 digits starting with 0');
             return;
         }
+        setActionLoading(true);
         try {
             await apiFetch('/admin/users/bulk-support', {
                 method: 'POST',
@@ -791,6 +894,8 @@ export default function MerchantsPage() {
             loadUsers();
         } catch (e) {
             alert('Error updating support numbers');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -982,6 +1087,13 @@ export default function MerchantsPage() {
                                     <Phone size={20} />
                                     Set Support No
                                 </button>
+                                <button
+                                    onClick={() => setIsMeetingModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                                >
+                                    <Video size={20} />
+                                    Set Meeting Link
+                                </button>
                             </div>
                         )}
                     </div>
@@ -1145,6 +1257,7 @@ export default function MerchantsPage() {
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Docs</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">QR</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Support</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Meeting</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                             </tr>
@@ -1442,12 +1555,141 @@ export default function MerchantsPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                                    disabled={actionLoading}
+                                    className="py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 disabled:opacity-50"
                                 >
-                                    Update All
+                                    {actionLoading ? 'Updating...' : 'Update All'}
                                 </button>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if(!confirm('Are you sure you want to clear and hide support numbers for all selected merchants?')) return;
+                                    setActionLoading(true);
+                                    try {
+                                        await apiFetch('/admin/users/bulk-support', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                user_ids: selectedIds,
+                                                support_number: null
+                                            })
+                                        });
+                                        toast.success('Support numbers cleared!');
+                                        setIsSupportModalOpen(false);
+                                        setBulkSupportNumber('');
+                                        setSelectedIds([]);
+                                        loadUsers();
+                                    } catch (e) {
+                                        toast.error('Failed to clear support numbers');
+                                    } finally {
+                                        setActionLoading(false);
+                                    }
+                                }}
+                                disabled={actionLoading}
+                                className="w-full mt-4 py-3 bg-rose-50 text-rose-600 rounded-xl font-bold hover:bg-rose-100 transition-colors border border-rose-100 flex items-center justify-center gap-2"
+                            >
+                                <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                                Clear & Hide Support
+                            </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Meeting Link Modal */}
+            {isAdmin && isMeetingModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                            <Video size={32} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 mb-2">Bulk Meeting Link</h3>
+                        <p className="text-slate-500 font-medium mb-6">Set a meeting link for <span className="text-slate-900 font-bold">{selectedIds.length} selected merchants</span>.</p>
+
+                        <div className="space-y-4 mb-8">
+                            <div>
+                                <label className="block text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">Meeting URL</label>
+                                <input
+                                    type="url"
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-black text-slate-900 focus:ring-2 focus:ring-indigo-100"
+                                    placeholder="https://meet.google.com/..."
+                                    value={bulkMeetingLink}
+                                    onChange={e => setBulkMeetingLink(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setIsMeetingModalOpen(false)}
+                                className="py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setActionLoading(true);
+                                    try {
+                                        await apiFetch('/admin/users/bulk-meeting', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                user_ids: selectedIds,
+                                                meeting_link: bulkMeetingLink
+                                            })
+                                        });
+                                        toast.success('Meeting links updated!');
+                                        setIsMeetingModalOpen(false);
+                                        setBulkMeetingLink('');
+                                        setSelectedIds([]);
+                                        loadUsers();
+                                    } catch (e) {
+                                        toast.error('Bulk update failed');
+                                    } finally {
+                                        setActionLoading(false);
+                                    }
+                                }}
+                                disabled={actionLoading}
+                                className="py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50"
+                            >
+                                {actionLoading ? 'Updating...' : 'Update All'}
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if(!confirm('Are you sure you want to clear and hide meeting links for all selected merchants?')) return;
+                                setActionLoading(true);
+                                try {
+                                    await apiFetch('/admin/users/bulk-meeting', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            user_ids: selectedIds,
+                                            meeting_link: null
+                                        })
+                                    });
+                                    toast.success('Meeting links cleared!');
+                                    setIsMeetingModalOpen(false);
+                                    setBulkMeetingLink('');
+                                    setSelectedIds([]);
+                                    loadUsers();
+                                } catch (e) {
+                                    toast.error('Failed to clear meeting links');
+                                } finally {
+                                    setActionLoading(false);
+                                }
+                            }}
+                            disabled={actionLoading}
+                            className="w-full mt-4 py-3 bg-rose-50 text-rose-600 rounded-xl font-bold hover:bg-rose-100 transition-colors border border-rose-100 flex items-center justify-center gap-2"
+                        >
+                            <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                            Clear & Hide Meeting
+                        </button>
                     </div>
                 </div>
             )}

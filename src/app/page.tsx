@@ -5,10 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy, MapPin, ChevronRight } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy, MapPin, ChevronRight, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
+import CampaignManager from '@/components/dashboard/CampaignManager';
 import { toast } from 'sonner';
 
 export default function AdminDashboard() {
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
     const [pendingTx, setPendingTx] = useState<any[]>([]);
     const [pendingRepayments, setPendingRepayments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [campaignStats, setCampaignStats] = useState<any>(null);
 
     useEffect(() => {
         if (status === 'authenticated' && session?.role === 'SUB_USER') {
@@ -48,22 +50,11 @@ export default function AdminDashboard() {
     const loadData = async () => {
         try {
             // Parallel fetch for speed
-            const [analytics, pending, users, pendingRepays, referralsData, qrData, analyticsPincodes] = await Promise.all([
+            const [analytics, pending, pendingRepays] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
-                apiFetch('/admin/users'),
-                apiFetch('/admin/repayments/pending'),
-                apiFetch('/admin/all-referrals'),
-                apiFetch('/admin/qr-bookings'),
-                apiFetch('/analytics/pincodes')
+                apiFetch('/admin/repayments/pending')
             ]);
-
-            const referralList = referralsData?.data || [];
-            const totalSignupPaid = referralList.reduce((sum: number, r: any) =>
-                sum + (r.signup_bonus_paid ? Number(r.signup_bonus_earned) : 0), 0);
-            const totalLoanPaid = referralList.reduce((sum: number, r: any) =>
-                sum + (r.loan_bonus_paid ? Number(r.loan_bonus_earned) : 0), 0);
-            const totalReferralPaid = totalSignupPaid + totalLoanPaid;
 
             setStats({
                 totalUsers: analytics?.total_users || 0,
@@ -77,20 +68,23 @@ export default function AdminDashboard() {
                 defaultedLoans: analytics?.defaulted_loans || 0,
                 pendingLoans: analytics?.pending_loans || 0,
                 recentRepayments: analytics?.recent_repayments || [],
-                totalReferralPaid: totalReferralPaid,
-                totalQrDeposits: Array.isArray(qrData?.data) 
-                    ? qrData.data.reduce((sum: number, b: any) => sum + (b.status !== 'rejected' && b.status !== 'pending' ? Number(b.security_amount) : 0), 0)
-                    : 0,
+                totalReferralPaid: analytics?.total_referral_paid || 0,
+                totalQrDeposits: analytics?.total_qr_deposits || 0,
                 totalVendors: analytics?.total_vendors || 0,
                 totalVendorsTransactionSum: analytics?.total_vendors_transaction_sum || 0,
                 totalVendorsPendingDues: analytics?.total_vendors_pending_dues || 0,
                 totalAgents: analytics?.total_agents || 0,
                 totalAgentsPendingDues: analytics?.total_agents_pending_dues || 0,
-                activePincodes: Array.isArray(analyticsPincodes?.active) ? analyticsPincodes.active : [],
-                upcomingPincodes: Array.isArray(analyticsPincodes?.upcoming) ? analyticsPincodes.upcoming : []
+                activePincodes: Array.isArray(analytics?.active_pincodes) ? analytics.active_pincodes : [],
+                upcomingPincodes: Array.isArray(analytics?.upcoming_pincodes) ? analytics.upcoming_pincodes : [],
+                totalActivePincodes: analytics?.total_active_pincodes || 0
             } as any);
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
+            
+            // Fetch campaign stats
+            const campStats = await apiFetch('/admin/campaigns/stats');
+            setCampaignStats(campStats);
         } catch (error) {
             console.error('Failed to load admin data', error);
         } finally {
@@ -266,7 +260,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Active Clusters</p>
-                        <p className="text-xl font-black text-slate-900">{(stats as any).activePincodes?.length || 0} Zones</p>
+                        <p className="text-xl font-black text-slate-900">{(stats as any).totalActivePincodes || (stats as any).activePincodes?.length || 0} Zones</p>
                     </div>
                 </Link>
             </div>
@@ -491,6 +485,71 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Campaign Participation & Leaderboard */}
+            {campaignStats?.campaign && (
+                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden mb-8 mt-8">
+                    <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50/30">
+                        <div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Active Contest: {campaignStats.campaign.title}</h3>
+                            <p className="text-slate-500 font-medium text-xs mt-0.5">Real-time participation and leaderboard scores.</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Participants</p>
+                                <p className="text-xl font-black text-indigo-600 leading-none">{campaignStats.total_participants}</p>
+                            </div>
+                            <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                                <Trophy size={24} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50/50">
+                                <tr>
+                                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-6">Participant</th>
+                                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</th>
+                                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Plan</th>
+                                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loans</th>
+                                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Onboarding</th>
+                                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right pr-6">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {campaignStats.participants.map((p: any) => (
+                                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                                        <td className="p-4 pl-6">
+                                            <p className="font-bold text-slate-900 text-sm">{p.name}</p>
+                                            <p className="text-[10px] font-medium text-slate-500">ID: {p.user_id}</p>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${p.user_type === 'VENDOR' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
+                                                {p.user_type}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 font-black text-slate-600">PLAN {p.plan}</td>
+                                        <td className="p-4 font-bold text-slate-900">{p.loans}</td>
+                                        <td className="p-4 font-bold text-slate-900">{p.onboarding}</td>
+                                        <td className="p-4 text-right pr-6">
+                                            <span className="font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg text-sm">
+                                                {p.score} PTS
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {campaignStats.participants.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="p-12 text-center text-slate-400 font-bold italic">No participants yet</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            <CampaignManager />
         </AdminLayout>
     );
 }

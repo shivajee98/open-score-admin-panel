@@ -7,7 +7,8 @@ import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar, ChevronDown, Database, CheckSquare, Phone } from 'lucide-react';
+import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar, ChevronDown, Database, CheckSquare, Phone, Video, X, Eye, Edit, Trash2, Link as LinkIcon, Save, Clock } from 'lucide-react';
+import Link from 'next/link';
 
 interface SubUser {
     id: number;
@@ -61,10 +62,14 @@ const SubUserRow = ({
 }: any) => {
     const [supportNumber, setSupportNumber] = useState(subUser.support_number ?? '');
     const [isSavingSupport, setIsSavingSupport] = useState(false);
+    const [meetingLink, setMeetingLink] = useState(subUser.meeting_link ?? '');
+    const [isSavingMeeting, setIsSavingMeeting] = useState(false);
+    const [isEditingMeeting, setIsEditingMeeting] = useState(false);
 
     useEffect(() => {
         setSupportNumber(subUser.support_number ?? '');
-    }, [subUser.support_number]);
+        setMeetingLink(subUser.meeting_link ?? '');
+    }, [subUser.support_number, subUser.meeting_link]);
 
     const handleSaveSupportNumber = async () => {
         const isValidLength = supportNumber.length === 10 || (supportNumber.length === 11 && supportNumber.startsWith('0'));
@@ -86,6 +91,31 @@ const SubUserRow = ({
         } finally {
             setIsSavingSupport(false);
         }
+    };
+
+    const handleSaveMeetingLink = async (valueOverride?: string | null) => {
+        setIsSavingMeeting(true);
+        const targetLink = valueOverride === undefined ? meetingLink : valueOverride;
+        try {
+            await apiFetch(`/admin/sub-users/${subUser.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ meeting_link: targetLink || null })
+            });
+            toast.success('Meeting link updated!');
+            setIsEditingMeeting(false);
+            fetchSubUsers();
+        } catch (e: any) {
+            toast.error(e.message || 'Error updating meeting link');
+        } finally {
+            setIsSavingMeeting(false);
+        }
+    };
+
+    const handleCopyMeetingLink = () => {
+        if (!subUser.meeting_link) return;
+        navigator.clipboard.writeText(subUser.meeting_link);
+        toast.success('Meeting link copied to clipboard!');
     };
 
     const normalizedKycStatus = subUser.kyc_verification?.status?.trim().toLowerCase();
@@ -250,6 +280,83 @@ const SubUserRow = ({
                         </div>
                     </div>
             </td>
+            <td className="p-6">
+                {subUser.meeting_link && !isEditingMeeting ? (
+                    <div className="flex items-center gap-2 group/meeting">
+                        <div 
+                            onClick={handleCopyMeetingLink}
+                            className="cursor-pointer flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all font-black text-[10px] uppercase tracking-wider shadow-sm"
+                        >
+                            <Video className="w-3.5 h-3.5" />
+                            Meeting Link
+                            <div className="h-3 w-[1px] bg-indigo-200 mx-1" />
+                            <LinkIcon className="w-3 h-3 opacity-50" />
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover/meeting:opacity-100 transition-opacity">
+                            <button 
+                                onClick={() => setIsEditingMeeting(true)}
+                                className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-indigo-600 transition-colors"
+                                title="Edit Link"
+                            >
+                                <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    if(confirm('Clear meeting link?')) {
+                                        setMeetingLink('');
+                                        handleSaveMeetingLink(null);
+                                    }
+                                }}
+                                className="p-1.5 hover:bg-rose-50 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
+                                title="Clear Link"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center gap-2 border-2 border-slate-50 rounded-xl p-1.5 bg-white shadow-sm focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
+                            <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 shrink-0">
+                                {isSavingMeeting ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Video size={14} />}
+                            </div>
+                            <input
+                                type="url"
+                                placeholder="Paste Link..."
+                                className="w-full bg-transparent border-none outline-none text-xs font-black text-slate-900 placeholder:text-slate-300 p-0"
+                                value={meetingLink}
+                                onChange={(e) => setMeetingLink(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveMeetingLink()}
+                            />
+                            <div className="flex items-center gap-1">
+                                <button
+                                    className={cn(
+                                        "w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+                                        isSavingMeeting ? "bg-slate-100 text-slate-400 cursor-wait" : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200"
+                                    )}
+                                    onClick={() => handleSaveMeetingLink()}
+                                    disabled={isSavingMeeting}
+                                    title="Save Meeting Link"
+                                >
+                                    <Save size={14} />
+                                </button>
+                                {isEditingMeeting && (
+                                    <button
+                                        onClick={() => {
+                                            setIsEditingMeeting(false);
+                                            setMeetingLink(subUser.meeting_link || '');
+                                        }}
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-400 hover:bg-slate-200 transition-all shrink-0"
+                                        title="Cancel"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </td>
             <td className="p-6 text-center">
                 <div className="flex flex-col">
                     <span className="font-mono font-black text-emerald-600 text-sm">₹{parseFloat((subUser as any).available_earnings || '0').toLocaleString('en-IN')}</span>
@@ -263,7 +370,15 @@ const SubUserRow = ({
                 </div>
             </td>
             <td className="p-6 pr-8 text-right">
-                <div className="flex justify-end gap-2 flex-wrap">
+                <div className="flex justify-end gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Link
+                        href={`/sub-users/detail?id=${subUser.id}`}
+                        className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100 shadow-sm"
+                        title="View Full Details"
+                    >
+                        <Eye size={18} />
+                    </Link>
+
                     {subUser.kyc_verification?.status?.trim().toLowerCase() === 'approved' && (
                         <button
                             onClick={() => handleKycAction(subUser.id, 're_kyc')}
@@ -278,7 +393,7 @@ const SubUserRow = ({
                         className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all border border-blue-100 shadow-sm"
                         title="Edit Details"
                     >
-                        <Shield size={18} />
+                        <Edit size={18} />
                     </button>
                     <button
                         onClick={async () => {
@@ -295,7 +410,7 @@ const SubUserRow = ({
                         className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all border border-rose-100 shadow-sm"
                         title="Delete Sub-User"
                     >
-                        <Plus size={18} className="rotate-45" />
+                        <Trash2 size={18} />
                     </button>
                 </div>
             </td>
@@ -354,6 +469,7 @@ export default function SubUsersPage() {
         support_number: '',
         show_support: false,
         is_active: true,
+        bulk_meeting_link: '',
     } as any);
 
     const [jumpPage, setJumpPage] = useState('');
@@ -362,8 +478,11 @@ export default function SubUsersPage() {
     const [globalReferralSettings, setGlobalReferralSettings] = useState<any>(null);
     const [savingGlobal, setSavingGlobal] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [bulkSupportNumber, setBulkSupportNumber] = useState('');
+    const [bulkMeetingLink, setBulkMeetingLink] = useState('');
     const [showDownloadOptions, setShowDownloadOptions] = useState(false);
     const downloadDropdownRef = useRef<HTMLDivElement>(null);
+    const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -743,69 +862,185 @@ export default function SubUsersPage() {
                 </div>
             </div>
 
-            {/* Bulk Support Update Bar */}
+            {/* Bulk Actions Bar */}
             {selectedIds.length > 0 && (
-                <div className="bg-blue-600 text-white p-6 rounded-[2rem] shadow-xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-300 border-4 border-blue-400/30">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                            <Shield className="w-6 h-6" />
+                <div className="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl mb-8 flex flex-col items-center gap-6 animate-in slide-in-from-top-4 duration-300 border-4 border-slate-800">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                <UsersIcon className="w-6 h-6 text-blue-400" />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-lg leading-tight">{selectedIds.length} Agents Selected</h3>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Update Support & Meeting Information</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="font-black text-lg leading-tight">{selectedIds.length} Agents Selected</h3>
-                            <p className="text-blue-100 text-xs font-bold uppercase tracking-widest">Update Support Information Default</p>
-                        </div>
+                        <button onClick={() => setSelectedIds([])} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                            <X size={20} />
+                        </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 flex-1 justify-end w-full md:w-auto">
-                        <div className="flex items-center gap-3 bg-white/10 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10 group cursor-pointer"
-                            onClick={() => setFormData((f: any) => ({ ...f, bulk_show_support: !f.bulk_show_support }))}>
-                            <span className="text-xs font-black uppercase tracking-widest">Show Support?</span>
-                            <button
-                                className={`relative w-10 h-5 rounded-full transition-colors border border-white/20 ${formData.bulk_show_support ? 'bg-white' : 'bg-white/20'}`}
-                            >
-                                <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full transition-transform ${formData.bulk_show_support ? 'bg-blue-600 translate-x-5' : 'bg-white translate-x-0'}`} />
-                            </button>
-                        </div>
-
-                        <div className="relative flex-1 max-w-[200px]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                        {/* Bulk Support Section */}
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-blue-400">
+                                    <Phone size={16} />
+                                    <span className="text-xs font-black uppercase tracking-widest">Support Update</span>
+                                </div>
+                                <div className="flex items-center gap-2 cursor-pointer"
+                                    onClick={() => setFormData((f: any) => ({ ...f, bulk_show_support: !f.bulk_show_support }))}>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Show?</span>
+                                    <button className={`relative w-8 h-4 rounded-full transition-colors ${formData.bulk_show_support ? 'bg-blue-500' : 'bg-white/10'}`}>
+                                        <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full transition-transform ${formData.bulk_show_support ? 'translate-x-4 bg-white' : 'translate-x-0 bg-slate-500'}`} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
                                 <input
                                     type="text"
                                     maxLength={11}
                                     placeholder="10 or 11 Digit Support Number"
-                                    className="w-full pl-6 pr-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-sm font-black text-white placeholder:text-white/40 outline-none focus:bg-white/20 focus:scale-[1.02] transition-all"
+                                    className="flex-1 px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-sm font-black text-white placeholder:text-white/20 outline-none focus:bg-white/20 transition-all"
                                     value={formData.bulk_support_number || ''}
                                     onChange={(e) => setFormData((f: any) => ({ ...f, bulk_support_number: e.target.value.replace(/\D/g, '').slice(0, 11) }))}
                                 />
+                                <button
+                                    onClick={async () => {
+                                        const isValid = formData.bulk_support_number && (formData.bulk_support_number.length === 10 || (formData.bulk_support_number.length === 11 && formData.bulk_support_number.startsWith('0')));
+                                        if (!isValid) {
+                                            toast.error('Invalid support number');
+                                            return;
+                                        }
+                                        setActionLoading(true);
+                                        try {
+                                            await apiFetch('/admin/sub-users/bulk-support', {
+                                                method: 'POST',
+                                                body: JSON.stringify({
+                                                    target_ids: selectedIds,
+                                                    target_type: 'sub-user',
+                                                    support_number: formData.bulk_support_number,
+                                                    show_support: formData.bulk_show_support
+                                                })
+                                            });
+                                            toast.success('Support updated');
+                                            fetchSubUsers();
+                                            setSelectedIds([]);
+                                        } catch (e: any) {
+                                            toast.error(e.message || 'Update failed');
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    disabled={actionLoading}
+                                    className="px-6 bg-blue-600 text-white rounded-xl font-black text-xs hover:bg-blue-700 transition-all disabled:opacity-50"
+                                >
+                                    {actionLoading ? '...' : 'Apply'}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if(!confirm('Clear support for all selected?')) return;
+                                        setActionLoading(true);
+                                        try {
+                                            await apiFetch('/admin/sub-users/bulk-support', {
+                                                method: 'POST',
+                                                body: JSON.stringify({
+                                                    target_ids: selectedIds,
+                                                    target_type: 'sub-user',
+                                                    support_number: null,
+                                                    show_support: false
+                                                })
+                                            });
+                                            toast.success('Support cleared & hidden');
+                                            fetchSubUsers();
+                                            setSelectedIds([]);
+                                        } catch (e: any) {
+                                            toast.error(e.message || 'Clear failed');
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    disabled={actionLoading}
+                                    className="px-4 bg-rose-500/20 text-rose-400 rounded-xl font-black text-[10px] hover:bg-rose-500/30 transition-all disabled:opacity-50 uppercase tracking-tighter"
+                                >
+                                    {actionLoading ? '...' : 'Clear'}
+                                </button>
+                            </div>
                         </div>
 
-                        <button
-                            onClick={async () => {
-                                const isValid = formData.bulk_support_number && (formData.bulk_support_number.length === 10 || (formData.bulk_support_number.length === 11 && formData.bulk_support_number.startsWith('0')));
-                                if (!isValid) {
-                                    toast.error('Support number must be 10 digits or 11 digits starting with 0');
-                                    return;
-                                }
-                                try {
-                                    await apiFetch('/admin/sub-users/bulk-support', {
-                                        method: 'POST',
-                                        body: JSON.stringify({
-                                            target_ids: selectedIds,
-                                            target_type: 'sub_users',
-                                            support_number: formData.bulk_support_number,
-                                            show_support: formData.bulk_show_support
-                                        })
-                                    });
-                                    toast.success('Support details updated for selected agents');
-                                    fetchSubUsers();
-                                    setSelectedIds([]);
-                                } catch (e: any) {
-                                    toast.error(e.message || 'Bulk update failed');
-                                }
-                            }}
-                            className="px-8 py-3 bg-white text-blue-600 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-lg shadow-black/10 active:scale-95 whitespace-nowrap"
-                        >
-                            Apply to All
-                        </button>
+                        {/* Bulk Meeting Section */}
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-4">
+                            <div className="flex items-center gap-2 text-indigo-400">
+                                <Video size={16} />
+                                <span className="text-xs font-black uppercase tracking-widest">Meeting Link Update</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <input
+                                    type="url"
+                                    placeholder="https://meet.google.com/..."
+                                    className="flex-1 px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-sm font-black text-white placeholder:text-white/20 outline-none focus:bg-white/20 transition-all"
+                                    value={formData.bulk_meeting_link || ''}
+                                    onChange={(e) => setFormData((f: any) => ({ ...f, bulk_meeting_link: e.target.value }))}
+                                />
+                                <button
+                                    onClick={async () => {
+                                        if (!formData.bulk_meeting_link) {
+                                            toast.error('Meeting link is required');
+                                            return;
+                                        }
+                                        setActionLoading(true);
+                                        try {
+                                            await apiFetch('/admin/sub-users/bulk-meeting', {
+                                                method: 'POST',
+                                                body: JSON.stringify({
+                                                    target_ids: selectedIds,
+                                                    target_type: 'sub-user',
+                                                    meeting_link: formData.bulk_meeting_link
+                                                })
+                                            });
+                                            toast.success('Meeting links updated');
+                                            fetchSubUsers();
+                                            setSelectedIds([]);
+                                        } catch (e: any) {
+                                            toast.error(e.message || 'Update failed');
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    disabled={actionLoading}
+                                    className="px-6 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all disabled:opacity-50"
+                                >
+                                    {actionLoading ? '...' : 'Apply'}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if(!confirm('Clear meeting links for all selected?')) return;
+                                        setActionLoading(true);
+                                        try {
+                                            await apiFetch('/admin/sub-users/bulk-meeting', {
+                                                method: 'POST',
+                                                body: JSON.stringify({
+                                                    target_ids: selectedIds,
+                                                    target_type: 'sub-user',
+                                                    meeting_link: null
+                                                })
+                                            });
+                                            toast.success('Meeting links cleared');
+                                            fetchSubUsers();
+                                            setSelectedIds([]);
+                                        } catch (e: any) {
+                                            toast.error(e.message || 'Clear failed');
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    disabled={actionLoading}
+                                    className="px-4 bg-rose-500/20 text-rose-400 rounded-xl font-black text-[10px] hover:bg-rose-500/30 transition-all disabled:opacity-50 uppercase tracking-tighter"
+                                >
+                                    {actionLoading ? '...' : 'Clear'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1019,6 +1254,7 @@ export default function SubUsersPage() {
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Credit Wallet / Limit</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Support</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Meeting</th>
                                     <th className="p-6 text-xs font-bold text-emerald-500 uppercase tracking-widest text-center">Available</th>
                                     <th className="p-6 text-xs font-bold text-amber-500 uppercase tracking-widest text-center">Upcoming</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
