@@ -24,7 +24,12 @@ export interface MonitoringAlert {
 }
 
 export function useAdminNotifications() {
-    const [counts, setCounts] = useState({ loans: 0, kyc: 0 });
+    const [counts, setCounts] = useState({ 
+        loans: 0, 
+        kyc: 0,
+        latest_approved_loan: null as any,
+        latest_pending_payment: null as any
+    });
     const [monitoring, setMonitoring] = useState<{
         latestAlert: MonitoringAlert | null;
         unread: number;
@@ -39,7 +44,9 @@ export function useAdminNotifications() {
             if (res && !res.error) {
                 setCounts({
                     loans: res.loans || 0,
-                    kyc: res.kyc || 0
+                    kyc: res.kyc || 0,
+                    latest_approved_loan: res.latest_approved_loan || null,
+                    latest_pending_payment: res.latest_pending_payment || null
                 });
             }
         } catch (e) {
@@ -67,7 +74,7 @@ export function useAdminNotifications() {
         const interval = setInterval(() => {
             fetchCounts();
             fetchMonitoring();
-        }, 90000); // 90 seconds
+        }, 10000); // Poll every 10 seconds for real-time responsiveness
         return () => clearInterval(interval);
     }, []);
 

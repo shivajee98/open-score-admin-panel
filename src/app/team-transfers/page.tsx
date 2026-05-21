@@ -224,7 +224,7 @@ export default function TeamTransfersPage() {
     const fetchTargetableUsers = async () => {
         setSearching(true);
         try {
-            const endpoint = isVendorConfig ? '/admin/sub-users?per_page=5000' : '/admin/users/targetable?linked_only=1';
+            const endpoint = isVendorConfig ? '/admin/sub-users?per_page=5000&light=1' : '/admin/users/targetable';
             const res = await apiFetch(endpoint);
             // sub-users is paginated, users/targetable is array
             setTargetableUsers(res?.data || (Array.isArray(res) ? res : []));

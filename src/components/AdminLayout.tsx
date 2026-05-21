@@ -8,7 +8,7 @@ import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, Shi
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import GlobalSearch from './GlobalSearch';
 import AdminUtilsSearch from './AdminUtilsSearch';
 
@@ -23,6 +23,57 @@ export default function AdminLayout({ children, title }: { children: React.React
 
     // Let's use Ref for silence
     const txRef = useRef<string | null>(null);
+    const lastApprovedLoanIdRef = useRef<number | null>(null);
+    const lastPendingPaymentIdRef = useRef<number | null>(null);
+
+    // Real-time notifications for approved loans and payment screenshots
+    useEffect(() => {
+        if (counts) {
+            if (counts.latest_approved_loan) {
+                const loan = counts.latest_approved_loan;
+                if (lastApprovedLoanIdRef.current !== null && lastApprovedLoanIdRef.current !== loan.id) {
+                    playNotificationSound(`New Loan Approved for ${loan.user_name} of Rupees ${loan.amount}`);
+                    toast.success(
+                        <div className="flex flex-col gap-1 pr-2">
+                            <span className="font-semibold text-slate-900 text-sm">🎉 Loan Approved!</span>
+                            <span className="text-xs text-slate-600">
+                                <strong>{loan.user_name}</strong>'s loan of <strong>₹{loan.amount.toLocaleString('en-IN')}</strong> (ID: {loan.display_id}) has been approved.
+                            </span>
+                        </div>,
+                        { duration: 8000 }
+                    );
+                }
+                lastApprovedLoanIdRef.current = loan.id;
+            }
+
+            if (counts.latest_pending_payment) {
+                const payment = counts.latest_pending_payment;
+                if (lastPendingPaymentIdRef.current !== null && lastPendingPaymentIdRef.current !== payment.id) {
+                    playNotificationSound(`New payment screenshot uploaded by ${payment.user_name} for Rupees ${payment.amount}`);
+                    toast.info(
+                        <div className="flex flex-col gap-1 pr-2">
+                            <span className="font-semibold text-indigo-900 text-sm">📸 Payment Screenshot Uploaded!</span>
+                            <span className="text-xs text-slate-600 mb-1">
+                                <strong>{payment.user_name}</strong> uploaded proof of <strong>₹{payment.amount.toLocaleString('en-IN')}</strong> for Loan {payment.loan_display_id}.
+                            </span>
+                            {payment.proof_image && (
+                                <a 
+                                    href={`/storage/${payment.proof_image}`} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="inline-flex items-center text-xs text-indigo-600 hover:underline font-semibold"
+                                >
+                                    View Screenshot ↗
+                                </a>
+                            )}
+                        </div>,
+                        { duration: 10000 }
+                    );
+                }
+                lastPendingPaymentIdRef.current = payment.id;
+            }
+        }
+    }, [counts]);
 
     // Auth check is now handled by Middleware and apiFetch
     useEffect(() => {

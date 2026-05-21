@@ -4,14 +4,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck, Percent } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
 import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
 import MerchantPincodeAnalysis from './MerchantPincodeAnalysis';
 import { Sparkles } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
 const isPlatformFeePaid = (loan: any): boolean => {
@@ -33,6 +33,7 @@ const getPendingPlatformFee = (loan: any) => {
 };
 
 export default function LoanApprovals() {
+    const router = useRouter();
     const { counts } = useAdminNotifications();
     const searchParams = useSearchParams();
     const [loans, setLoans] = useState<any[]>([]);
@@ -45,6 +46,27 @@ export default function LoanApprovals() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedLoanIds, setSelectedLoanIds] = useState<number[]>([]);
+    const [stageStats, setStageStats] = useState<{
+        approve_stage: number;
+        pay_fee_stage: number;
+        ready_to_disburse: number;
+        risk_stage: number;
+        total_pending: number;
+        available_funds: number;
+        treasury_warning: boolean;
+        amount_needed: number;
+    } | null>(null);
+
+    const fetchStageStats = async () => {
+        try {
+            const data = await apiFetch('/admin/loans/stage-counts');
+            if (data && !data.error) {
+                setStageStats(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch stage stats', error);
+        }
+    };
 
     // Filters & Pagination
     const [search, setSearch] = useState('');
@@ -117,8 +139,8 @@ export default function LoanApprovals() {
     const CountdownTimer = ({ loan, delayMinutes, label }: { loan: any, delayMinutes: number, label: string }) => {
         if (!autoPilotSettings.enabled || delayMinutes <= 0) return null;
 
-        // Suspend timer if there are pending re-uploads or existing risk flags
-        if ((loan.reupload_fields && loan.reupload_fields.length > 0) || loan.is_auto_pilot_risk) {
+        // Suspend timer if there are pending re-uploads
+        if (loan.reupload_fields && loan.reupload_fields.length > 0) {
             return null;
         }
         
@@ -333,6 +355,7 @@ export default function LoanApprovals() {
             } else {
                 setLoans([]);
             }
+            fetchStageStats();
         } catch (error) {
             console.error('Failed to load loans', error);
         } finally {
@@ -598,6 +621,105 @@ export default function LoanApprovals() {
             <div className="flex flex-col lg:flex-row gap-8">
                 {/* Main Content Area */}
                 <div className="flex-1 min-w-0">
+
+                    {/* Treasury Warning Banner */}
+                    {stageStats?.treasury_warning && (
+                        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 border border-rose-100 shadow-md animate-pulse">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 mt-0.5 sm:mt-0">
+                                        <AlertTriangle className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 text-sm">Low Treasury Balance Warning</h3>
+                                        <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                                            The available treasury balance (<strong className="text-rose-600">₹{stageStats.available_funds.toLocaleString('en-IN')}</strong>) is insufficient to support all approved loans currently awaiting disbursal (Requires <strong className="text-slate-800">₹{stageStats.amount_needed.toLocaleString('en-IN')}</strong>). Please add capital to the treasury to resume disbursements.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => router.push('/users')}
+                                    className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/15 active:scale-[0.98] transition-all cursor-pointer"
+                                >
+                                    <Landmark size={13} />
+                                    Add Capital
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Loan Metric Summary Grid */}
+                    {stageStats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            {/* Card 1: Risk Stage */}
+                            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Risk Review Queue</span>
+                                        <h3 className="text-2xl font-bold text-slate-800 mt-1">{stageStats.risk_stage}</h3>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-rose-50 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all duration-300">
+                                        <AlertTriangle className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                                    <span>Requires manual intervention</span>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Approve Stage */}
+                            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Approvals</span>
+                                        <h3 className="text-2xl font-bold text-slate-800 mt-1">{stageStats.approve_stage}</h3>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                                        <Clock className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                    <span>Intake & Vetting</span>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Pay Fee Stage */}
+                            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Platform Fee</span>
+                                        <h3 className="text-2xl font-bold text-slate-800 mt-1">{stageStats.pay_fee_stage}</h3>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
+                                        <Percent className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                    <span>Fee pending verification</span>
+                                </div>
+                            </div>
+
+                            {/* Card 4: Ready to Disburse */}
+                            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ready to Disburse</span>
+                                        <h3 className="text-2xl font-bold text-slate-800 mt-1">{stageStats.ready_to_disburse}</h3>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                                        <BadgeCheck className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    <span>Funds checks cleared</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
@@ -1279,6 +1401,12 @@ export default function LoanApprovals() {
 
                                                 {loan.status === 'APPROVED' && (
                                                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        {loan.is_auto_pilot_risk && (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl font-bold text-[9px] uppercase tracking-wider shadow-sm animate-pulse">
+                                                                <AlertTriangle size={12} className="text-rose-500 shrink-0" />
+                                                                risk needs manual verification during disbursal
+                                                            </span>
+                                                        )}
                                                         {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}

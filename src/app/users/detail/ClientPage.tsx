@@ -434,58 +434,107 @@ export default function UserDetailsPage() {
                                 </div>
 
                                 {/* KYC & Documents Display */}
-                                <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <Shield className="w-3 h-3" /> KYC Documents & Shop Proofs
-                                    </h4>
-                                    <div className="flex flex-wrap gap-4">
-                                        {user.aadhar_image && (
-                                            <a href={user.aadhar_image} target="_blank" className="group relative">
-                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
-                                                    <img src={user.aadhar_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Aadhar Front" />
-                                                    <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
-                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">Aadhar Front</span>
+                                <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 space-y-6">
+                                    {/* Identity Documents */}
+                                    <div>
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <Shield className="w-3 h-3 text-blue-500" /> Identity & KYC Documents
+                                        </h4>
+                                        <div className="flex flex-wrap gap-4">
+                                            {user.aadhar_image && (
+                                                <a href={user.aadhar_image} target="_blank" className="group relative">
+                                                    <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                        <img src={user.aadhar_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Aadhar Front" />
+                                                        <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
+                                                            <span className="text-[8px] font-black text-white uppercase tracking-tighter">Aadhar Front</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </a>
-                                        )}
-                                        {user.aadhar_back_image && (
-                                            <a href={user.aadhar_back_image} target="_blank" className="group relative">
-                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
-                                                    <img src={user.aadhar_back_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Aadhar Back" />
-                                                    <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
-                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">Aadhar Back</span>
+                                                </a>
+                                            )}
+                                            {user.aadhar_back_image && (
+                                                <a href={user.aadhar_back_image} target="_blank" className="group relative">
+                                                    <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                        <img src={user.aadhar_back_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Aadhar Back" />
+                                                        <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
+                                                            <span className="text-[8px] font-black text-white uppercase tracking-tighter">Aadhar Back</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </a>
-                                        )}
-                                        {user.pan_image && (
-                                            <a href={user.pan_image} target="_blank" className="group relative">
-                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
-                                                    <img src={user.pan_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="PAN Card" />
-                                                    <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
-                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">PAN Card</span>
+                                                </a>
+                                            )}
+                                            {user.pan_image && (
+                                                <a href={user.pan_image} target="_blank" className="group relative">
+                                                    <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                        <img src={user.pan_image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="PAN Card" />
+                                                        <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm p-1 text-center">
+                                                            <span className="text-[8px] font-black text-white uppercase tracking-tighter">PAN Card</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </a>
-                                        )}
-                                        {user.shop_images && Array.isArray(user.shop_images) && user.shop_images.map((img: string, idx: number) => (
-                                            <a key={idx} href={img} target="_blank" className="group relative">
-                                                <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
-                                                    <img src={img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={`Shop ${idx + 1}`} />
-                                                    <div className="absolute inset-x-0 bottom-0 bg-emerald-900/60 backdrop-blur-sm p-1 text-center">
-                                                        <span className="text-[8px] font-black text-white uppercase tracking-tighter">Shop Photo {idx + 1}</span>
+                                                </a>
+                                            )}
+                                            {user.electricity_bill && (
+                                                <a href={user.electricity_bill} target="_blank" className="group relative">
+                                                    <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                        <img src={user.electricity_bill} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Electricity Bill" />
+                                                        <div className="absolute inset-x-0 bottom-0 bg-amber-900/60 backdrop-blur-sm p-1 text-center">
+                                                            <span className="text-[8px] font-black text-white uppercase tracking-tighter">Electricity Bill</span>
+                                                        </div>
                                                     </div>
+                                                </a>
+                                            )}
+                                            {user.shop_rent_doc && (
+                                                <a href={user.shop_rent_doc} target="_blank" className="group relative">
+                                                    <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                        <img src={user.shop_rent_doc} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Shop Rent Doc" />
+                                                        <div className="absolute inset-x-0 bottom-0 bg-indigo-900/60 backdrop-blur-sm p-1 text-center">
+                                                            <span className="text-[8px] font-black text-white uppercase tracking-tighter">Rent/Shop Doc</span>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            )}
+                                            {!user.aadhar_image && !user.pan_image && !user.electricity_bill && !user.shop_rent_doc && (
+                                                <div className="w-full py-4 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-100 border-dashed">
+                                                    <ShieldAlert className="w-5 h-5 text-slate-200 mb-1" />
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No KYC Docs</p>
                                                 </div>
-                                            </a>
-                                        ))}
-                                        {!user.aadhar_image && !user.pan_image && (!user.shop_images || user.shop_images.length === 0) && (
-                                            <div className="w-full py-8 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-100 border-dashed">
-                                                <ShieldAlert className="w-6 h-6 text-slate-200 mb-2" />
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Documents Uploaded</p>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {/* Shop Images */}
+                                    {(user.role === 'MERCHANT' || user.role === 'VENDOR') && (
+                                        <div className="pt-6 border-t border-slate-200/50">
+                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
+                                                <span className="flex items-center gap-2">
+                                                    <Building2 className="w-3 h-3 text-emerald-500" /> Shop & Store Photos
+                                                </span>
+                                                {user.shop_images && Array.isArray(user.shop_images) && user.shop_images.length > 0 && (
+                                                    <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter">
+                                                        {user.shop_images.length} Photos Trace
+                                                    </span>
+                                                )}
+                                            </h4>
+                                            <div className="flex flex-wrap gap-4">
+                                                {user.shop_images && (Array.isArray(user.shop_images) ? user.shop_images : (() => {
+                                                    try { return JSON.parse(user.shop_images); } catch (e) { return []; }
+                                                })()).map((img: string, idx: number) => (
+                                                    <a key={idx} href={img} target="_blank" className="group relative">
+                                                        <div className="w-32 h-20 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                                            <img src={img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={`Shop ${idx + 1}`} />
+                                                            <div className="absolute inset-x-0 bottom-0 bg-emerald-900/60 backdrop-blur-sm p-1 text-center">
+                                                                <span className="text-[8px] font-black text-white uppercase tracking-tighter">Shop View {idx + 1}</span>
+                                                            </div>
+                                                        </div>
+                                                    </a>
+                                                ))}
+                                                {(!user.shop_images || (Array.isArray(user.shop_images) ? user.shop_images.length === 0 : true)) && (
+                                                    <div className="w-full py-4 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-100 border-dashed">
+                                                        <Building2 className="w-5 h-5 text-slate-200 mb-1" />
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Shop Photos Uploaded</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -916,22 +965,29 @@ export default function UserDetailsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="p-6">
-                                                    {(tx.paid_to && tx.paid_to.role === 'MERCHANT') ? (
+                                                    {tx.paid_to ? (
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm border border-slate-50">
-                                                                {tx.paid_to.name?.[0] || 'M'}
+                                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm border border-slate-50 uppercase">
+                                                                {tx.paid_to.name?.[0] || (tx.paid_to.role === 'MERCHANT' ? 'M' : 'U')}
                                                             </div>
                                                             <div>
                                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                                     <p className="text-sm font-black text-slate-900 italic">
                                                                         {tx.paid_to.business_name || tx.paid_to.name}
                                                                     </p>
-                                                                    <span className="text-[7px] px-1 bg-indigo-50 text-indigo-400 font-black rounded uppercase border border-indigo-100">
-                                                                        MERCHANT
+                                                                    <span className={cn(
+                                                                        "text-[7px] px-1 font-black rounded uppercase border",
+                                                                        tx.paid_to.role === 'MERCHANT' ? "bg-indigo-50 text-indigo-400 border-indigo-100" :
+                                                                        tx.paid_to.role === 'SYSTEM' ? "bg-slate-100 text-slate-400 border-slate-200" :
+                                                                        tx.paid_to.role === 'AGENT' ? "bg-amber-50 text-amber-500 border-amber-100" :
+                                                                        "bg-emerald-50 text-emerald-500 border-emerald-100"
+                                                                    )}>
+                                                                        {tx.paid_to.role}
                                                                     </span>
                                                                 </div>
                                                                 <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                                    <Phone className="w-2.5 h-2.5" /> {tx.paid_to.mobile}
+                                                                    {tx.paid_to.role === 'SYSTEM' ? <Shield size={10} /> : <Phone size={10} />}
+                                                                    {tx.paid_to.mobile}
                                                                 </p>
                                                             </div>
                                                         </div>

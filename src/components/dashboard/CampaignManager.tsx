@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Megaphone, Power, Edit3, Users, Search, Check, X, Layout, Image as ImageIcon, Link as LinkIcon, Plus, Trash2, Upload, Info } from 'lucide-react';
+import { Megaphone, Power, Edit3, Users, Search, Check, X, Layout, Image as ImageIcon, Link as LinkIcon, Plus, Trash2, Upload, Info, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-export default function CampaignManager() {
+export default function CampaignManager({ onViewStats }: { onViewStats?: (id: number) => void }) {
     const [campaigns, setCampaigns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -178,10 +178,9 @@ export default function CampaignManager() {
 
         setSearchingUsers(true);
         try {
-            // Dual search: both standard users and sub-users (vendors)
             const [usersRes, subUsersRes] = await Promise.all([
-                apiFetch(`/admin/users?search=${val}&per_page=5`),
-                apiFetch(`/admin/sub-users?search=${val}&per_page=5`)
+                apiFetch(`/admin/users?search=${val}&per_page=15`),
+                apiFetch(`/admin/sub-users?search=${val}&per_page=15`)
             ]);
             
             const standardUsers = (usersRes.data || []).map((u: any) => ({ ...u, id: `u:${u.id}`, _source: 'USER' }));
@@ -322,12 +321,25 @@ export default function CampaignManager() {
                                             <Power className="w-5 h-5" />
                                         </button>
                                         <button 
-                                            onClick={() => openEditModal(c)}
-                                            className="w-10 h-10 bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 rounded-xl flex items-center justify-center transition-all shadow-sm"
-                                        >
-                                            <Edit3 className="w-4 h-4" />
-                                        </button>
-                                    </div>
+                                             onClick={() => openEditModal(c)}
+                                             className="w-10 h-10 bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 rounded-xl flex items-center justify-center transition-all shadow-sm"
+                                             title="Edit Campaign"
+                                         >
+                                             <Edit3 className="w-4 h-4" />
+                                         </button>
+                                         {onViewStats && (
+                                             <button 
+                                                 onClick={() => {
+                                                     onViewStats(c.id);
+                                                     window.scrollTo({ top: 500, behavior: 'smooth' });
+                                                 }}
+                                                 className="px-4 h-10 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2"
+                                             >
+                                                 <Trophy size={14} />
+                                                 Leaderboard
+                                             </button>
+                                         )}
+                                     </div>
                                     <button 
                                         onClick={() => handleDelete(c.id)}
                                         className="w-10 h-10 text-rose-300 hover:text-rose-600 transition-colors"

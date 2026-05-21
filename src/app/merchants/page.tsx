@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink, AlertCircle, Phone, Video, Link as LinkIcon, Edit } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, CheckCircle, MoreVertical, ReceiptIndianRupee, CheckSquare, Square, Save, Eye, Clock, X, Check, ChevronLeft, ChevronRight, Download, AlertTriangle, ArrowRightLeft, MapPin, Filter, Calendar, ShieldAlert, ShieldCheck, BadgeCheck, Unlink, AlertCircle, Phone, Video, Link as LinkIcon, Edit, Send, Mail, Bell } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import MaintenanceChargeModal from '@/components/MaintenanceChargeModal';
 import Link from 'next/link';
@@ -11,9 +11,11 @@ import VaultConfigModal from '@/components/VaultConfigModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import MerchantKycModal from '@/components/MerchantKycModal';
+import EmailHistoryModal from '@/components/EmailHistoryModal';
+import AppNotificationHistoryModal from '@/components/AppNotificationHistoryModal';
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onReviewKyc, onVaultConfig }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onReviewKyc, onVaultConfig, onSendEmail, onSendNotification }: any) => {
     const [cashbackPercent, setCashbackPercent] = useState(user.cashback_percentage ?? '');
     const [cashbackFlat, setCashbackFlat] = useState(user.cashback_flat_amount ?? '');
     const [receivePercent, setReceivePercent] = useState(user.receive_cashback_percentage ?? '');
@@ -265,6 +267,36 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                 </div>
             </td>
             <td className="p-6">
+                {user.email ? (
+                    <div className="flex items-center justify-center">
+                        {isAdmin && (
+                            <button
+                                onClick={() => onSendEmail([user.id])}
+                                className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-md transition-colors"
+                                title="Send Email"
+                            >
+                                <Send className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <span className="text-xs text-slate-300">-</span>
+                )}
+            </td>
+            <td className="p-6">
+                <div className="flex items-center justify-center">
+                    {isAdmin && (
+                        <button
+                            onClick={() => onSendNotification([user.id])}
+                            className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors"
+                            title="Send App Notification"
+                        >
+                            <Bell className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
+            </td>
+            <td className="p-6">
                 {user.kyc_leads?.[0]?.rejection_reason && (
                     <div className="max-w-[200px]">
                         <p className="text-[10px] font-black text-rose-500 uppercase tracking-tighter mb-1 flex items-center gap-1">
@@ -449,11 +481,13 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleDelete, 
                                 <AlertTriangle className="w-3 h-3" /> PENDING KYC
                             </span>
                         )}
-                        {(user.aadhar_image || user.aadhar_back_image || user.pan_image) && (
+                        {(user.aadhar_image || user.aadhar_back_image || user.pan_image || user.electricity_bill || user.shop_rent_doc) && (
                             <div className="flex gap-1 mt-1">
                                 {user.aadhar_image && <a href={user.aadhar_image} target="_blank" className="w-6 h-4 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-400 hover:text-blue-500 transition-colors" title="Aadhar Front">F</a>}
                                 {user.aadhar_back_image && <a href={user.aadhar_back_image} target="_blank" className="w-6 h-4 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-400 hover:text-blue-500 transition-colors" title="Aadhar Back">B</a>}
                                 {user.pan_image && <a href={user.pan_image} target="_blank" className="w-6 h-4 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-400 hover:text-blue-500 transition-colors" title="PAN">P</a>}
+                                {user.electricity_bill && <a href={user.electricity_bill} target="_blank" className="w-6 h-4 bg-blue-50 rounded border border-blue-100 flex items-center justify-center text-[8px] font-bold text-blue-400 hover:text-blue-600 transition-colors" title="Electricity Bill">E</a>}
+                                {user.shop_rent_doc && <a href={user.shop_rent_doc} target="_blank" className="w-6 h-4 bg-indigo-50 rounded border border-indigo-100 flex items-center justify-center text-[8px] font-bold text-indigo-400 hover:text-indigo-600 transition-colors" title="Rent/Shop Doc">R</a>}
                             </div>
                         )}
                     </div>
@@ -768,6 +802,59 @@ export default function MerchantsPage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
+    // Email Modal States
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [isEmailHistoryOpen, setIsEmailHistoryOpen] = useState(false);
+    const [emailTargetIds, setEmailTargetIds] = useState<number[]>([]);
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailMessage, setEmailMessage] = useState('');
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+    // App Notification Modal States
+    const [isNotificationHistoryOpen, setIsNotificationHistoryOpen] = useState(false);
+    const [notificationTargetIds, setNotificationTargetIds] = useState<number[]>([]);
+
+    const handleOpenBulkEmailModal = () => {
+        setEmailTargetIds(selectedIds);
+        setEmailSubject('');
+        setEmailMessage('');
+        setIsEmailModalOpen(true);
+    };
+
+    const handleOpenSingleEmailModal = (ids: number[]) => {
+        setEmailTargetIds(ids);
+        setEmailSubject('');
+        setEmailMessage('');
+        setIsEmailModalOpen(true);
+    };
+
+    const handleSendEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSendingEmail(true);
+        try {
+            for (const id of emailTargetIds) {
+                await apiFetch('/admin/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient_ids: [id],
+                        recipient_type: 'user',
+                        subject: emailSubject,
+                        message: emailMessage,
+                    })
+                });
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            toast.success('Emails scheduled successfully!');
+            setIsEmailModalOpen(false);
+            setSelectedIds([]);
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to send emails.');
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
+
     const loadUsers = async () => {
         setLoading(true);
         try {
@@ -972,7 +1059,30 @@ export default function MerchantsPage() {
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                        {isAdmin && (
+                            <button
+                                onClick={() => setIsEmailHistoryOpen(true)}
+                                className="flex items-center gap-2 px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm"
+                                title="View Email Logs & Stats"
+                            >
+                                <Mail className="w-4 h-4 text-teal-600" />
+                                <span className="hidden sm:inline">Mailing Records</span>
+                            </button>
+                        )}
+                        {isAdmin && (
+                            <button
+                                onClick={() => {
+                                    setNotificationTargetIds([]);
+                                    setIsNotificationHistoryOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm"
+                                title="View Notification History"
+                            >
+                                <Bell className="w-4 h-4 text-indigo-600" />
+                                <span className="hidden sm:inline">App Alerts</span>
+                            </button>
+                        )}
                         <div className="relative download-dropdown">
                             <button
                                 onClick={() => setShowDownloadOptions(!showDownloadOptions)}
@@ -1093,6 +1203,40 @@ export default function MerchantsPage() {
                                 >
                                     <Video size={20} />
                                     Set Meeting Link
+                                </button>
+                                <button
+                                    onClick={handleOpenBulkEmailModal}
+                                    className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-lg shadow-teal-200"
+                                >
+                                    <Send size={20} />
+                                    Send Email
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNotificationTargetIds(selectedIds);
+                                        setIsNotificationHistoryOpen(true);
+                                    }}
+                                    className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                                >
+                                    <Bell size={20} />
+                                    Send Notification
+                                </button>
+                                <button
+                                    onClick={() => setIsEmailHistoryOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                                >
+                                    <Mail size={20} className="text-teal-600" />
+                                    Email History
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNotificationTargetIds([]);
+                                        setIsNotificationHistoryOpen(true);
+                                    }}
+                                    className="flex items-center gap-2 px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                                >
+                                    <Bell size={20} className="text-indigo-600" />
+                                    Alert History
                                 </button>
                             </div>
                         )}
@@ -1243,6 +1387,8 @@ export default function MerchantsPage() {
                                     )}
                                 </th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">Merchant Details</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Email</th>
+                                <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">App Notification</th>
                                 <th className="p-6 text-xs font-bold text-rose-500 uppercase tracking-widest">Decline Reason</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Role</th>
                                 <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Balance</th>
@@ -1277,6 +1423,11 @@ export default function MerchantsPage() {
                                     currentUser={currentUser}
                                     onReviewKyc={handleKycReview}
                                     onVaultConfig={(u: any) => { setSelectedUserForVault(u); setIsVaultModalOpen(true); }}
+                                    onSendEmail={handleOpenSingleEmailModal}
+                                    onSendNotification={(ids: number[]) => {
+                                        setNotificationTargetIds(ids);
+                                        setIsNotificationHistoryOpen(true);
+                                    }}
                                 />
                             ))}
                         </tbody>
@@ -1498,6 +1649,95 @@ export default function MerchantsPage() {
                         setSelectedIds([]);
                     }}
                 />
+            )}
+
+            {/* Email History Modal */}
+            <EmailHistoryModal
+                isOpen={isEmailHistoryOpen}
+                onClose={() => setIsEmailHistoryOpen(false)}
+            />
+
+            {/* App Notification History Modal */}
+            <AppNotificationHistoryModal
+                isOpen={isNotificationHistoryOpen}
+                onClose={() => setIsNotificationHistoryOpen(false)}
+                recipientType="user"
+                selectedIds={notificationTargetIds}
+                onSuccess={() => {
+                    setSelectedIds([]);
+                    loadUsers();
+                }}
+            />
+
+            {/* Send Email Modal */}
+            {isAdmin && isEmailModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-2xl font-black text-slate-900">Send Email</h3>
+                            <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <p className="text-slate-500 font-medium mb-6">
+                            Sending email to <span className="text-slate-900 font-bold">{emailTargetIds.length} selected recipients</span>.
+                        </p>
+
+                        <form onSubmit={handleSendEmailSubmit}>
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Subject</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-teal-100 outline-none"
+                                        placeholder="Enter email subject"
+                                        value={emailSubject}
+                                        onChange={e => setEmailSubject(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Message Content</label>
+                                    <textarea
+                                        required
+                                        rows={6}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm text-slate-900 focus:ring-2 focus:ring-teal-100 outline-none font-medium"
+                                        placeholder="Type your message here..."
+                                        value={emailMessage}
+                                        onChange={e => setEmailMessage(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEmailModalOpen(false)}
+                                    className="py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSendingEmail}
+                                    className="py-4 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-lg shadow-teal-200 flex items-center justify-center gap-2"
+                                >
+                                    {isSendingEmail ? (
+                                        <>
+                                            <Clock className="w-5 h-5 animate-spin" />
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-5 h-5" />
+                                            Send Email
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
 
             {/* Footer */}

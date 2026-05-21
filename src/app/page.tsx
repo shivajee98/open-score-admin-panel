@@ -50,10 +50,11 @@ export default function AdminDashboard() {
     const loadData = async () => {
         try {
             // Parallel fetch for speed
-            const [analytics, pending, pendingRepays] = await Promise.all([
+            const [analytics, pending, pendingRepays, allCamps] = await Promise.all([
                 apiFetch('/admin/analytics/dashboard'),
                 apiFetch('/admin/funds/pending'),
-                apiFetch('/admin/repayments/pending')
+                apiFetch('/admin/repayments/pending'),
+                apiFetch('/admin/campaigns')
             ]);
 
             setStats({
@@ -82,13 +83,23 @@ export default function AdminDashboard() {
             setPendingTx(Array.isArray(pending) ? pending : []);
             setPendingRepayments(Array.isArray(pendingRepays?.data) ? pendingRepays.data : (Array.isArray(pendingRepays) ? pendingRepays : []));
             
-            // Fetch campaign stats
+            // Fetch campaign stats (default to active)
             const campStats = await apiFetch('/admin/campaigns/stats');
             setCampaignStats(campStats);
         } catch (error) {
             console.error('Failed to load admin data', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadCampaignStats = async (id: number) => {
+        try {
+            const campStats = await apiFetch(`/admin/campaigns/stats?campaign_id=${id}`);
+            setCampaignStats(campStats);
+            toast.success(`Loaded stats for: ${campStats.campaign.title}`);
+        } catch (error) {
+            toast.error('Failed to load campaign stats');
         }
     };
 
@@ -263,6 +274,18 @@ export default function AdminDashboard() {
                         <p className="text-xl font-black text-slate-900">{(stats as any).totalActivePincodes || (stats as any).activePincodes?.length || 0} Zones</p>
                     </div>
                 </Link>
+                
+                {campaignStats?.campaign && (
+                    <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                            <Trophy className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Contest Participants</p>
+                            <p className="text-xl font-black text-slate-900">{campaignStats.total_participants}</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Recent Repayments & Health Grid */}
@@ -491,10 +514,22 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden mb-8 mt-8">
                     <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50/30">
                         <div>
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Active Contest: {campaignStats.campaign.title}</h3>
-                            <p className="text-slate-500 font-medium text-xs mt-0.5">Real-time participation and leaderboard scores.</p>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                                    {campaignStats.campaign.is_active ? 'Active Contest' : 'Past Contest'}: {campaignStats.campaign.title}
+                                </h3>
+                                {!campaignStats.campaign.is_active && (
+                                    <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[8px] font-black uppercase rounded-md">Deactivated</span>
+                                )}
+                            </div>
+                            <p className="text-slate-500 font-medium text-xs">
+                                {campaignStats.campaign.is_active 
+                                    ? 'Real-time participation and leaderboard scores.' 
+                                    : `Final scores recorded at ${new Date(campaignStats.campaign.deactivated_at || campaignStats.campaign.updated_at).toLocaleString()}`
+                                }
+                            </p>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-6">
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Participants</p>
                                 <p className="text-xl font-black text-indigo-600 leading-none">{campaignStats.total_participants}</p>
@@ -549,7 +584,7 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            <CampaignManager />
+            <CampaignManager onViewStats={loadCampaignStats} />
         </AdminLayout>
     );
 }

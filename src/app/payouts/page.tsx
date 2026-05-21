@@ -319,8 +319,8 @@ export default function PayoutsAdminPage() {
                                                                     <p className="text-sm font-black text-slate-900">{payout.user?.name}</p>
                                                                     {payout.user?.role && (
                                                                         <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter border ${payout.user.role === 'MERCHANT' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                                                payout.user.role === 'STUDENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                                                    'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                            payout.user.role === 'STUDENT' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                                                'bg-emerald-50 text-emerald-600 border-emerald-100'
                                                                             }`}>
                                                                             {payout.user.role}
                                                                         </span>
@@ -389,7 +389,7 @@ export default function PayoutsAdminPage() {
                                                     </td>
                                                     <td className="px-8 py-6 text-right">
                                                         <div className="flex items-center justify-end gap-2">
-                                                            {payout.status === 'PENDING' && (
+                                                            {(payout.status === 'PENDING' || payout.status === 'WAITING') && (
                                                                 <button
                                                                     onClick={() => { setSelectedPayout(payout); setIsActionModalOpen(true); }}
                                                                     className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-90"
@@ -568,11 +568,29 @@ export default function PayoutsAdminPage() {
                             </div>
 
                             <div className="mb-8">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Admin Note (Internal)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block italic">Waiting Duration Presets</label>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {[
+                                        { label: '2 Hours', text: 'Bank server is experiencing a delay. Funds will be sent within 2 hours.' },
+                                        { label: '6 Hours', text: 'Verification in progress. Expect settlement within 6 hours.' },
+                                        { label: '24 Hours', text: 'Manual verification required. Will be processed within 24 hours.' },
+                                        { label: '48 Hours', text: 'Delayed due to bank holidays. Will be processed within 48 hours.' },
+                                        { label: 'System Issue', text: 'Technical glitch at nodal bank. We are resolving this. Funds safe.' },
+                                    ].map((preset) => (
+                                        <button
+                                            key={preset.label}
+                                            onClick={() => setAdminNote(preset.text)}
+                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase transition-all"
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">Admin Note (visible to user)</label>
                                 <textarea
                                     value={adminNote}
                                     onChange={(e) => setAdminNote(e.target.value)}
-                                    placeholder="Add any details about payment reference or rejection reason..."
+                                    placeholder="Add any details about payment reference, waiting duration or rejection reason..."
                                     className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:border-slate-900 transition-all h-24"
                                 ></textarea>
                             </div>

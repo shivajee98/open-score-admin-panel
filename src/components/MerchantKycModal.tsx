@@ -223,6 +223,14 @@ export default function MerchantKycModal({ isOpen, onClose, merchant, isAdmin, o
                                     <ImagePreview label="PAN Card Image" src={merchant.pan_image} fallbackLabel="PAN Image" />
                                 </div>
 
+                                <div className="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-100 space-y-6">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Additional Merchant Proofs</span>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <ImagePreview label="Electricity Bill" src={merchant.electricity_bill} fallbackLabel="Bill" />
+                                        <ImagePreview label="Rent/Shop Agreement" src={merchant.shop_rent_doc} fallbackLabel="Doc" />
+                                    </div>
+                                </div>
+
                                 <div className="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-100">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 px-1">Shop/Store Images</span>
                                     <div className="grid grid-cols-2 gap-3">

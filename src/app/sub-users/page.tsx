@@ -7,8 +7,10 @@ import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar, ChevronDown, Database, CheckSquare, Phone, Video, X, Eye, Edit, Trash2, Link as LinkIcon, Save, Clock } from 'lucide-react';
+import { UserPlus, Plus, Shield, Users as UsersIcon, Wallet, ArrowRight, TrendingUp, TreePine, Search, Filter, ChevronLeft, ChevronRight, Download, Calendar, ChevronDown, Database, CheckSquare, Phone, Video, X, Eye, Edit, Trash2, Link as LinkIcon, Save, Clock, Send, Mail, Bell } from 'lucide-react';
 import Link from 'next/link';
+import EmailHistoryModal from '@/components/EmailHistoryModal';
+import AppNotificationHistoryModal from '@/components/AppNotificationHistoryModal';
 
 interface SubUser {
     id: number;
@@ -58,7 +60,9 @@ const SubUserRow = ({
     handleKycAction, 
     creditAmount, 
     setCreditAmount, 
-    handleAddCredit 
+    handleAddCredit,
+    onSendEmail,
+    onSendNotification
 }: any) => {
     const [supportNumber, setSupportNumber] = useState(subUser.support_number ?? '');
     const [isSavingSupport, setIsSavingSupport] = useState(false);
@@ -159,6 +163,32 @@ const SubUserRow = ({
                             )}
                         </div>
                     </div>
+                </div>
+            </td>
+            <td className="p-6">
+                {subUser.email ? (
+                    <div className="flex items-center justify-center">
+                        <button
+                            onClick={() => onSendEmail([subUser.id])}
+                            className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-md transition-colors"
+                            title="Send Email"
+                        >
+                            <Send className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                ) : (
+                    <span className="text-slate-300">-</span>
+                )}
+            </td>
+            <td className="p-6">
+                <div className="flex items-center justify-center">
+                    <button
+                        onClick={() => onSendNotification([subUser.id])}
+                        className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors"
+                        title="Send App Notification"
+                    >
+                        <Bell className="w-3.5 h-3.5" />
+                    </button>
                 </div>
             </td>
             <td className="p-6">
@@ -475,6 +505,59 @@ export default function SubUsersPage() {
     const [jumpPage, setJumpPage] = useState('');
 
     const [creditAmount, setCreditAmount] = useState('');
+
+    // Email Modal States
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [isEmailHistoryOpen, setIsEmailHistoryOpen] = useState(false);
+    const [emailTargetIds, setEmailTargetIds] = useState<number[]>([]);
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailMessage, setEmailMessage] = useState('');
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+    // App Notification Modal States
+    const [isNotificationHistoryOpen, setIsNotificationHistoryOpen] = useState(false);
+    const [notificationTargetIds, setNotificationTargetIds] = useState<number[]>([]);
+
+    const handleOpenBulkEmailModal = () => {
+        setEmailTargetIds(selectedIds);
+        setEmailSubject('');
+        setEmailMessage('');
+        setIsEmailModalOpen(true);
+    };
+
+    const handleOpenSingleEmailModal = (ids: number[]) => {
+        setEmailTargetIds(ids);
+        setEmailSubject('');
+        setEmailMessage('');
+        setIsEmailModalOpen(true);
+    };
+
+    const handleSendEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSendingEmail(true);
+        try {
+            for (const id of emailTargetIds) {
+                await apiFetch('/admin/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient_ids: [id],
+                        recipient_type: 'user',
+                        subject: emailSubject,
+                        message: emailMessage,
+                    })
+                });
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            toast.success('Emails scheduled successfully!');
+            setIsEmailModalOpen(false);
+            setSelectedIds([]);
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to send emails.');
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
     const [globalReferralSettings, setGlobalReferralSettings] = useState<any>(null);
     const [savingGlobal, setSavingGlobal] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -739,6 +822,25 @@ export default function SubUsersPage() {
                         <TreePine className="w-5 h-5" />
                         Vendor Tree
                     </button>
+                    <button
+                        onClick={() => setIsEmailHistoryOpen(true)}
+                        className="flex items-center gap-2 px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm"
+                        title="View Email Logs & Stats"
+                    >
+                        <Mail className="w-4 h-4 text-teal-600" />
+                        <span className="hidden sm:inline">Mailing Records</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setNotificationTargetIds([]);
+                            setIsNotificationHistoryOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm"
+                        title="View Notification History"
+                    >
+                        <Bell className="w-4 h-4 text-indigo-600" />
+                        <span className="hidden sm:inline">App Alerts</span>
+                    </button>
                     <div className="relative" ref={downloadDropdownRef}>
                         <button
                             onClick={() => setShowDownloadOptions(!showDownloadOptions)}
@@ -880,7 +982,7 @@ export default function SubUsersPage() {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                         {/* Bulk Support Section */}
                         <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-4">
                             <div className="flex items-center justify-between">
@@ -1038,6 +1140,50 @@ export default function SubUsersPage() {
                                     className="px-4 bg-rose-500/20 text-rose-400 rounded-xl font-black text-[10px] hover:bg-rose-500/30 transition-all disabled:opacity-50 uppercase tracking-tighter"
                                 >
                                     {actionLoading ? '...' : 'Clear'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Bulk Email Section */}
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-4">
+                            <div className="flex items-center gap-2 text-teal-400">
+                                <Send size={16} />
+                                <span className="text-xs font-black uppercase tracking-widest">Bulk Email Delivery</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 pt-2">
+                                <button
+                                    onClick={handleOpenBulkEmailModal}
+                                    className="py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-all flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Send className="w-4 h-4" />
+                                    Compose Email
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNotificationTargetIds(selectedIds);
+                                        setIsNotificationHistoryOpen(true);
+                                    }}
+                                    className="py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Bell className="w-4 h-4" />
+                                    Compose Alert
+                                </button>
+                                <button
+                                    onClick={() => setIsEmailHistoryOpen(true)}
+                                    className="py-3 bg-white/10 text-white border border-white/15 rounded-xl font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Mail className="w-4 h-4 text-teal-400" />
+                                    Email Logs
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNotificationTargetIds([]);
+                                        setIsNotificationHistoryOpen(true);
+                                    }}
+                                    className="py-3 bg-white/10 text-white border border-white/15 rounded-xl font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Bell className="w-4 h-4 text-indigo-400" />
+                                    Alert Logs
                                 </button>
                             </div>
                         </div>
@@ -1248,6 +1394,8 @@ export default function SubUsersPage() {
                                         />
                                     </th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Vendor Details</th>
+                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Email</th>
+                                    <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">App Notification</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">KYC Status</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Referral Code</th>
                                     <th className="p-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Child Accounts</th>
@@ -1281,6 +1429,11 @@ export default function SubUsersPage() {
                                             creditAmount={selectedSubUser?.id === subUser.id ? creditAmount : ''}
                                             setCreditAmount={setCreditAmount}
                                             handleAddCredit={handleAddCredit}
+                                            onSendEmail={handleOpenSingleEmailModal}
+                                            onSendNotification={(ids: number[]) => {
+                                                setNotificationTargetIds(ids);
+                                                setIsNotificationHistoryOpen(true);
+                                            }}
                                         />
                                     ))
                                 )}
@@ -1590,6 +1743,95 @@ export default function SubUsersPage() {
                     </div>
                 </div>
             )}
+            {/* Email History Modal */}
+            <EmailHistoryModal
+                isOpen={isEmailHistoryOpen}
+                onClose={() => setIsEmailHistoryOpen(false)}
+            />
+
+            {/* App Notification History Modal */}
+            <AppNotificationHistoryModal
+                isOpen={isNotificationHistoryOpen}
+                onClose={() => setIsNotificationHistoryOpen(false)}
+                recipientType="sub_user"
+                selectedIds={notificationTargetIds}
+                onSuccess={() => {
+                    setSelectedIds([]);
+                    fetchSubUsers();
+                }}
+            />
+
+            {/* Send Email Modal */}
+            {isEmailModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-2xl font-black text-slate-900">Send Email</h3>
+                            <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <p className="text-slate-500 font-medium mb-6">
+                            Sending email to <span className="text-slate-900 font-bold">{emailTargetIds.length} selected recipients</span>.
+                        </p>
+
+                        <form onSubmit={handleSendEmailSubmit}>
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Subject</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-teal-100 outline-none"
+                                        placeholder="Enter email subject"
+                                        value={emailSubject}
+                                        onChange={e => setEmailSubject(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Message Content</label>
+                                    <textarea
+                                        required
+                                        rows={6}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm text-slate-900 focus:ring-2 focus:ring-teal-100 outline-none font-medium"
+                                        placeholder="Type your message here..."
+                                        value={emailMessage}
+                                        onChange={e => setEmailMessage(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEmailModalOpen(false)}
+                                    className="py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSendingEmail}
+                                    className="py-4 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-lg shadow-teal-200 flex items-center justify-center gap-2"
+                                >
+                                    {isSendingEmail ? (
+                                        <>
+                                            <Clock className="w-5 h-5 animate-spin" />
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-5 h-5" />
+                                            Send Email
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Footer */}
             <footer className="mt-12 py-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p className="text-slate-400 text-sm font-medium">© 2026 Admin Panel • MSME Loan Systems</p>
