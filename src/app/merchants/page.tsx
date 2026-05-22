@@ -1102,12 +1102,17 @@ export default function MerchantsPage() {
                                         onClick={async () => {
                                             setShowDownloadOptions(false);
                                             try {
-                                                const params = new URLSearchParams({
+                                                const payload = {
                                                     type: 'merchant',
                                                     search: search,
                                                     ...filters
+                                                };
+                                                const blob = await apiFetch(`/admin/users/export`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(payload),
+                                                    responseType: 'blob'
                                                 });
-                                                const blob = await apiFetch(`/admin/users/export?${params.toString()}`, { responseType: 'blob' });
                                                 const url = window.URL.createObjectURL(blob);
                                                 const link = document.createElement('a');
                                                 link.href = url;
@@ -1131,7 +1136,16 @@ export default function MerchantsPage() {
                                             onClick={async () => {
                                                 setShowDownloadOptions(false);
                                                 try {
-                                                    const blob = await apiFetch(`/admin/users/export?type=merchant&user_ids=${selectedIds.join(',')}`, { responseType: 'blob' });
+                                                    const payload = {
+                                                        type: 'merchant',
+                                                        user_ids: selectedIds
+                                                    };
+                                                    const blob = await apiFetch(`/admin/users/export`, {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify(payload),
+                                                        responseType: 'blob'
+                                                    });
                                                     const url = window.URL.createObjectURL(blob);
                                                     const link = document.createElement('a');
                                                     link.href = url;

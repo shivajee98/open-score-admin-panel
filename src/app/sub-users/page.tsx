@@ -579,23 +579,28 @@ export default function SubUsersPage() {
 
     const handleExport = async (type: 'all' | 'selected') => {
         try {
-            const query = new URLSearchParams();
+            const payload: any = {};
 
             if (type === 'all') {
-                if (search) query.append('search', search);
+                if (search) payload.search = search;
                 // Include other active filters
                 Object.entries(filters).forEach(([key, value]) => {
-                    if (value) query.append(key, value.toString());
+                    if (value) payload[key] = value;
                 });
             } else {
                 if (selectedIds.length === 0) {
                     alert("Please select vendors first");
                     return;
                 }
-                query.append('user_ids', selectedIds.join(','));
+                payload.user_ids = selectedIds;
             }
 
-            const blob = await apiFetch(`/admin/sub-users/export?${query.toString()}`, { responseType: 'blob' });
+            const blob = await apiFetch(`/admin/sub-users/export`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                responseType: 'blob'
+            });
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import { ShieldCheck, Search, Filter, ChevronLeft, ChevronRight, Fingerprint, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, Search, Filter, ChevronLeft, ChevronRight, Fingerprint, Info, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function KycLogsPage() {
     const [logs, setLogs] = useState<any[]>([]);
@@ -14,6 +15,87 @@ export default function KycLogsPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalLogs, setTotalLogs] = useState(0);
+
+    const [testingInProd, setTestingInProd] = useState<boolean>(false);
+    const [testingLoading, setTestingLoading] = useState<boolean>(true);
+    const [testingSaving, setTestingSaving] = useState<boolean>(false);
+
+    const [bypassKycForTest, setBypassKycForTest] = useState<boolean>(false);
+    const [bypassLoading, setBypassLoading] = useState<boolean>(true);
+    const [bypassSaving, setBypassSaving] = useState<boolean>(false);
+
+    const fetchSettings = async () => {
+        setTestingLoading(true);
+        setBypassLoading(true);
+        try {
+            const data = await apiFetch('/admin/system-settings');
+            const testingSetting = data.find((s: any) => s.key === 'testing_in_prod');
+            if (testingSetting) {
+                setTestingInProd(testingSetting.value === '1');
+            }
+            const bypassSetting = data.find((s: any) => s.key === 'bypass_kyc_for_test_accounts');
+            if (bypassSetting) {
+                setBypassKycForTest(bypassSetting.value === '1');
+            }
+        } catch (error) {
+            console.error('Failed to load system settings', error);
+        } finally {
+            setTestingLoading(false);
+            setBypassLoading(false);
+        }
+    };
+
+    const handleToggleTesting = async (checked: boolean) => {
+        setTestingSaving(true);
+        const toastId = toast.loading(checked ? 'Enabling Test Mode...' : 'Disabling Test Mode...');
+        try {
+            await apiFetch('/admin/system-settings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    settings: {
+                        testing_in_prod: checked ? '1' : '0'
+                    }
+                })
+            });
+            setTestingInProd(checked);
+            toast.success(
+                checked 
+                    ? 'Testing in Prod enabled! 99999-prefix numbers will bypass OTP.' 
+                    : 'Testing in Prod disabled. Standard OTP flow active.',
+                { id: toastId }
+            );
+        } catch (error) {
+            toast.error('Failed to update testing in prod setting', { id: toastId });
+        } finally {
+            setTestingSaving(false);
+        }
+    };
+
+    const handleToggleBypass = async (checked: boolean) => {
+        setBypassSaving(true);
+        const toastId = toast.loading(checked ? 'Enabling KYC Bypass...' : 'Disabling KYC Bypass...');
+        try {
+            await apiFetch('/admin/system-settings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    settings: {
+                        bypass_kyc_for_test_accounts: checked ? '1' : '0'
+                    }
+                })
+            });
+            setBypassKycForTest(checked);
+            toast.success(
+                checked 
+                    ? 'KYC Bypass enabled for 99999 alternate numbers!' 
+                    : 'KYC Bypass disabled. Real KYC active.',
+                { id: toastId }
+            );
+        } catch (error) {
+            toast.error('Failed to update KYC bypass setting', { id: toastId });
+        } finally {
+            setBypassSaving(false);
+        }
+    };
 
     const loadLogs = async () => {
         setLoading(true);
@@ -41,12 +123,99 @@ export default function KycLogsPage() {
     };
 
     useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    useEffect(() => {
         const timeout = setTimeout(loadLogs, 300);
         return () => clearTimeout(timeout);
     }, [search, typeFilter, statusFilter, page]);
 
     return (
         <AdminLayout title="KYC Verification Logs">
+            {/* Control Banner Card */}
+            <div className="mb-8 bg-slate-50 border border-slate-100 rounded-[2.5rem] p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-8 transition-all">
+                <div className="space-y-3 max-w-2xl">
+                    <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            testingInProd || bypassKycForTest
+                                ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' 
+                                : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                        }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${(testingInProd || bypassKycForTest) ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
+                            {(testingInProd || bypassKycForTest) ? 'Bypass Active' : 'Secure Mode'}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Developer Settings</span>
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Production Bypass Control</h2>
+                    <p className="text-sm font-medium text-slate-500 leading-relaxed">
+                        Toggle developer bypass features in production. When active, any OTP request or verification for mobile numbers starting with <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-amber-600 font-bold">99999</code> will automatically bypass carrier SMS dispatch and accept <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-emerald-600 font-bold">123456</code>. You can also enable <strong className="text-slate-800">KYC Auto-Verify</strong> to allow bypassed alternate number accounts to verify Aadhaar and PAN using mock sandbox responses.
+                    </p>
+                </div>
+                
+                <div className="flex flex-col gap-4 min-w-[280px] w-full lg:w-auto">
+                    {/* Toggle 1: Testing in Prod */}
+                    <div className="flex items-center gap-4 bg-white/60 border border-slate-100/50 backdrop-blur p-5 rounded-[2rem] shadow-sm">
+                        <div className="flex-1">
+                            <p className="text-xs font-black text-slate-900 uppercase tracking-wide">Testing in Prod</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                                {testingLoading ? 'Loading setting...' : (testingInProd ? 'OTP bypass is live' : 'Bypass is disabled')}
+                            </p>
+                        </div>
+                        
+                        {testingLoading ? (
+                            <div className="w-10 h-6 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                            </div>
+                        ) : (
+                            <button
+                                disabled={testingSaving}
+                                onClick={() => handleToggleTesting(!testingInProd)}
+                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-2 ${
+                                    testingInProd ? 'bg-amber-500' : 'bg-slate-200'
+                                }`}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
+                                        testingInProd ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Toggle 2: KYC Bypass for Test Accounts */}
+                    <div className="flex items-center gap-4 bg-white/60 border border-slate-100/50 backdrop-blur p-5 rounded-[2rem] shadow-sm">
+                        <div className="flex-1">
+                            <p className="text-xs font-black text-slate-900 uppercase tracking-wide">KYC Auto-Verify</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                                {bypassLoading ? 'Loading setting...' : (bypassKycForTest ? 'Mock Aadhaar & PAN active' : 'Real KYC active')}
+                            </p>
+                        </div>
+                        
+                        {bypassLoading ? (
+                            <div className="w-10 h-6 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                            </div>
+                        ) : (
+                            <button
+                                disabled={bypassSaving}
+                                onClick={() => handleToggleBypass(!bypassKycForTest)}
+                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-2 ${
+                                    bypassKycForTest ? 'bg-amber-500' : 'bg-slate-200'
+                                }`}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
+                                        bypassKycForTest ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+            
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-3">

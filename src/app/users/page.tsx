@@ -665,24 +665,31 @@ export default function UsersPage() {
 
     const handleExport = async (type: 'all' | 'selected') => {
         try {
-            const query = new URLSearchParams();
-            query.append('type', filters.user_type);
+            const payload: any = {
+                type: filters.user_type,
+            };
 
             if (type === 'all') {
-                if (search) query.append('search', search);
-                // Include other active filters
+                if (search) payload.search = search;
                 Object.entries(filters).forEach(([key, value]) => {
-                    if (value && key !== 'user_type') query.append(key, value.toString());
+                    if (value && key !== 'user_type') {
+                        payload[key] = value;
+                    }
                 });
             } else {
                 if (selectedIds.length === 0) {
                     alert("Please select users first");
                     return;
                 }
-                query.append('user_ids', selectedIds.join(','));
+                payload.user_ids = selectedIds;
             }
 
-            const blob = await apiFetch(`/admin/users/export?${query.toString()}`, { responseType: 'blob' });
+            const blob = await apiFetch(`/admin/users/export`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                responseType: 'blob'
+            });
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;

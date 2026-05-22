@@ -17,6 +17,7 @@ export default function AdminDashboard() {
     const router = useRouter();
     const [stats, setStats] = useState({
         totalUsers: 0,
+        totalVerifiedEmails: 0,
         totalMerchants: 0,
         totalDisbursed: 0,
         totalRepaid: 0,
@@ -38,6 +39,10 @@ export default function AdminDashboard() {
     const [pendingRepayments, setPendingRepayments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [campaignStats, setCampaignStats] = useState<any>(null);
+    const [isVerifiedModalOpen, setIsVerifiedModalOpen] = useState(false);
+    const [verifiedUsers, setVerifiedUsers] = useState<any[]>([]);
+    const [loadingVerified, setLoadingVerified] = useState(false);
+    const [verifiedSearch, setVerifiedSearch] = useState('');
 
     useEffect(() => {
         if (status === 'authenticated' && session?.role === 'SUB_USER') {
@@ -59,6 +64,7 @@ export default function AdminDashboard() {
 
             setStats({
                 totalUsers: analytics?.total_users || 0,
+                totalVerifiedEmails: analytics?.total_verified_emails || 0,
                 totalMerchants: analytics?.total_merchants || 0,
                 totalDisbursed: analytics?.total_disbursed || 0,
                 totalRepaid: analytics?.total_repaid || 0,
@@ -100,6 +106,22 @@ export default function AdminDashboard() {
             toast.success(`Loaded stats for: ${campStats.campaign.title}`);
         } catch (error) {
             toast.error('Failed to load campaign stats');
+        }
+    };
+
+    const openVerifiedEmailsModal = async () => {
+        setIsVerifiedModalOpen(true);
+        setLoadingVerified(true);
+        try {
+            const data = await apiFetch('/admin/analytics/verified-emails');
+            if (Array.isArray(data)) {
+                setVerifiedUsers(data);
+            }
+        } catch (error) {
+            console.error('Failed to load verified emails', error);
+            toast.error('Failed to load verified emails list');
+        } finally {
+            setLoadingVerified(false);
         }
     };
 
@@ -274,6 +296,19 @@ export default function AdminDashboard() {
                         <p className="text-xl font-black text-slate-900">{(stats as any).totalActivePincodes || (stats as any).activePincodes?.length || 0} Zones</p>
                     </div>
                 </Link>
+
+                <div 
+                    onClick={openVerifiedEmailsModal}
+                    className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 hover:border-emerald-200 transition-all group cursor-pointer"
+                >
+                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all shrink-0">
+                        <BadgeCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Verified Emails</p>
+                        <p className="text-xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors">{(stats as any).totalVerifiedEmails || 0} Users</p>
+                    </div>
+                </div>
                 
                 {campaignStats?.campaign && (
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
@@ -585,6 +620,118 @@ export default function AdminDashboard() {
             )}
 
             <CampaignManager onViewStats={loadCampaignStats} />
+
+            {isVerifiedModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-950">Verified Email Addresses</h3>
+                                <p className="text-xs text-slate-500 font-medium">List of all verified customers, merchants, agents, and vendors.</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsVerifiedModalOpen(false)}
+                                className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Search and Filters */}
+                        <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Search by name, email or type..."
+                                    value={verifiedSearch}
+                                    onChange={(e) => setVerifiedSearch(e.target.value)}
+                                    className="w-full bg-white pl-4 pr-10 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 font-medium text-slate-900 transition-colors"
+                                />
+                                {verifiedSearch && (
+                                    <button 
+                                        onClick={() => setVerifiedSearch('')}
+                                        className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto min-h-[300px]">
+                            {loadingVerified ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-xs text-slate-500 font-bold tracking-wider uppercase animate-pulse">Loading verified users...</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {verifiedUsers
+                                        .filter(user => {
+                                            const term = verifiedSearch.toLowerCase();
+                                            return (
+                                                (user.name || '').toLowerCase().includes(term) ||
+                                                (user.email || '').toLowerCase().includes(term) ||
+                                                (user.type || '').toLowerCase().includes(term) ||
+                                                (user.mobile_number || '').toLowerCase().includes(term)
+                                            );
+                                        })
+                                        .map((user, idx) => (
+                                            <div key={`${user.type}-${user.id}-${idx}`} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors animate-in fade-in duration-150">
+                                                <div className="min-w-0 flex-1 pr-4">
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <p className="font-bold text-slate-950 truncate text-sm">{user.name}</p>
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${
+                                                            user.type === 'Customer' ? 'bg-emerald-100 text-emerald-800' :
+                                                            user.type === 'Merchant' ? 'bg-amber-100 text-amber-800' :
+                                                            user.type === 'Agent' ? 'bg-violet-100 text-violet-800' :
+                                                            user.type === 'Vendor' ? 'bg-blue-100 text-blue-800' :
+                                                            'bg-slate-100 text-slate-800'
+                                                        }`}>
+                                                            {user.type}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                                                        <span className="font-medium truncate">{user.email}</span>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="font-mono text-slate-400">{user.mobile_number}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Verified On</p>
+                                                    <p className="text-xs font-semibold text-slate-750">{user.verified_at ? new Date(user.verified_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    }
+
+                                    {verifiedUsers.filter(user => {
+                                        const term = verifiedSearch.toLowerCase();
+                                        return (
+                                            (user.name || '').toLowerCase().includes(term) ||
+                                            (user.email || '').toLowerCase().includes(term) ||
+                                            (user.type || '').toLowerCase().includes(term) ||
+                                            (user.mobile_number || '').toLowerCase().includes(term)
+                                        );
+                                    }).length === 0 && (
+                                        <div className="py-20 text-center">
+                                            <p className="text-sm font-bold text-slate-400 italic">No verified users found matching search</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs font-bold text-slate-500">
+                            <span>Total Verified: {verifiedUsers.length}</span>
+                            <span>OpenScore Verification Portal</span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

@@ -926,8 +926,13 @@ export default function InternalUsersPage() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={async () => {
-                                const params = new URLSearchParams({ type: 'internal', search: search, ...filters });
-                                const blob = await apiFetch(`/admin/users/export?${params.toString()}`, { responseType: 'blob' });
+                                const payload = { type: 'internal', search: search, ...filters };
+                                const blob = await apiFetch(`/admin/users/export`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload),
+                                    responseType: 'blob'
+                                });
                                 const url = window.URL.createObjectURL(blob);
                                 const a = document.createElement('a');
                                 a.href = url;
