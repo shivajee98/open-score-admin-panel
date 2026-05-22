@@ -58,7 +58,7 @@ export default function AdminLayout({ children, title }: { children: React.React
                             </span>
                             {payment.proof_image && (
                                 <a 
-                                    href={`/storage/${payment.proof_image}`} 
+                                    href={`https://api.msmeloan.sbs/storage/${payment.proof_image}`} 
                                     target="_blank" 
                                     rel="noreferrer"
                                     className="inline-flex items-center text-xs text-indigo-600 hover:underline font-semibold"

@@ -23,6 +23,7 @@ export default function EmailHistoryModal({ isOpen, onClose }: EmailHistoryModal
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
+    const [smtpAccounts, setSmtpAccounts] = useState<string[]>([]);
 
     const fetchLogs = async (page = 1) => {
         setLoading(true);
@@ -45,23 +46,27 @@ export default function EmailHistoryModal({ isOpen, onClose }: EmailHistoryModal
         }
     };
 
+    const fetchSmtpAccounts = async () => {
+        try {
+            const res = await apiFetch(`/admin/smtp-accounts`);
+            if (res.all) {
+                setSmtpAccounts(res.all);
+            }
+        } catch (e: any) {
+            console.error('Failed to fetch SMTP accounts', e);
+        }
+    };
+
     useEffect(() => {
         if (isOpen) {
             fetchLogs(1);
+            fetchSmtpAccounts();
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const smtpAccounts = [
-        'alert.openscore@msmeloan.sbs',
-        'alert.openscore.1@msmeloan.sbs',
-        'alert.openscore.2@msmeloan.sbs',
-        'alert.openscore.3@msmeloan.sbs',
-        'alert.openscore.4@msmeloan.sbs',
-        'alert.openscore.5@msmeloan.sbs',
-        'alert.openscore.6@msmeloan.sbs',
-    ];
+
 
     return (
         <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
