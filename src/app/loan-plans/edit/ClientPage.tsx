@@ -566,10 +566,27 @@ export default function EditLoanPlan() {
                                                                     checked={config.allowed_frequencies.includes(freq)}
                                                                     onChange={(e) => {
                                                                         const current = config.allowed_frequencies;
-                                                                        const newFreqs = e.target.checked
+                                                                        const isChecked = e.target.checked;
+                                                                        const newFreqs = isChecked
                                                                             ? [...current, freq]
                                                                             : current.filter(f => f !== freq);
-                                                                        updateConfig(idx, 'allowed_frequencies', newFreqs);
+                                                                        
+                                                                        const newRates = { ...config.interest_rates };
+                                                                        if (isChecked) {
+                                                                            if (newRates[freq] === undefined) {
+                                                                                newRates[freq] = config.interest_rate || 0;
+                                                                            }
+                                                                        } else {
+                                                                            delete newRates[freq];
+                                                                        }
+
+                                                                        const newConfigs = [...formData.configurations];
+                                                                        newConfigs[idx] = {
+                                                                            ...newConfigs[idx],
+                                                                            allowed_frequencies: newFreqs,
+                                                                            interest_rates: newRates
+                                                                        };
+                                                                        setFormData({ ...formData, configurations: newConfigs });
                                                                     }}
                                                                     className="w-4 h-4 text-indigo-600 rounded"
                                                                 />

@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import AdminLayout from '@/components/AdminLayout';
-import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy, MapPin, ChevronRight, Trophy } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, TrendingUp, Users, Wallet, QrCode, Gift, Copy, MapPin, ChevronRight, Trophy, X } from 'lucide-react';
 import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
@@ -17,6 +18,7 @@ export default function AdminDashboard() {
     const router = useRouter();
     const [stats, setStats] = useState({
         totalUsers: 0,
+        activeUsers: 0,
         totalVerifiedEmails: 0,
         totalMerchants: 0,
         totalDisbursed: 0,
@@ -44,6 +46,16 @@ export default function AdminDashboard() {
     const [loadingVerified, setLoadingVerified] = useState(false);
     const [verifiedSearch, setVerifiedSearch] = useState('');
 
+    const [isOutstandingModalOpen, setIsOutstandingModalOpen] = useState(false);
+    const [outstandingLoans, setOutstandingLoans] = useState<any[]>([]);
+    const [loadingOutstanding, setLoadingOutstanding] = useState(false);
+    const [outstandingSearch, setOutstandingSearch] = useState('');
+
+    const [isActiveUsersModalOpen, setIsActiveUsersModalOpen] = useState(false);
+    const [activeUsersList, setActiveUsersList] = useState<any[]>([]);
+    const [loadingActiveUsers, setLoadingActiveUsers] = useState(false);
+    const [activeUsersSearch, setActiveUsersSearch] = useState('');
+
     useEffect(() => {
         if (status === 'authenticated' && session?.role === 'SUB_USER') {
             router.push('/sub-user-dashboard');
@@ -51,6 +63,46 @@ export default function AdminDashboard() {
             loadData();
         }
     }, [session, status, router]);
+
+    // Background Poller for real-time active users fluctuation
+    useEffect(() => {
+        if (status !== 'authenticated' || session?.role !== 'ADMIN') return;
+
+        const pollActiveUsers = async () => {
+            try {
+                const data = await apiFetch('/admin/analytics/active-users');
+                if (data) {
+                    if (typeof data.active_users === 'number') {
+                        setStats(prev => ({
+                            ...prev,
+                            activeUsers: data.active_users
+                        }));
+                    }
+                    if (isActiveUsersModalOpen && Array.isArray(data?.users)) {
+                        setActiveUsersList(data.users);
+                    }
+                }
+            } catch (e) {
+                // Fail silently
+            }
+        };
+
+        const interval = setInterval(pollActiveUsers, 4000);
+        return () => clearInterval(interval);
+    }, [session, status, isActiveUsersModalOpen]);
+
+    const openActiveUsersModal = async () => {
+        setIsActiveUsersModalOpen(true);
+        setLoadingActiveUsers(true);
+        try {
+            const data = await apiFetch('/admin/analytics/active-users');
+            setActiveUsersList(Array.isArray(data?.users) ? data.users : []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingActiveUsers(false);
+        }
+    };
 
     const loadData = async () => {
         try {
@@ -64,6 +116,7 @@ export default function AdminDashboard() {
 
             setStats({
                 totalUsers: analytics?.total_users || 0,
+                activeUsers: analytics?.active_users || 0,
                 totalVerifiedEmails: analytics?.total_verified_emails || 0,
                 totalMerchants: analytics?.total_merchants || 0,
                 totalDisbursed: analytics?.total_disbursed || 0,
@@ -125,6 +178,22 @@ export default function AdminDashboard() {
         }
     };
 
+    const openOutstandingLoansModal = async () => {
+        setIsOutstandingModalOpen(true);
+        setLoadingOutstanding(true);
+        try {
+            const data = await apiFetch('/admin/analytics/outstanding-loans');
+            if (Array.isArray(data)) {
+                setOutstandingLoans(data);
+            }
+        } catch (error) {
+            console.error('Failed to load outstanding loans', error);
+            toast.error('Failed to load outstanding loans list');
+        } finally {
+            setLoadingOutstanding(false);
+        }
+    };
+
     const handleApprove = async (id: number) => {
         if (!confirm('Approve this transaction?')) return;
         try {
@@ -183,6 +252,25 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                <div 
+                    onClick={openActiveUsersModal}
+                    className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 relative overflow-hidden group cursor-pointer hover:shadow-md hover:border-emerald-250 transition-all select-none"
+                >
+                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0 relative">
+                        <Users className="w-5 h-5 animate-pulse" />
+                        <span className="absolute top-1 right-1 flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            Active Users (Live)
+                        </p>
+                        <p className="text-xl font-black text-emerald-600">{stats.activeUsers}</p>
+                    </div>
+                </div>
+
                 <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
                         <Wallet className="w-5 h-5" />
@@ -203,8 +291,11 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+                <div 
+                    onClick={openOutstandingLoansModal}
+                    className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 cursor-pointer hover:shadow-md hover:border-purple-250 transition-all duration-200 select-none group"
+                >
+                    <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
                         <Clock className="w-5 h-5" />
                     </div>
                     <div>
@@ -621,6 +712,131 @@ export default function AdminDashboard() {
 
             <CampaignManager onViewStats={loadCampaignStats} />
 
+            {/* Active Users Modal */}
+            {isActiveUsersModalOpen && (
+                <div className="fixed inset-0 bg-[#000]/40 backdrop-blur-[3px] flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-6 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                                    <Users className="w-5 h-5 animate-pulse" />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-900 text-lg">Live Active Users</h3>
+                                    <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+                                        Currently Online: {activeUsersList.length}
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setIsActiveUsersModalOpen(false);
+                                    setActiveUsersSearch('');
+                                }}
+                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Filter and Info */}
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <input 
+                                type="text"
+                                placeholder="Search by name, phone or type..."
+                                value={activeUsersSearch}
+                                onChange={(e) => setActiveUsersSearch(e.target.value)}
+                                className="bg-white border border-slate-200 text-slate-800 placeholder-slate-400 text-sm rounded-xl px-4 py-2 w-full sm:max-w-xs focus:outline-none focus:border-emerald-500 transition-all font-semibold"
+                            />
+                            <div className="text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1 select-none shrink-0 self-start sm:self-auto">
+                                ⚡ Real-time updates active
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {loadingActiveUsers && activeUsersList.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-3"></div>
+                                    <p className="text-slate-400 text-sm font-bold">Querying live registry...</p>
+                                </div>
+                            ) : (
+                                (() => {
+                                    const filtered = activeUsersList.filter(u => {
+                                        const term = activeUsersSearch.toLowerCase();
+                                        return (
+                                            u.name?.toLowerCase().includes(term) ||
+                                            u.mobile_number?.includes(term) ||
+                                            u.role?.toLowerCase().includes(term) ||
+                                            u.type?.toLowerCase().includes(term)
+                                        );
+                                    });
+
+                                    if (filtered.length === 0) {
+                                        return (
+                                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                                <Users className="w-10 h-10 text-slate-300 mb-3" />
+                                                <p className="text-slate-400 text-sm font-semibold">No matching active users found</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="space-y-3">
+                                            {filtered.map((user) => {
+                                                const isSubUser = user.type === 'SUB_USER';
+                                                return (
+                                                    <div 
+                                                        key={`${user.type}_${user.id}`}
+                                                        className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn(
+                                                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm",
+                                                                isSubUser 
+                                                                    ? "bg-indigo-50 text-indigo-600 border border-indigo-100" 
+                                                                    : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                                            )}>
+                                                                {user.name ? user.name.substring(0, 2).toUpperCase() : 'US'}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-bold text-slate-800 text-sm leading-snug">{user.name}</h4>
+                                                                <p className="text-slate-400 text-xs font-semibold">{user.mobile_number}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={cn(
+                                                                "text-[10px] font-extrabold tracking-wider uppercase px-2 py-1 rounded-lg border",
+                                                                isSubUser 
+                                                                    ? "bg-indigo-50/50 text-indigo-700 border-indigo-100" 
+                                                                    : "bg-emerald-50/50 text-emerald-700 border-emerald-100"
+                                                            )}>
+                                                                {user.role}
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 font-semibold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">
+                                                                Active
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-[10px] text-slate-400 font-bold text-center">
+                            Note: Stale user sessions auto-expire after 15 seconds of inactivity.
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isVerifiedModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
@@ -728,6 +944,206 @@ export default function AdminDashboard() {
                         <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs font-bold text-slate-500">
                             <span>Total Verified: {verifiedUsers.length}</span>
                             <span>OpenScore Verification Portal</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isOutstandingModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-black text-slate-950">Outstanding Portfolio Audit</h3>
+                                    <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-black tracking-wider uppercase animate-pulse">pH-Scale Color Coded</span>
+                                </div>
+                                <p className="text-xs text-slate-500 font-medium">Realtime list of active borrowers, classified by repayment delay acidity index (pH scale).</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsOutstandingModalOpen(false)}
+                                className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Search and Filters */}
+                        <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Search by borrower name, phone, type or loan ID..."
+                                    value={outstandingSearch}
+                                    onChange={(e) => setOutstandingSearch(e.target.value)}
+                                    className="w-full bg-white pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-purple-500 font-medium text-slate-900 transition-colors"
+                                />
+                                {outstandingSearch && (
+                                    <button 
+                                        onClick={() => setOutstandingSearch('')}
+                                        className="absolute right-3 top-3 text-xs text-slate-400 hover:text-slate-600 font-bold"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Legend */}
+                        <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-100 flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-slate-600">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> pH 14 (Safe / Up to Date)</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span> pH 9 (1-3 Days Overdue)</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> pH 5 (4-10 Days Overdue)</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> pH 3 (11-30 Days Overdue)</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span> pH 1 (30+ Days Overdue)</span>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6 min-h-[300px] bg-slate-50/30">
+                            {loadingOutstanding ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-xs text-slate-500 font-bold tracking-wider uppercase animate-pulse">Auditing outstanding loans...</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {outstandingLoans
+                                        .filter(loan => {
+                                            const term = outstandingSearch.toLowerCase();
+                                            return (
+                                                (loan.name || '').toLowerCase().includes(term) ||
+                                                (loan.role || '').toLowerCase().includes(term) ||
+                                                (loan.mobile_number || '').toLowerCase().includes(term) ||
+                                                String(loan.display_id || '').includes(term)
+                                            );
+                                        })
+                                        .map((loan, idx) => {
+                                            const overdueDays = loan.max_days_overdue;
+                                            
+                                            // pH-Style dynamic mapping
+                                            let phLabel = 'pH 14 - Safe / Up to Date';
+                                            let phClasses = 'bg-emerald-50/40 border-emerald-100 text-emerald-800 hover:border-emerald-200';
+                                            let badgeClasses = 'bg-emerald-100 text-emerald-800';
+                                            let dotClass = 'bg-emerald-500';
+
+                                            if (overdueDays > 0 && overdueDays <= 3) {
+                                                phLabel = `pH 9 - Mild Delay (${overdueDays}d overdue)`;
+                                                phClasses = 'bg-yellow-50/40 border-yellow-100 text-yellow-800 hover:border-yellow-200';
+                                                badgeClasses = 'bg-yellow-100 text-yellow-800';
+                                                dotClass = 'bg-yellow-500';
+                                            } else if (overdueDays > 3 && overdueDays <= 10) {
+                                                phLabel = `pH 5 - Moderate Acid (${overdueDays}d overdue)`;
+                                                phClasses = 'bg-orange-50/40 border-orange-100 text-orange-900 hover:border-orange-200';
+                                                badgeClasses = 'bg-orange-100 text-orange-800';
+                                                dotClass = 'bg-orange-500';
+                                            } else if (overdueDays > 10 && overdueDays <= 30) {
+                                                phLabel = `pH 3 - High Acidity (${overdueDays}d overdue)`;
+                                                phClasses = 'bg-red-50/40 border-red-100 text-red-900 hover:border-red-200';
+                                                badgeClasses = 'bg-red-100 text-red-800';
+                                                dotClass = 'bg-red-500';
+                                            } else if (overdueDays > 30) {
+                                                phLabel = `pH 1 - Corrosive Acid (${overdueDays}d overdue)`;
+                                                phClasses = 'bg-rose-50/40 border-rose-200 text-rose-950 hover:border-rose-300';
+                                                badgeClasses = 'bg-rose-100 text-rose-900';
+                                                dotClass = 'bg-rose-600 animate-pulse';
+                                            }
+
+                                            return (
+                                                <div 
+                                                    key={`outstanding-${loan.loan_id}-${idx}`} 
+                                                    className={`p-5 rounded-2xl border flex flex-col justify-between transition-all duration-200 hover:shadow-sm ${phClasses}`}
+                                                >
+                                                    <div>
+                                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <p className="font-bold text-slate-900 text-sm">{loan.name}</p>
+                                                                    <span className="px-2 py-0.5 rounded text-[8px] font-black bg-slate-900/10 text-slate-800 uppercase tracking-wide">
+                                                                        {loan.role}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[10px] font-bold text-slate-400 font-mono tracking-tight mt-0.5">{loan.mobile_number}</p>
+                                                            </div>
+                                                            <div className="text-right shrink-0">
+                                                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-900 text-white">
+                                                                    ID: #{loan.display_id}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Loan details */}
+                                                        <div className="grid grid-cols-2 gap-2 py-2 border-y border-slate-950/5 text-xs">
+                                                            <div>
+                                                                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-450">Principal Hold</p>
+                                                                <p className="font-black text-slate-855">₹{loan.loan_amount.toLocaleString('en-IN')}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-450">Total Pending Dues</p>
+                                                                <p className="font-black text-purple-755">₹{loan.outstanding_amount.toLocaleString('en-IN')}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Repayments detail list */}
+                                                        <div className="mt-3 space-y-1.5">
+                                                            <p className="text-[8px] font-black uppercase tracking-wider text-slate-450 mb-1">Repayment Schedule</p>
+                                                            {loan.repayments.map((rep: any, rIdx: number) => {
+                                                                const repOverdue = rep.days_overdue;
+                                                                return (
+                                                                    <div key={`rep-${rep.id}-${rIdx}`} className="flex justify-between items-center text-[10px] py-1 px-2 rounded-lg bg-slate-955/5 font-semibold text-slate-750">
+                                                                        <span>EMI Installment</span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span>₹{rep.amount.toLocaleString('en-IN')}</span>
+                                                                            <span className="text-slate-300">|</span>
+                                                                            <span>Due: {new Date(rep.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                                                            {repOverdue > 0 ? (
+                                                                                <span className="text-red-600 font-bold">({repOverdue}d late)</span>
+                                                                            ) : (
+                                                                                <span className="text-emerald-600 font-bold">(On Time)</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* pH Scale Indicator Bar */}
+                                                    <div className="mt-4 pt-3 border-t border-slate-955/5 flex items-center justify-between text-[10px] font-bold">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className={`w-2 h-2 rounded-full ${dotClass}`}></span>
+                                                            <span className="font-bold">{phLabel}</span>
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${badgeClasses}`}>
+                                                            {overdueDays === 0 ? 'ALKALINE' : 'ACIDIC'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    }
+
+                                    {outstandingLoans.filter(loan => {
+                                        const term = outstandingSearch.toLowerCase();
+                                        return (
+                                            (loan.name || '').toLowerCase().includes(term) ||
+                                            (loan.role || '').toLowerCase().includes(term) ||
+                                            (loan.mobile_number || '').toLowerCase().includes(term) ||
+                                            String(loan.display_id || '').includes(term)
+                                        );
+                                    }).length === 0 && (
+                                        <div className="col-span-2 py-20 text-center">
+                                            <p className="text-sm font-bold text-slate-400 italic">No outstanding accounts found matching search</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs font-bold text-slate-500">
+                            <span>Active Outstanding Loans: {outstandingLoans.length}</span>
+                            <span>OpenScore Audit Dashboard</span>
                         </div>
                     </div>
                 </div>
