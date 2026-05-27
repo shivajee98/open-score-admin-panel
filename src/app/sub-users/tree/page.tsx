@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import {
     TreePine, ChevronDown, ChevronRight, UsersRound, User, ArrowLeft,
-    Settings, Save, Search, X
+    Settings, Save, Search, X, ChevronUp
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -14,6 +14,7 @@ export default function VendorTreePage() {
     const router = useRouter();
     const [treeData, setTreeData] = useState<any[]>([]);
     const [search, setSearch] = useState('');
+    const [activeMatchIndex, setActiveMatchIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [settings, setSettings] = useState({ max_vendor_depth: 3, min_child_commission: 0 });
     const [savingSettings, setSavingSettings] = useState(false);
@@ -59,37 +60,124 @@ export default function VendorTreePage() {
         }
     };
 
-    // Recursive filter function
-    const getFilteredTree = (nodes: any[], query: string): any[] => {
-        if (!query.trim()) return nodes;
+    // Process tree for search matching and expansion without filtering
+    const processTreeForSearch = (nodes: any[], query: string): { nodes: any[], hasMatchInBranch: boolean } => {
+        if (!query.trim()) {
+            return {
+                nodes: nodes.map(node => ({
+                    ...node,
+                    isSearchMatch: false,
+                    forceExpand: false,
+                    children_vendors: node.children_vendors ? processTreeForSearch(node.children_vendors, '').nodes : [],
+                    linked_users: node.linked_users?.map((u: any) => ({ ...u, isSearchMatch: false })) || []
+                })),
+                hasMatchInBranch: false
+            };
+        }
         const lowQuery = query.toLowerCase();
+        let branchHasMatch = false;
 
-        return nodes.map(node => {
+        const processed = nodes.map(node => {
             const nameMatch = node.name?.toLowerCase().includes(lowQuery);
             const mobileMatch = node.mobile_number?.toLowerCase().includes(lowQuery);
             const codeMatch = node.referral_code?.toLowerCase().includes(lowQuery);
             const nodeMatches = nameMatch || mobileMatch || codeMatch;
 
-            const filteredChildren = getFilteredTree(node.children_vendors || [], query);
-            const filteredUsers = (node.linked_users || []).filter((u: any) => 
-                u.name?.toLowerCase().includes(lowQuery) || 
-                u.mobile_number?.toLowerCase().includes(lowQuery)
-            );
-
-            if (nodeMatches || filteredChildren.length > 0 || filteredUsers.length > 0) {
+            const childrenResult = processTreeForSearch(node.children_vendors || [], query);
+            
+            const processedUsers = (node.linked_users || []).map((u: any) => {
+                const userMatch = u.name?.toLowerCase().includes(lowQuery) || 
+                                 u.mobile_number?.toLowerCase().includes(lowQuery);
                 return {
-                    ...node,
-                    children_vendors: filteredChildren,
-                    linked_users: filteredUsers,
-                    isSearchMatch: nodeMatches,
-                    forceExpand: filteredChildren.length > 0 || filteredUsers.length > 0
+                    ...u,
+                    isSearchMatch: userMatch
                 };
+            });
+            const anyUserMatches = processedUsers.some((u: any) => u.isSearchMatch);
+
+            const hasMatchInDescendants = childrenResult.hasMatchInBranch || anyUserMatches;
+            const nodeOrDescendantMatches = nodeMatches || hasMatchInDescendants;
+
+            if (nodeOrDescendantMatches) {
+                branchHasMatch = true;
             }
-            return null;
-        }).filter(Boolean);
+
+            return {
+                ...node,
+                children_vendors: childrenResult.nodes,
+                linked_users: processedUsers,
+                isSearchMatch: nodeMatches,
+                forceExpand: hasMatchInDescendants
+            };
+        });
+
+        return {
+            nodes: processed,
+            hasMatchInBranch: branchHasMatch
+        };
     };
 
-    const filteredData = getFilteredTree(treeData, search);
+    // Flatten matches to navigate easily
+    const getMatchesList = (nodes: any[]): { id: string, type: 'vendor' | 'worker', name: string }[] => {
+        let list: any[] = [];
+        for (const node of nodes) {
+            if (node.isSearchMatch) {
+                list.push({ id: `v-${node.id}`, type: 'vendor', name: node.name });
+            }
+            if (node.children_vendors?.length) {
+                list = list.concat(getMatchesList(node.children_vendors));
+            }
+            if (node.linked_users?.length) {
+                for (const u of node.linked_users) {
+                    if (u.isSearchMatch) {
+                        list.push({ id: `u-${u.id}`, type: 'worker', name: u.name });
+                    }
+                }
+            }
+        }
+        return list;
+    };
+
+    const searchResult = processTreeForSearch(treeData, search);
+    const filteredData = searchResult.nodes;
+
+    const matches = getMatchesList(filteredData);
+    const activeMatch = matches[activeMatchIndex];
+
+    const handleNextMatch = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (matches.length > 0) {
+            setActiveMatchIndex((prev) => (prev + 1) % matches.length);
+        }
+    };
+
+    const handlePrevMatch = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (matches.length > 0) {
+            setActiveMatchIndex((prev) => (prev - 1 + matches.length) % matches.length);
+        }
+    };
+
+    // Scroll to the active search match smoothly
+    useEffect(() => {
+        if (search && matches.length > 0) {
+            const currentActive = matches[activeMatchIndex];
+            if (currentActive) {
+                const timer = setTimeout(() => {
+                    const el = document.getElementById(currentActive.id);
+                    if (el) {
+                        el.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                }, 100);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [activeMatchIndex, search, matches]);
 
     // Count total nodes recursively
     const countNodes = (nodes: any[]): { vendors: number, users: number } => {
@@ -132,22 +220,51 @@ export default function VendorTreePage() {
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="relative flex-1 md:w-64">
+                        <div className="relative flex-1 md:w-80">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                             <input
                                 type="text"
                                 placeholder="Search tree..."
-                                className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-indigo-100 outline-none transition-all shadow-sm"
+                                className="w-full pl-11 pr-32 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:ring-4 focus:ring-indigo-100 outline-none transition-all shadow-sm"
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setActiveMatchIndex(0);
+                                }}
                             />
                             {search && (
-                                <button 
-                                    onClick={() => setSearch('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
-                                >
-                                    <X size={14} />
-                                </button>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs font-bold">
+                                    <span className={matches.length === 0 ? "text-rose-500 font-semibold" : "text-slate-400"}>
+                                        {matches.length > 0 ? `${activeMatchIndex + 1}/${matches.length}` : '0 matches'}
+                                    </span>
+                                    {matches.length > 0 && (
+                                        <div className="flex items-center border-l border-slate-200 pl-1.5 ml-0.5 gap-0.5">
+                                            <button
+                                                onClick={handlePrevMatch}
+                                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                                                title="Previous match"
+                                            >
+                                                <ChevronUp size={14} />
+                                            </button>
+                                            <button
+                                                onClick={handleNextMatch}
+                                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                                                title="Next match"
+                                            >
+                                                <ChevronDown size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <button 
+                                        onClick={() => {
+                                            setSearch('');
+                                            setActiveMatchIndex(0);
+                                        }}
+                                        className="text-slate-300 hover:text-slate-500 pl-1 border-l border-slate-200 ml-0.5"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -234,7 +351,13 @@ export default function VendorTreePage() {
                     <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl p-8 overflow-hidden min-h-[500px]">
                         <div className="space-y-1">
                             {filteredData.map((node: any) => (
-                                <AdminTreeNode key={node.id} node={node} depth={0} isSearching={!!search} />
+                                <AdminTreeNode 
+                                    key={node.id} 
+                                    node={node} 
+                                    depth={0} 
+                                    isSearching={!!search} 
+                                    activeMatchId={activeMatch?.id}
+                                />
                             ))}
                         </div>
                     </div>
@@ -244,7 +367,17 @@ export default function VendorTreePage() {
     );
 }
 
-function AdminTreeNode({ node, depth, isSearching }: { node: any, depth: number, isSearching?: boolean }) {
+function AdminTreeNode({ 
+    node, 
+    depth, 
+    isSearching, 
+    activeMatchId 
+}: { 
+    node: any, 
+    depth: number, 
+    isSearching?: boolean, 
+    activeMatchId?: string 
+}) {
     const [expanded, setExpanded] = useState(depth < 2);
 
     // Auto-expand if search match is in branch
@@ -257,6 +390,9 @@ function AdminTreeNode({ node, depth, isSearching }: { node: any, depth: number,
     const hasChildren = (node.children_vendors?.length > 0) || (node.linked_users?.length > 0);
     const isVendor = node.type === 'vendor';
 
+    const nodeId = isVendor ? `v-${node.id}` : `u-${node.id}`;
+    const isActiveMatch = activeMatchId === nodeId;
+
     const colors = [
         'from-blue-500 to-indigo-600',
         'from-indigo-500 to-purple-600',
@@ -268,10 +404,16 @@ function AdminTreeNode({ node, depth, isSearching }: { node: any, depth: number,
     const gradientClass = colors[depth % colors.length];
 
     return (
-        <div>
+        <div id={nodeId}>
             <div
-                className={`flex items-center gap-3 p-3 rounded-xl transition-colors cursor-pointer ${
-                    node.isSearchMatch ? 'bg-indigo-50 ring-1 ring-indigo-100 shadow-sm' : hasChildren ? 'hover:bg-slate-50' : ''
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${
+                    isActiveMatch 
+                        ? 'bg-amber-100 ring-2 ring-amber-400 shadow-md font-bold' 
+                        : node.isSearchMatch 
+                            ? 'bg-indigo-50 ring-1 ring-indigo-100 shadow-sm' 
+                            : hasChildren 
+                                ? 'hover:bg-slate-50' 
+                                : ''
                 }`}
                 onClick={() => hasChildren && setExpanded(!expanded)}
                 style={{ paddingLeft: `${depth * 24 + 12}px` }}
@@ -335,10 +477,22 @@ function AdminTreeNode({ node, depth, isSearching }: { node: any, depth: number,
             {expanded && hasChildren && (
                 <div className="border-l-2 border-slate-100" style={{ marginLeft: `${depth * 24 + 28}px` }}>
                     {node.children_vendors?.map((child: any) => (
-                        <AdminTreeNode key={`v-${child.id}`} node={child} depth={depth + 1} isSearching={isSearching} />
+                        <AdminTreeNode 
+                            key={`v-${child.id}`} 
+                            node={child} 
+                            depth={depth + 1} 
+                            isSearching={isSearching} 
+                            activeMatchId={activeMatchId} 
+                        />
                     ))}
                     {node.linked_users?.map((user: any) => (
-                        <AdminTreeNode key={`u-${user.id}`} node={user} depth={depth + 1} isSearching={isSearching} />
+                        <AdminTreeNode 
+                            key={`u-${user.id}`} 
+                            node={user} 
+                            depth={depth + 1} 
+                            isSearching={isSearching} 
+                            activeMatchId={activeMatchId} 
+                        />
                     ))}
                 </div>
             )}
