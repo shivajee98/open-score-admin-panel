@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Info, RotateCcw, ArrowRight, ShieldAlert } from 'lucide-react';
 
-export type ActionType = 'PROCEED' | 'SEND_KYC' | 'APPROVE' | 'DISBURSE' | 'REDO' | 'DELETE' | 'REJECT';
+export type ActionType = 'PROCEED' | 'SEND_KYC' | 'APPROVE' | 'DISBURSE' | 'REDO' | 'DELETE' | 'REJECT' | 'APPROVE_FEE';
 
 interface ActionConfirmationDialogProps {
   isOpen: boolean;
@@ -51,6 +51,17 @@ const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
           step2Label: 'Confirm State Reversion',
           confirmText: 'Revert State',
           warning: 'This action cannot be easily undone and may affect agent liquidity.'
+        };
+      case 'APPROVE_FEE':
+        return {
+          title: 'Approve Platform Fee',
+          description: `Confirming Platform Fee payment of ₹${amount} for ${customerName}.`,
+          icon: <CheckCircle className="w-12 h-12 text-indigo-500" />,
+          color: 'indigo',
+          step1Label: 'Verify Payment Proof',
+          step2Label: 'Final Payment Confirmation',
+          confirmText: 'Confirm Fee Payment',
+          warning: 'This will mark the platform fee as paid and progress the loan workflow.'
         };
       case 'APPROVE':
         return {
