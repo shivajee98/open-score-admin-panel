@@ -122,6 +122,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Users & Funds', href: '/users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Internal Team & Funds', href: '/internal-users', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Merchants', href: '/merchants', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
+        { label: 'Active Users Tracker', href: '/active-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Support Agents', href: '/support/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Field KYC Agent', href: '/team/kyc-agents', icon: <Shield className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },
         { label: 'Field KYC Leads', href: '/team/kyc-leads', icon: <ListFilter className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team' },

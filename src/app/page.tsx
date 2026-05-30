@@ -51,11 +51,6 @@ export default function AdminDashboard() {
     const [loadingOutstanding, setLoadingOutstanding] = useState(false);
     const [outstandingSearch, setOutstandingSearch] = useState('');
 
-    const [isActiveUsersModalOpen, setIsActiveUsersModalOpen] = useState(false);
-    const [activeUsersList, setActiveUsersList] = useState<any[]>([]);
-    const [loadingActiveUsers, setLoadingActiveUsers] = useState(false);
-    const [activeUsersSearch, setActiveUsersSearch] = useState('');
-
     useEffect(() => {
         if (status === 'authenticated' && session?.role === 'SUB_USER') {
             router.push('/sub-user-dashboard');
@@ -78,9 +73,6 @@ export default function AdminDashboard() {
                             activeUsers: data.active_users
                         }));
                     }
-                    if (isActiveUsersModalOpen && Array.isArray(data?.users)) {
-                        setActiveUsersList(data.users);
-                    }
                 }
             } catch (e) {
                 // Fail silently
@@ -89,20 +81,7 @@ export default function AdminDashboard() {
 
         const interval = setInterval(pollActiveUsers, 4000);
         return () => clearInterval(interval);
-    }, [session, status, isActiveUsersModalOpen]);
-
-    const openActiveUsersModal = async () => {
-        setIsActiveUsersModalOpen(true);
-        setLoadingActiveUsers(true);
-        try {
-            const data = await apiFetch('/admin/analytics/active-users');
-            setActiveUsersList(Array.isArray(data?.users) ? data.users : []);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoadingActiveUsers(false);
-        }
-    };
+    }, [session, status]);
 
     const loadData = async () => {
         try {
@@ -231,7 +210,7 @@ export default function AdminDashboard() {
         return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
     }
 
-    if ((session as any)?.user?.role === 'SUB_USER') {
+    if (session?.role === 'SUB_USER') {
         return null; // Will redirect
     }
 
@@ -253,7 +232,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div 
-                    onClick={openActiveUsersModal}
+                    onClick={() => router.push('/active-users')}
                     className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 relative overflow-hidden group cursor-pointer hover:shadow-md hover:border-emerald-250 transition-all select-none"
                 >
                     <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0 relative">
@@ -712,130 +691,6 @@ export default function AdminDashboard() {
 
             <CampaignManager onViewStats={loadCampaignStats} />
 
-            {/* Active Users Modal */}
-            {isActiveUsersModalOpen && (
-                <div className="fixed inset-0 bg-[#000]/40 backdrop-blur-[3px] flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="p-6 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
-                                    <Users className="w-5 h-5 animate-pulse" />
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-slate-900 text-lg">Live Active Users</h3>
-                                    <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
-                                        Currently Online: {activeUsersList.length}
-                                    </p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => {
-                                    setIsActiveUsersModalOpen(false);
-                                    setActiveUsersSearch('');
-                                }}
-                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Filter and Info */}
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <input 
-                                type="text"
-                                placeholder="Search by name, phone or type..."
-                                value={activeUsersSearch}
-                                onChange={(e) => setActiveUsersSearch(e.target.value)}
-                                className="bg-white border border-slate-200 text-slate-800 placeholder-slate-400 text-sm rounded-xl px-4 py-2 w-full sm:max-w-xs focus:outline-none focus:border-emerald-500 transition-all font-semibold"
-                            />
-                            <div className="text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1 select-none shrink-0 self-start sm:self-auto">
-                                ⚡ Real-time updates active
-                            </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6">
-                            {loadingActiveUsers && activeUsersList.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-3"></div>
-                                    <p className="text-slate-400 text-sm font-bold">Querying live registry...</p>
-                                </div>
-                            ) : (
-                                (() => {
-                                    const filtered = activeUsersList.filter(u => {
-                                        const term = activeUsersSearch.toLowerCase();
-                                        return (
-                                            u.name?.toLowerCase().includes(term) ||
-                                            u.mobile_number?.includes(term) ||
-                                            u.role?.toLowerCase().includes(term) ||
-                                            u.type?.toLowerCase().includes(term)
-                                        );
-                                    });
-
-                                    if (filtered.length === 0) {
-                                        return (
-                                            <div className="flex flex-col items-center justify-center py-12 text-center">
-                                                <Users className="w-10 h-10 text-slate-300 mb-3" />
-                                                <p className="text-slate-400 text-sm font-semibold">No matching active users found</p>
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div className="space-y-3">
-                                            {filtered.map((user) => {
-                                                const isSubUser = user.type === 'SUB_USER';
-                                                return (
-                                                    <div 
-                                                        key={`${user.type}_${user.id}`}
-                                                        className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={cn(
-                                                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm",
-                                                                isSubUser 
-                                                                    ? "bg-indigo-50 text-indigo-600 border border-indigo-100" 
-                                                                    : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                                                            )}>
-                                                                {user.name ? user.name.substring(0, 2).toUpperCase() : 'US'}
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="font-bold text-slate-800 text-sm leading-snug">{user.name}</h4>
-                                                                <p className="text-slate-400 text-xs font-semibold">{user.mobile_number}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={cn(
-                                                                "text-[10px] font-extrabold tracking-wider uppercase px-2 py-1 rounded-lg border",
-                                                                isSubUser 
-                                                                    ? "bg-indigo-50/50 text-indigo-700 border-indigo-100" 
-                                                                    : "bg-emerald-50/50 text-emerald-700 border-emerald-100"
-                                                            )}>
-                                                                {user.role}
-                                                            </span>
-                                                            <span className="text-[10px] text-slate-400 font-semibold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">
-                                                                Active
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })()
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-[10px] text-slate-400 font-bold text-center">
-                            Note: Stale user sessions auto-expire after 15 seconds of inactivity.
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {isVerifiedModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">

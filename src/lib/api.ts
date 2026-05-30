@@ -60,19 +60,9 @@ export const apiFetch = async (endpoint: string, options: RequestInit & { respon
             const isLoginPage = window.location.pathname.includes('/login');
             if (isLoginPage) return response.json();
 
-            // Check for session-expired (single-session enforcement)
-            try {
-                const cloned = response.clone();
-                const body = await cloned.json();
-                if (body.code === 'SESSION_EXPIRED') {
-                    clearTokenCache();
-                    alert('Session expired. You have been logged in from another device.');
-                    window.location.href = '/login';
-                    throw new Error(body.error);
-                }
-            } catch (e) {
-                // If parsing fails, just continue to the normal error handling below
-            }
+            clearTokenCache();
+            window.location.href = '/login';
+            throw new Error('Unauthenticated. Please log in again.');
         }
 
         let errorData: any = {};
