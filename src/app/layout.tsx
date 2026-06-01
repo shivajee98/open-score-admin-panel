@@ -4,7 +4,6 @@ import "./globals.css";
 import ToastContainer from "@/components/ui/Toast";
 import { Providers } from "@/components/Providers";
 import AuthGuard from "@/components/AuthGuard";
-import IssueReporter from "@/components/IssueReporter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +37,6 @@ export default function RootLayout({
           <ToastContainer />
           <AuthGuard>
             {children}
-            <IssueReporter appName="Admin Panel" />
           </AuthGuard>
         </Providers>
       </body>

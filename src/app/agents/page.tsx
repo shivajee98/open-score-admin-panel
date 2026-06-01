@@ -870,6 +870,10 @@ export default function AgentsPage() {
                                 <Filter className="w-4 h-4" />
                                 Filters
                             </button>
+                            <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl text-indigo-700 text-sm font-bold shadow-sm whitespace-nowrap">
+                                <UsersIcon className="w-4 h-4 text-indigo-500" />
+                                <span>{pagination.total || 0} Agents</span>
+                            </div>
                         </div>
                     </div>
 

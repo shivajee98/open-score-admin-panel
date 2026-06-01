@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck, Percent } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck, Percent, Bell, Send } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
@@ -12,6 +12,9 @@ import KycVerificationSidebar from '@/components/loans/KycVerificationSidebar';
 import MerchantPincodeAnalysis from './MerchantPincodeAnalysis';
 import { Sparkles } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import EmailHistoryModal from '@/components/EmailHistoryModal';
+import AppNotificationHistoryModal from '@/components/AppNotificationHistoryModal';
 
 // Helper: Check if platform fee (EMI #0) has been paid for a loan
 const isPlatformFeePaid = (loan: any): boolean => {
@@ -46,6 +49,73 @@ export default function LoanApprovals() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedLoanIds, setSelectedLoanIds] = useState<number[]>([]);
+
+    const { user: currentUser } = useAuth();
+    const isAdmin = currentUser?.role === 'ADMIN';
+
+    // Email Modal States
+    const [isEmailHistoryOpen, setIsEmailHistoryOpen] = useState(false);
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [emailTargetIds, setEmailTargetIds] = useState<number[]>([]);
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailMessage, setEmailMessage] = useState('');
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+    // App Notification Modal States
+    const [isNotificationHistoryOpen, setIsNotificationHistoryOpen] = useState(false);
+    const [notificationTargetIds, setNotificationTargetIds] = useState<number[]>([]);
+
+    const handleOpenBulkEmailModal = () => {
+        const userIds = loans
+            .filter(l => selectedLoanIds.includes(l.id))
+            .map(l => l.user?.id)
+            .filter((id): id is number => !!id);
+        const uniqueUserIds = Array.from(new Set(userIds));
+        
+        if (uniqueUserIds.length === 0) {
+            toast.error('None of the selected loans have valid user IDs.');
+            return;
+        }
+
+        setEmailTargetIds(uniqueUserIds);
+        setEmailSubject('');
+        setEmailMessage('');
+        setIsEmailModalOpen(true);
+    };
+
+    const handleOpenSingleEmailModal = (ids: number[]) => {
+        setEmailTargetIds(ids);
+        setEmailSubject('');
+        setEmailMessage('');
+        setIsEmailModalOpen(true);
+    };
+
+    const handleSendEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSendingEmail(true);
+        try {
+            for (const id of emailTargetIds) {
+                await apiFetch('/admin/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient_ids: [id],
+                        recipient_type: 'user',
+                        subject: emailSubject,
+                        message: emailMessage,
+                    })
+                });
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            toast.success('Emails scheduled successfully!');
+            setIsEmailModalOpen(false);
+            setSelectedLoanIds([]);
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to send emails.');
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
     const [stageStats, setStageStats] = useState<{
         approve_stage: number;
         pay_fee_stage: number;
@@ -849,6 +919,24 @@ export default function LoanApprovals() {
                                 <span className="hidden sm:inline">Auto Pilot</span>
                             </button>
 
+                            {isAdmin && (
+                                <button
+                                    onClick={() => setIsEmailHistoryOpen(true)}
+                                    className="flex items-center gap-2 px-5 py-3 bg-white text-slate-600 border border-slate-200 hover:border-teal-200 hover:bg-teal-50/30 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-slate-200/50 group/email"
+                                >
+                                    <Mail size={16} className="text-teal-500 group-hover/email:scale-110 transition-transform" />
+                                    <span className="hidden sm:inline">Email History</span>
+                                </button>
+                            )}
+
+                            <button
+                                onClick={() => setIsNotificationHistoryOpen(true)}
+                                className="flex items-center gap-2 px-5 py-3 bg-white text-slate-600 border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-slate-200/50 group/bell"
+                            >
+                                <Bell size={16} className="text-indigo-500 group-hover/bell:scale-110 transition-transform" />
+                                <span className="hidden sm:inline">Push History</span>
+                            </button>
+
                             <button
                                 onClick={() => setShowPincodeModal(true)}
                                 className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-all shadow-lg shadow-indigo-100/50 group/pin"
@@ -1279,6 +1367,33 @@ export default function LoanApprovals() {
                                                                 >
                                                                     <FileText size={10} /> View KYC
                                                                 </button>
+                                                            )}
+                                                            {loan.user?.id && (
+                                                                <div className="mt-1.5 flex items-center gap-2">
+                                                                    {isAdmin && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleOpenSingleEmailModal([loan.user.id]);
+                                                                            }}
+                                                                            className="text-[9px] font-bold text-teal-600 hover:text-teal-850 flex items-center gap-0.5 transition-colors"
+                                                                            title="Send Email to User"
+                                                                        >
+                                                                            <Mail size={10} /> Email
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setNotificationTargetIds([loan.user.id]);
+                                                                            setIsNotificationHistoryOpen(true);
+                                                                        }}
+                                                                        className="text-[9px] font-bold text-indigo-600 hover:text-indigo-850 flex items-center gap-0.5 transition-colors"
+                                                                        title="Send Notification to User"
+                                                                    >
+                                                                        <Bell size={10} /> Notify
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -2603,6 +2718,146 @@ export default function LoanApprovals() {
                 amount={confirmModal.amount}
                 isRisk={confirmModal.isRisk}
             />
+
+            {/* Bulk Actions Bar */}
+            {selectedLoanIds.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] animate-in slide-in-from-bottom-10 duration-500">
+                    <div className="bg-slate-900 text-white rounded-[2rem] px-8 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.4)] border border-white/10 flex items-center gap-8 backdrop-blur-xl">
+                        <div className="flex items-center gap-4 border-r border-white/10 pr-8">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-lg">
+                                {selectedLoanIds.length}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest leading-none mb-1">Loans</p>
+                                <p className="text-sm font-black uppercase tracking-tight">Selected</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => {
+                                    const userIds = loans
+                                        .filter(l => selectedLoanIds.includes(l.id))
+                                        .map(l => l.user?.id)
+                                        .filter((id): id is number => !!id);
+                                    const uniqueUserIds = Array.from(new Set(userIds));
+                                    if (uniqueUserIds.length === 0) {
+                                        toast.error("No valid users found for the selected loans.");
+                                        return;
+                                    }
+                                    setNotificationTargetIds(uniqueUserIds);
+                                    setIsNotificationHistoryOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 hover:bg-white/10 rounded-xl transition-all text-xs font-black uppercase tracking-widest"
+                            >
+                                <Bell className="w-4 h-4 text-indigo-400" /> Notify
+                            </button>
+                            {isAdmin && (
+                                <button 
+                                    onClick={handleOpenBulkEmailModal}
+                                    className="flex items-center gap-2 px-4 py-2 hover:bg-white/10 rounded-xl transition-all text-xs font-black uppercase tracking-widest text-teal-400 hover:text-teal-300"
+                                >
+                                    <Send className="w-4 h-4" /> Send Email
+                                </button>
+                            )}
+                            <button 
+                                onClick={() => setSelectedLoanIds([])}
+                                className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+                            >
+                                <X className="w-4 h-4" /> Deselect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Email History Modal */}
+            <EmailHistoryModal
+                isOpen={isEmailHistoryOpen}
+                onClose={() => setIsEmailHistoryOpen(false)}
+            />
+
+            {/* App Notification History Modal */}
+            <AppNotificationHistoryModal
+                isOpen={isNotificationHistoryOpen}
+                onClose={() => {
+                    setIsNotificationHistoryOpen(false);
+                    setNotificationTargetIds([]);
+                }}
+                recipientType="user"
+                selectedIds={notificationTargetIds}
+            />
+
+            {/* Send Email Modal */}
+            {isAdmin && isEmailModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-2xl font-black text-slate-900">Send Email</h3>
+                            <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <p className="text-slate-500 font-medium mb-6">
+                            Sending email to <span className="text-slate-900 font-bold">{emailTargetIds.length} selected recipients</span>.
+                        </p>
+
+                        <form onSubmit={handleSendEmailSubmit}>
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Subject</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-base font-bold text-slate-900 focus:ring-2 focus:ring-teal-100 outline-none"
+                                        placeholder="Enter email subject"
+                                        value={emailSubject}
+                                        onChange={e => setEmailSubject(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Message Content</label>
+                                    <textarea
+                                        required
+                                        rows={6}
+                                        className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm text-slate-900 focus:ring-2 focus:ring-teal-100 outline-none font-medium"
+                                        placeholder="Type your message here..."
+                                        value={emailMessage}
+                                        onChange={e => setEmailMessage(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEmailModalOpen(false)}
+                                    className="py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSendingEmail}
+                                    className="py-4 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 transition-colors shadow-lg shadow-teal-200 flex items-center justify-center gap-2"
+                                >
+                                    {isSendingEmail ? (
+                                        <>
+                                            <Clock className="w-5 h-5 animate-spin" />
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-5 h-5" />
+                                            Send Email
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

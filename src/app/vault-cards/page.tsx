@@ -13,6 +13,14 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+const formatNum = (val: any) => {
+    const num = parseFloat(val);
+    if (isNaN(num)) return '0';
+    const fixed = num.toFixed(1);
+    const result = fixed.endsWith('.0') ? parseFloat(fixed) : parseFloat(fixed);
+    return result.toLocaleString('en-IN', { maximumFractionDigits: 1 });
+};
+
 export default function VaultCardsPage() {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -23,7 +31,7 @@ export default function VaultCardsPage() {
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [isSavingConfig, setIsSavingConfig] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
-    const [activeTab, setActiveTab] = useState<'REQUESTS' | 'CONFIG' | 'ADD_MONEY'>('REQUESTS');
+    const [activeTab, setActiveTab] = useState<'REQUESTS' | 'CONFIG' | 'ADD_MONEY' | 'GROWTH_PLANS'>('REQUESTS');
     const [addMoneyRequests, setAddMoneyRequests] = useState<any[]>([]);
     const [loadingAddMoney, setLoadingAddMoney] = useState(false);
     const [stats, setStats] = useState<any>({
@@ -51,6 +59,141 @@ export default function VaultCardsPage() {
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [actionType, setActionType] = useState<'CHARGE' | 'APPROVE_PAYMENT' | 'VIEW'>('VIEW');
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Growth Plans CRUD State
+    const [growthPlans, setGrowthPlans] = useState<any[]>([]);
+    const [loadingPlans, setLoadingPlans] = useState(false);
+    const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+    const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+    const [planForm, setPlanForm] = useState({
+        title: '',
+        plan_key: '',
+        min_amount: '',
+        max_amount: '',
+        amount_options: '',
+        rate_percent: '',
+        rate_frequency: 'DAILY',
+        tenure_days: '',
+        penalty_daily_charge: '20',
+        penalty_cancellation_fee: '300',
+        collapse_increment_on_penalty: true,
+        sort_order: '0',
+        is_active: true
+    });
+
+    const loadGrowthPlans = async () => {
+        setLoadingPlans(true);
+        try {
+            const data = await apiFetch('/admin/growth-plans');
+            setGrowthPlans(data || []);
+        } catch (error) {
+            toast.error('Failed to load growth plans');
+        } finally {
+            setLoadingPlans(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'GROWTH_PLANS') {
+            loadGrowthPlans();
+        }
+    }, [activeTab]);
+
+    const handleOpenPlanModal = (plan: any = null) => {
+        if (plan) {
+            setSelectedPlanId(plan.id);
+            setPlanForm({
+                title: plan.title || '',
+                plan_key: plan.plan_key || '',
+                min_amount: plan.min_amount ? Math.round(parseFloat(plan.min_amount)).toString() : '',
+                max_amount: plan.max_amount ? Math.round(parseFloat(plan.max_amount)).toString() : '',
+                amount_options: Array.isArray(plan.amount_options) ? plan.amount_options.map((x: any) => Math.round(parseFloat(x))).join(', ') : '',
+                rate_percent: plan.rate_percent ? parseFloat(plan.rate_percent).toString() : '',
+                rate_frequency: plan.rate_frequency || 'DAILY',
+                tenure_days: plan.tenure_days?.toString() || '',
+                penalty_daily_charge: plan.penalty_daily_charge ? Math.round(parseFloat(plan.penalty_daily_charge)).toString() : '20',
+                penalty_cancellation_fee: plan.penalty_cancellation_fee ? Math.round(parseFloat(plan.penalty_cancellation_fee)).toString() : '300',
+                collapse_increment_on_penalty: plan.collapse_increment_on_penalty !== false,
+                sort_order: plan.sort_order?.toString() || '0',
+                is_active: plan.is_active !== false
+            });
+        } else {
+            setSelectedPlanId(null);
+            setPlanForm({
+                title: '',
+                plan_key: '',
+                min_amount: '',
+                max_amount: '',
+                amount_options: '',
+                rate_percent: '',
+                rate_frequency: 'DAILY',
+                tenure_days: '',
+                penalty_daily_charge: '20',
+                penalty_cancellation_fee: '300',
+                collapse_increment_on_penalty: true,
+                sort_order: '0',
+                is_active: true
+            });
+        }
+        setIsPlanModalOpen(true);
+    };
+
+    const handleSavePlan = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsProcessing(true);
+        try {
+            const amountOptions = planForm.amount_options
+                ? planForm.amount_options.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v))
+                : [];
+
+            const body = {
+                title: planForm.title,
+                plan_key: planForm.plan_key || planForm.title.toLowerCase().replace(/[^a-z0-9_]+/g, ''),
+                min_amount: parseFloat(planForm.min_amount),
+                max_amount: parseFloat(planForm.max_amount),
+                amount_options: amountOptions,
+                rate_percent: parseFloat(planForm.rate_percent),
+                rate_frequency: planForm.rate_frequency,
+                tenure_days: parseInt(planForm.tenure_days),
+                penalty_daily_charge: parseFloat(planForm.penalty_daily_charge || '0'),
+                penalty_cancellation_fee: parseFloat(planForm.penalty_cancellation_fee || '0'),
+                collapse_increment_on_penalty: planForm.collapse_increment_on_penalty,
+                sort_order: parseInt(planForm.sort_order || '0'),
+                is_active: planForm.is_active
+            };
+
+            if (selectedPlanId) {
+                await apiFetch(`/admin/growth-plans/${selectedPlanId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(body)
+                });
+                toast.success('Growth plan updated successfully');
+            } else {
+                await apiFetch('/admin/growth-plans', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                toast.success('Growth plan created successfully');
+            }
+            setIsPlanModalOpen(false);
+            loadGrowthPlans();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to save growth plan');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleDeletePlan = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this growth plan?')) return;
+        try {
+            await apiFetch(`/admin/growth-plans/${id}`, { method: 'DELETE' });
+            toast.success('Growth plan deleted successfully');
+            loadGrowthPlans();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to delete growth plan');
+        }
+    };
 
     useEffect(() => {
         loadRequests();
@@ -250,16 +393,34 @@ export default function VaultCardsPage() {
                     <button
                         onClick={() => setActiveTab('REQUESTS')}
                         className={cn(
-                            "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                             activeTab === 'REQUESTS' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
                         )}
                     >
                         Requests
                     </button>
                     <button
+                        onClick={() => setActiveTab('ADD_MONEY')}
+                        className={cn(
+                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            activeTab === 'ADD_MONEY' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        )}
+                    >
+                        Deposits & Topups
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('GROWTH_PLANS')}
+                        className={cn(
+                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            activeTab === 'GROWTH_PLANS' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        )}
+                    >
+                        Growth Plans
+                    </button>
+                    <button
                         onClick={() => setActiveTab('CONFIG')}
                         className={cn(
-                            "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                             activeTab === 'CONFIG' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
                         )}
                     >
@@ -537,6 +698,221 @@ export default function VaultCardsPage() {
                         )}
                     </div>
                 </>
+            ) : activeTab === 'GROWTH_PLANS' ? (
+                <div className="space-y-8 animate-in fade-in duration-300">
+                    {/* Header bar */}
+                    <div className="flex items-center justify-between bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Active Growth Plans</h3>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Configure database-driven investment tiers & options</p>
+                        </div>
+                        <button
+                            onClick={() => handleOpenPlanModal()}
+                            className="px-6 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" /> Create Growth Plan
+                        </button>
+                    </div>
+
+                    {/* Plans Grid */}
+                    {loadingPlans ? (
+                        <div className="flex justify-center items-center py-20">
+                            <Clock className="w-8 h-8 animate-spin text-slate-400" />
+                        </div>
+                    ) : growthPlans.length === 0 ? (
+                        <div className="p-16 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm">
+                            <p className="text-slate-400 font-bold italic text-sm mb-4">No growth plans configured yet.</p>
+                            <button
+                                onClick={() => handleOpenPlanModal()}
+                                className="px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
+                            >
+                                Add Your First Plan
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {growthPlans.map((plan) => (
+                                <div key={plan.id} className={cn(
+                                    "bg-white p-6 rounded-[2.5rem] shadow-md border transition-all duration-300 relative group flex flex-col justify-between min-h-[320px]",
+                                    plan.is_active ? "border-slate-100" : "border-slate-200 opacity-60"
+                                )}>
+                                    <div>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="px-3.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                                                Order #{plan.sort_order || 0}
+                                            </div>
+                                            <span className={cn(
+                                                "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
+                                                plan.is_active ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                            )}>
+                                                {plan.is_active ? "Active" : "Disabled"}
+                                            </span>
+                                        </div>
+
+                                        <h4 className="text-2xl font-black text-slate-900 leading-tight mb-1">{plan.title}</h4>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">T{plan.tenure_days} Days Tenure</p>
+
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100/50 mb-6 space-y-3">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Daily Rate</span>
+                                                <span className="font-black text-emerald-600 text-sm">+{formatNum(plan.rate_percent)}% {plan.rate_frequency}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Limits</span>
+                                                <span className="font-black text-slate-800">{formatNum(plan.min_amount)} - {formatNum(plan.max_amount)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Penalty / Cancellation</span>
+                                                <span className="font-black text-rose-600">{formatNum(plan.penalty_daily_charge)}/day + {formatNum(plan.penalty_cancellation_fee)} fee</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200/50">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Clawback</span>
+                                                <span className={cn(
+                                                    "font-black text-[9px] uppercase tracking-widest",
+                                                    plan.collapse_increment_on_penalty ? "text-amber-600" : "text-slate-500"
+                                                )}>
+                                                    {plan.collapse_increment_on_penalty ? "Collapse Yield" : "Preserve Yield"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-4 border-t border-slate-100">
+                                        <button
+                                            onClick={() => handleOpenPlanModal(plan)}
+                                            className="flex-1 py-3 border-2 border-slate-200 text-slate-700 hover:bg-slate-50 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                        >
+                                            Edit Plan
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeletePlan(plan.id)}
+                                            className="py-3 px-4 border-2 border-rose-100 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : activeTab === 'ADD_MONEY' ? (
+                <div className="space-y-8 animate-in fade-in duration-300">
+                    {/* Header bar */}
+                    <div className="flex items-center justify-between bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight text-left">Deposits & Topups</h3>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1 text-left">Verify and approve Vault deposits and Growth Plan investments</p>
+                        </div>
+                    </div>
+
+                    {/* Table / List */}
+                    {loadingAddMoney ? (
+                        <div className="flex justify-center items-center py-20">
+                            <Clock className="w-8 h-8 animate-spin text-slate-400" />
+                        </div>
+                    ) : addMoneyRequests.length === 0 ? (
+                        <div className="p-16 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm">
+                            <p className="text-slate-400 font-bold italic text-sm">No deposit or topup requests found.</p>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50/50">
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">User / Details</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Type / Target</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Payment Proof</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {addMoneyRequests.map((req) => (
+                                            <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-black text-slate-900 text-sm">{req.user?.name || 'Unknown User'}</div>
+                                                    <div className="text-slate-400 text-xs font-bold font-mono mt-0.5">{req.user?.mobile_number}</div>
+                                                    <div className="text-slate-400 text-[10px] mt-0.5">{req.user?.email}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {req.growth_plan ? (
+                                                        <div className="inline-flex flex-col gap-1">
+                                                            <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-lg text-[9px] font-black uppercase tracking-widest w-fit">
+                                                                Growth Plan
+                                                            </span>
+                                                            <span className="font-extrabold text-slate-700 text-xs mt-0.5">{req.growth_plan.title}</span>
+                                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">T{req.growth_plan.tenure_days} Days Lock</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                                                            Direct Vault Card Topup
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-black text-slate-900 text-sm">₹{formatNum(req.amount)}</div>
+                                                    <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mt-0.5">{req.payment_mode}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={cn(
+                                                        "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
+                                                        req.status === 'APPROVED' ? "bg-emerald-100 text-emerald-700" :
+                                                        req.status === 'REJECTED' ? "bg-rose-100 text-rose-700" :
+                                                        "bg-amber-100 text-amber-700"
+                                                    )}>
+                                                        {req.status}
+                                                    </span>
+                                                    {req.rejection_reason && (
+                                                        <p className="text-[9px] text-rose-500 italic font-semibold mt-1 max-w-[200px] break-words">
+                                                            "{req.rejection_reason}"
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {req.payment_proof ? (
+                                                        <a
+                                                            href={getStorageUrl(req.payment_proof) || '#'}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm"
+                                                        >
+                                                            <Camera className="w-3 h-3" /> View Proof
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-xs italic font-semibold">No Proof</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {req.status === 'PENDING' ? (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleApproveAddMoney(req.id)}
+                                                                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-1"
+                                                            >
+                                                                <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRejectAddMoney(req.id)}
+                                                                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-rose-100 flex items-center gap-1"
+                                                            >
+                                                                <XCircle className="w-3.5 h-3.5" /> Reject
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">—</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
@@ -883,6 +1259,236 @@ export default function VaultCardsPage() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create/Edit Plan Modal */}
+            {isPlanModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 sm:p-0">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => !isProcessing && setIsPlanModalOpen(false)} />
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
+                        <div className="bg-slate-900 p-8 text-white relative">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-3 bg-white/10 rounded-2xl border border-white/10">
+                                    <Settings className="w-6 h-6" />
+                                </div>
+                                <button onClick={() => setIsPlanModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight">
+                                {selectedPlanId ? 'Edit Growth Plan' : 'Create Growth Plan'}
+                            </h2>
+                            <p className="text-blue-300 text-xs font-bold uppercase tracking-widest mt-1">Configure interest tiers & penalty policies</p>
+                        </div>
+
+                        <form onSubmit={handleSavePlan} className="p-8 space-y-4 max-h-[60vh] overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Plan Title</label>
+                                    <input
+                                        type="text" required
+                                        value={planForm.title}
+                                        onChange={(e) => {
+                                            const titleVal = e.target.value;
+                                            const slug = titleVal.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                                            setPlanForm(prev => ({
+                                                ...prev,
+                                                title: titleVal,
+                                                plan_key: prev.plan_key === '' || prev.plan_key === prev.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') ? slug : prev.plan_key
+                                            }));
+                                        }}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. Starter Plan"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Plan Key (Unique Slug)</label>
+                                    <input
+                                        type="text" required
+                                        value={planForm.plan_key}
+                                        onChange={(e) => setPlanForm({ ...planForm, plan_key: e.target.value.toLowerCase().replace(/[^a-z0-9_]+/g, '') })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. starter_plan"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Min Amount Limit</label>
+                                    <input
+                                        type="number" required
+                                        value={planForm.min_amount}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setPlanForm(prev => {
+                                                const next = { ...prev, min_amount: val };
+                                                const minVal = parseFloat(next.min_amount) || 0;
+                                                const maxVal = parseFloat(next.max_amount) || 0;
+                                                if (minVal > 0 && maxVal >= minVal) {
+                                                    const step = (maxVal - minVal) / 3;
+                                                    next.amount_options = [
+                                                        minVal,
+                                                        minVal + Math.round(step * 1 / 100) * 100,
+                                                        minVal + Math.round(step * 2 / 100) * 100,
+                                                        maxVal
+                                                    ].join(', ');
+                                                }
+                                                return next;
+                                            });
+                                        }}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 2000"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Max Amount Limit</label>
+                                    <input
+                                        type="number" required
+                                        value={planForm.max_amount}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setPlanForm(prev => {
+                                                const next = { ...prev, max_amount: val };
+                                                const minVal = parseFloat(next.min_amount) || 0;
+                                                const maxVal = parseFloat(next.max_amount) || 0;
+                                                if (minVal > 0 && maxVal >= minVal) {
+                                                    const step = (maxVal - minVal) / 3;
+                                                    next.amount_options = [
+                                                        minVal,
+                                                        minVal + Math.round(step * 1 / 100) * 100,
+                                                        minVal + Math.round(step * 2 / 100) * 100,
+                                                        maxVal
+                                                    ].join(', ');
+                                                }
+                                                return next;
+                                            });
+                                        }}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 4000"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Amount Option Chips (Comma Separated)</label>
+                                <input
+                                    type="text" required
+                                    value={planForm.amount_options}
+                                    onChange={(e) => setPlanForm({ ...planForm, amount_options: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                    placeholder="e.g. 2000, 3000, 4000"
+                                />
+                                <span className="text-[9px] text-slate-400 font-bold block mt-1 ml-1">
+                                    Pre-populated default suggestions based on min/max limit ranges.
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Tenure (Days)</label>
+                                    <input
+                                        type="number" required
+                                        value={planForm.tenure_days}
+                                        onChange={(e) => setPlanForm({ ...planForm, tenure_days: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 30"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Sort Order</label>
+                                    <input
+                                        type="number"
+                                        value={planForm.sort_order}
+                                        onChange={(e) => setPlanForm({ ...planForm, sort_order: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 0"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Rate Percent (%)</label>
+                                    <input
+                                        type="number" step="0.01" required
+                                        value={planForm.rate_percent}
+                                        onChange={(e) => setPlanForm({ ...planForm, rate_percent: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 10"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Rate Frequency</label>
+                                    <select
+                                        value={planForm.rate_frequency}
+                                        onChange={(e) => setPlanForm({ ...planForm, rate_frequency: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm appearance-none"
+                                    >
+                                        <option value="DAILY">Daily Rate</option>
+                                        <option value="MONTHLY">Monthly Rate</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Daily Underfunded Penalty</label>
+                                    <input
+                                        type="number"
+                                        value={planForm.penalty_daily_charge}
+                                        onChange={(e) => setPlanForm({ ...planForm, penalty_daily_charge: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 20"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Early Cancellation Fee</label>
+                                    <input
+                                        type="number"
+                                        value={planForm.penalty_cancellation_fee}
+                                        onChange={(e) => setPlanForm({ ...planForm, penalty_cancellation_fee: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all font-bold text-sm"
+                                        placeholder="e.g. 300"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={planForm.collapse_increment_on_penalty}
+                                        onChange={(e) => setPlanForm({ ...planForm, collapse_increment_on_penalty: e.target.checked })}
+                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Collapse increments on penalty</span>
+                                </label>
+
+                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={planForm.is_active}
+                                        onChange={(e) => setPlanForm({ ...planForm, is_active: e.target.checked })}
+                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Mark plan as Active</span>
+                                </label>
+                            </div>
+
+                            <div className="pt-4">
+                                <button
+                                    type="submit"
+                                    disabled={isProcessing}
+                                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95 transition-all"
+                                >
+                                    {isProcessing ? <Clock className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Growth Plan</>}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

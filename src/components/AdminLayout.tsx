@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare, Phone, PhoneCall, Fingerprint, KeyRound } from 'lucide-react';
+import { LayoutDashboard, Users, User, FileText, Settings, LogOut, Verified, ShieldCheck, TrendingUp, Ticket, QrCode, DollarSign, Banknote, Wallet, Gift, AlertTriangle, Archive, ChevronDown, Percent, Shield, ListFilter, Search, Key, Megaphone, Smartphone, MapPin, CreditCard, MessageSquare, Phone, PhoneCall, Fingerprint, KeyRound, Building } from 'lucide-react';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -115,6 +115,7 @@ export default function AdminLayout({ children, title }: { children: React.React
 
         // Loan Management
         { label: 'My Loan User', href: '/loans', icon: <Verified className="w-5 h-5" />, roles: ['ADMIN'], group: 'Loan Management' },
+        { label: 'Construction Loans', href: '/construction-loans', icon: <Building className="w-5 h-5" />, roles: ['ADMIN'], group: 'Loan Management' },
         { label: 'Loan Plans', href: '/loan-plans', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Loan Management' },
         { label: 'Withdrawal Process', href: '/withdrawal-rules', icon: <ShieldCheck className="w-5 h-5" />, roles: ['ADMIN'], group: 'Loan Management' },
 
