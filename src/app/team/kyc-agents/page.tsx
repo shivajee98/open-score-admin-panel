@@ -34,9 +34,25 @@ export default function KycAgentsPage() {
         access_type: 'BOTH' as 'LOAN' | 'MERCHANT' | 'BOTH'
     });
 
+    const [availablePincodes, setAvailablePincodes] = useState<{pincode: string, assigned_to: string | null}[]>([]);
+    const [pincodeSearch, setPincodeSearch] = useState('');
+    const [expandedPincodeAgents, setExpandedPincodeAgents] = useState<number[]>([]);
+
+    const togglePincodes = (agentId: number) => {
+        setExpandedPincodeAgents(prev => 
+            prev.includes(agentId) ? prev.filter(id => id !== agentId) : [...prev, agentId]
+        );
+    };
+
     useEffect(() => {
         fetchAgents();
     }, []);
+
+    useEffect(() => {
+        if (isModalOpen && availablePincodes.length === 0) {
+            apiFetch('/admin/kyc-agents-pincodes').then(setAvailablePincodes).catch(() => {});
+        }
+    }, [isModalOpen]);
 
     const fetchAgents = async () => {
         setIsLoading(true);
@@ -47,6 +63,15 @@ export default function KycAgentsPage() {
             toast.error('Failed to load KYC agents');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const togglePincode = (pincode: string) => {
+        const current = formData.pincode_access ? formData.pincode_access.split(',').map(p => p.trim()).filter(Boolean) : [];
+        if (current.includes(pincode)) {
+            setFormData({ ...formData, pincode_access: current.filter(p => p !== pincode).join(', ') });
+        } else {
+            setFormData({ ...formData, pincode_access: [...current, pincode].join(', ') });
         }
     };
 
@@ -81,6 +106,8 @@ export default function KycAgentsPage() {
             }
             closeModal();
             fetchAgents();
+            // Re-fetch pincodes next time modal is opened to refresh assigned labels
+            setAvailablePincodes([]);
         } catch (error: any) {
             toast.error(error.message || 'Operation failed');
         }
@@ -92,12 +119,14 @@ export default function KycAgentsPage() {
             await apiFetch(`/admin/kyc-agents/${id}`, { method: 'DELETE' });
             toast.success('Agent deleted');
             fetchAgents();
+            setAvailablePincodes([]);
         } catch (error) {
             toast.error('Failed to delete');
         }
     };
 
     const openModal = (agent?: KycAgent) => {
+        setPincodeSearch('');
         if (agent) {
             setEditingAgent(agent);
             setFormData({
@@ -125,6 +154,22 @@ export default function KycAgentsPage() {
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingAgent(null);
+    };
+
+    const filteredPincodes = availablePincodes.filter(p => p.pincode.includes(pincodeSearch));
+
+    const handleSelectAllFiltered = () => {
+        const current = formData.pincode_access ? formData.pincode_access.split(',').map(p => p.trim()).filter(Boolean) : [];
+        const filteredPincodeStrings = filteredPincodes.map(pc => pc.pincode);
+        const newSet = new Set([...current, ...filteredPincodeStrings]);
+        setFormData({ ...formData, pincode_access: Array.from(newSet).join(', ') });
+    };
+
+    const handleDeselectAllFiltered = () => {
+        const current = formData.pincode_access ? formData.pincode_access.split(',').map(p => p.trim()).filter(Boolean) : [];
+        const filteredPincodeStrings = filteredPincodes.map(pc => pc.pincode);
+        const remaining = current.filter(p => !filteredPincodeStrings.includes(p));
+        setFormData({ ...formData, pincode_access: remaining.join(', ') });
     };
 
     return (
@@ -198,11 +243,31 @@ export default function KycAgentsPage() {
                                     <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Assigned Area</span>
                                         <div className="flex flex-wrap gap-1 mb-2">
-                                            {(agent.pincode_access || []).map(pc => (
-                                                <span key={pc} className="text-sm bg-white border border-slate-200 px-2 py-0.5 rounded-lg font-mono font-black text-blue-600 shadow-sm">
-                                                    {pc}
-                                                </span>
-                                            ))}
+                                            {(() => {
+                                                const pincodes = agent.pincode_access || [];
+                                                const isExpanded = expandedPincodeAgents.includes(agent.id);
+                                                const displayPincodes = isExpanded ? pincodes : pincodes.slice(0, 15);
+                                                const hiddenCount = pincodes.length - 15;
+                                                return (
+                                                    <>
+                                                        {displayPincodes.map(pc => (
+                                                            <span key={pc} className="text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-lg font-mono font-bold text-blue-600 shadow-sm">
+                                                                {pc}
+                                                            </span>
+                                                        ))}
+                                                        {!isExpanded && hiddenCount > 0 && (
+                                                            <button onClick={() => togglePincodes(agent.id)} className="text-xs font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-lg hover:bg-slate-300 transition-colors">
+                                                                +{hiddenCount} more
+                                                            </button>
+                                                        )}
+                                                        {isExpanded && hiddenCount > 0 && (
+                                                            <button onClick={() => togglePincodes(agent.id)} className="text-xs font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-lg hover:bg-slate-300 transition-colors">
+                                                                Show less
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="flex items-center flex-wrap gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
                                             <MapPin size={10} className="text-slate-300 shrink-0" />
@@ -236,7 +301,7 @@ export default function KycAgentsPage() {
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={closeModal}></div>
-                        <div className="bg-white rounded-[2rem] w-full max-w-xl p-8 shadow-2xl relative z-10 animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
+                        <div className="bg-white rounded-[2rem] w-full max-w-xl p-8 shadow-2xl relative z-10 animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 max-h-[95vh] overflow-y-auto">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">{editingAgent ? 'Edit Agent' : 'Register New KYC Agent'}</h2>
@@ -289,12 +354,84 @@ export default function KycAgentsPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-2 relative">
                                     <div className="flex items-center justify-between px-1">
                                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Pincode Access</label>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter italic">Comma separated values</span>
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter italic">Select multiple</span>
                                     </div>
-                                    <textarea value={formData.pincode_access} onChange={e => setFormData({ ...formData, pincode_access: e.target.value })} className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all outline-none h-24 resize-none" placeholder="e.g. 110001, 110005, 110020" required />
+                                    
+                                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search pincodes..." 
+                                            className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold text-slate-700 focus:border-blue-500 outline-none mb-3"
+                                            value={pincodeSearch}
+                                            onChange={e => setPincodeSearch(e.target.value)}
+                                        />
+
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <button 
+                                                type="button" 
+                                                onClick={handleSelectAllFiltered}
+                                                className="flex-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 py-2 rounded-lg transition-colors border border-blue-100"
+                                            >
+                                                Select All {pincodeSearch ? 'Filtered' : ''}
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                onClick={handleDeselectAllFiltered}
+                                                className="flex-1 text-xs font-bold text-slate-500 bg-white hover:bg-slate-100 py-2 rounded-lg transition-colors border border-slate-200"
+                                            >
+                                                Deselect All
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                            {filteredPincodes.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-4 space-y-2">
+                                                    <span className="text-xs text-slate-400 font-bold">No pincodes found matching "{pincodeSearch}"</span>
+                                                    {pincodeSearch.length >= 4 && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => {
+                                                                togglePincode(pincodeSearch);
+                                                                setPincodeSearch('');
+                                                            }}
+                                                            className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                                                        >
+                                                            + Add "{pincodeSearch}" manually
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                filteredPincodes.map(pc => {
+                                                    const current = formData.pincode_access ? formData.pincode_access.split(',').map(p => p.trim()).filter(Boolean) : [];
+                                                    const isSelected = current.includes(pc.pincode);
+                                                    const isAssigned = pc.assigned_to && (!editingAgent || pc.assigned_to !== editingAgent.name);
+                                                    
+                                                    return (
+                                                        <div 
+                                                            key={pc.pincode} 
+                                                            onClick={() => togglePincode(pc.pincode)}
+                                                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'}`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-5 h-5 rounded flex items-center justify-center border ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-slate-50'}`}>
+                                                                    {isSelected && <Check size={14} />}
+                                                                </div>
+                                                                <span className="font-mono font-bold">{pc.pincode}</span>
+                                                            </div>
+                                                            {isAssigned && (
+                                                                <span className="text-[10px] font-black px-2 py-1 bg-amber-100 text-amber-700 rounded-md">
+                                                                    {pc.assigned_to}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-[0.2em] py-5 rounded-2xl shadow-xl shadow-blue-600/30 active:scale-[0.98] transition-all transform motion-safe:hover:-translate-y-1">

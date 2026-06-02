@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, User, Smartphone, Lock, Shield, Settings, Check, Users, Clock } from 'lucide-react';
+import { Plus, Trash2, Edit, User, Smartphone, Lock, Shield, Settings, Check, Users, Clock, Download } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import AdminLayout from '@/components/AdminLayout';
@@ -46,9 +46,10 @@ const VISIBILITY_GROUPS = [
 ];
 
 export default function SupportAgentsPage() {
-    const [view, setView] = useState<'agents' | 'categories'>('agents');
+    const [view, setView] = useState<'agents' | 'categories' | 'productivity'>('agents');
     const [agents, setAgents] = useState<Agent[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [productivityData, setProductivityData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSavingAvailability, setIsSavingAvailability] = useState(false);
 
@@ -115,17 +116,55 @@ export default function SupportAgentsPage() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [agentsRes, catsRes] = await Promise.all([
+            const [agentsRes, catsRes, prodRes] = await Promise.all([
                 apiFetch('/admin/support/agents'),
-                apiFetch('/admin/support/categories')
+                apiFetch('/admin/support/categories'),
+                apiFetch('/admin/support/productivity')
             ]);
             setAgents(agentsRes);
             setCategories(catsRes);
+            if (Array.isArray(prodRes)) setProductivityData(prodRes);
         } catch (error) {
             toast.error('Failed to load data');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleExportExcel = () => {
+        if (!productivityData.length) {
+            toast.error('No productivity data to export');
+            return;
+        }
+
+        const headers = ['Agent Name', 'Role', 'Status', 'Login Time (s)', 'Break Time (s)', 'Break Count', 'Assigned', 'Accepted', 'Avg Accept Delay (s)', 'Avg Reply Delay (s)', 'Late Replies', 'Performance Score'];
+        const csvRows = [
+            headers.join(','),
+            ...productivityData.map(p => [
+                `"${p.name}"`,
+                `"${p.role}"`,
+                `"${p.status}"`,
+                p.loginTime,
+                p.breakTime,
+                p.breakCount,
+                p.assigned,
+                p.accepted,
+                p.acceptDelay,
+                p.replyDelay,
+                p.lateReplies,
+                p.performance
+            ].join(','))
+        ];
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `support_productivity_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     };
 
     const handleAgentSubmit = async (e: React.FormEvent) => {
@@ -286,6 +325,12 @@ export default function SupportAgentsPage() {
                         >
                             <Settings size={14} /> Categories
                         </button>
+                        <button
+                            onClick={() => setView('productivity')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${view === 'productivity' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                            <Clock size={14} /> Productivity
+                        </button>
                     </div>
                 </div>
 
@@ -391,7 +436,7 @@ export default function SupportAgentsPage() {
                             ))}
                         </div>
                     </div>
-                ) : (
+                ) : view === 'categories' ? (
                     <div className="space-y-6">
                         <div className="flex justify-end">
                             <button
@@ -434,7 +479,89 @@ export default function SupportAgentsPage() {
                             ))}
                         </div>
                     </div>
-                )}
+                ) : view === 'productivity' ? (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-800">Team Productivity Metrics</h2>
+                                <p className="text-sm font-medium text-slate-500">Live statistics for today's session</p>
+                            </div>
+                            <button
+                                onClick={handleExportExcel}
+                                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all shadow-lg"
+                            >
+                                <Download size={20} /> Export Excel (CSV)
+                            </button>
+                        </div>
+                        
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 text-[10px] uppercase tracking-wider font-black text-slate-500 border-b border-slate-100">
+                                            <th className="p-4">Agent</th>
+                                            <th className="p-4">Status</th>
+                                            <th className="p-4">Login Time</th>
+                                            <th className="p-4">Break Time</th>
+                                            <th className="p-4">Chats</th>
+                                            <th className="p-4">Delays (Acc/Rep)</th>
+                                            <th className="p-4">Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {productivityData.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">No productivity data available yet.</td>
+                                            </tr>
+                                        ) : productivityData.map((p, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="p-4">
+                                                    <div className="font-bold text-slate-800">{p.name}</div>
+                                                    <div className="text-xs text-slate-400 font-medium">{p.role}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className={`px-2 py-1 text-[10px] uppercase font-black tracking-wider rounded-md border ${
+                                                        p.status === 'online' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                        p.status === 'break' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                        'bg-rose-50 text-rose-600 border-rose-100'
+                                                    }`}>
+                                                        {p.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-mono text-sm font-bold text-slate-700">
+                                                        {Math.floor(p.loginTime / 3600)}h {Math.floor((p.loginTime % 3600) / 60)}m
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-mono text-sm font-bold text-slate-700">
+                                                        {Math.floor(p.breakTime / 60)}m {p.breakTime % 60}s
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 mt-1">{p.breakCount} Breaks</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-bold text-slate-700">{p.accepted} / {p.assigned}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-mono text-sm font-bold text-slate-700">{p.acceptDelay}s / {p.replyDelay}s</div>
+                                                    {p.lateReplies > 0 && <div className="text-[10px] text-rose-500 font-black mt-1">{p.lateReplies} Late</div>}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-full bg-slate-100 rounded-full h-2 min-w-[60px]">
+                                                            <div className={`h-2 rounded-full ${p.performance > 80 ? 'bg-emerald-500' : p.performance > 60 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${p.performance}%` }}></div>
+                                                        </div>
+                                                        <span className="text-sm font-black text-slate-700">{p.performance}%</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
 
                 {/* Agent Modal */}
                 {isAgentModalOpen && (
