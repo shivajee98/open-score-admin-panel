@@ -60,6 +60,16 @@ export default function VaultCardsPage() {
     const [actionType, setActionType] = useState<'CHARGE' | 'APPROVE_PAYMENT' | 'VIEW'>('VIEW');
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Cashback Modal State
+    const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
+    const [selectedCashbackCustomer, setSelectedCashbackCustomer] = useState<any>(null);
+    const [cashbackForm, setCashbackForm] = useState({
+        cashback_percentage: '',
+        receive_cashback_percentage: '',
+        cashback_flat_amount: '',
+        receive_cashback_flat_amount: ''
+    });
+
     // Growth Plans CRUD State
     const [growthPlans, setGrowthPlans] = useState<any[]>([]);
     const [loadingPlans, setLoadingPlans] = useState(false);
@@ -340,6 +350,29 @@ export default function VaultCardsPage() {
         }
     };
 
+    const handleSaveCashback = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsProcessing(true);
+        try {
+            await apiFetch(`/admin/users/${selectedCashbackCustomer.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    cashback_percentage: parseFloat(cashbackForm.cashback_percentage) || 0,
+                    receive_cashback_percentage: parseFloat(cashbackForm.receive_cashback_percentage) || 0,
+                    cashback_flat_amount: parseFloat(cashbackForm.cashback_flat_amount) || 0,
+                    receive_cashback_flat_amount: parseFloat(cashbackForm.receive_cashback_flat_amount) || 0
+                })
+            });
+            toast.success('Cashback settings updated successfully');
+            setIsCashbackModalOpen(false);
+            loadRequests();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update cashback');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const handleSaveGlobalRate = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsProcessing(true);
@@ -549,6 +582,8 @@ export default function VaultCardsPage() {
                                 <thead>
                                     <tr className="bg-slate-50/50">
                                         <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Agent / Requested For</th>
+                                        <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cashback % (P | R)</th>
+                                        <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Flat Bonus (P | R)</th>
                                         <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                         <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment</th>
                                         <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Requested Date</th>
@@ -572,6 +607,28 @@ export default function VaultCardsPage() {
                                                             <span className="text-indigo-600">Customer: {req.customer_number}</span>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    {req.customer ? (
+                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                                                            <span className="text-emerald-600">{Number(req.customer.cashback_percentage || 0).toFixed(1)}%</span>
+                                                            <span className="text-slate-300">|</span>
+                                                            <span className="text-blue-600">{Number(req.customer.receive_cashback_percentage || 0).toFixed(1)}%</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-slate-300 italic">N/A</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    {req.customer ? (
+                                                        <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-700">
+                                                            <span className="text-emerald-600">₹{Number(req.customer.cashback_flat_amount || 0)}</span>
+                                                            <span className="text-slate-300">|</span>
+                                                            <span className="text-blue-600">₹{Number(req.customer.receive_cashback_flat_amount || 0)}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-slate-300 italic">N/A</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-4">
                                                     <span className={cn(
@@ -653,6 +710,23 @@ export default function VaultCardsPage() {
                                                                 className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-md"
                                                             >
                                                                 Review Hold
+                                                            </button>
+                                                        )}
+                                                        {req.customer && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedCashbackCustomer(req.customer);
+                                                                    setCashbackForm({
+                                                                        cashback_percentage: req.customer.cashback_percentage?.toString() || '0',
+                                                                        receive_cashback_percentage: req.customer.receive_cashback_percentage?.toString() || '0',
+                                                                        cashback_flat_amount: req.customer.cashback_flat_amount?.toString() || '0',
+                                                                        receive_cashback_flat_amount: req.customer.receive_cashback_flat_amount?.toString() || '0'
+                                                                    });
+                                                                    setIsCashbackModalOpen(true);
+                                                                }}
+                                                                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md"
+                                                            >
+                                                                Edit Cashback
                                                             </button>
                                                         )}
                                                         <button
@@ -1497,6 +1571,89 @@ export default function VaultCardsPage() {
             <style jsx global>{`
                 .BadgeCheck { width: 24px; height: 24px; }
             `}</style>
+            {/* Cashback Edit Modal */}
+            {isCashbackModalOpen && selectedCashbackCustomer && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 sm:p-0">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => !isProcessing && setIsCashbackModalOpen(false)} />
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-5 duration-300">
+                        <div className="bg-emerald-600 p-8 text-white relative">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-3 bg-white/20 rounded-2xl border border-white/20">
+                                    <Settings className="w-6 h-6" />
+                                </div>
+                                <button onClick={() => setIsCashbackModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight">Edit Customer Cashback</h2>
+                            <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mt-1">Configure individual vault cashback settings</p>
+                        </div>
+
+                        <form onSubmit={handleSaveCashback} className="p-8 space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Agent Provide %</label>
+                                    <input
+                                        type="number" step="0.01" required
+                                        value={cashbackForm.cashback_percentage}
+                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, cashback_percentage: e.target.value }))}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        placeholder="e.g. 5"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Agent Receive %</label>
+                                    <input
+                                        type="number" step="0.01" required
+                                        value={cashbackForm.receive_cashback_percentage}
+                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, receive_cashback_percentage: e.target.value }))}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        placeholder="e.g. 2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Flat Agent Provide (₹)</label>
+                                    <input
+                                        type="number" step="0.01" required
+                                        value={cashbackForm.cashback_flat_amount}
+                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, cashback_flat_amount: e.target.value }))}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        placeholder="e.g. 100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Flat Agent Receive (₹)</label>
+                                    <input
+                                        type="number" step="0.01" required
+                                        value={cashbackForm.receive_cashback_flat_amount}
+                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, receive_cashback_flat_amount: e.target.value }))}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        placeholder="e.g. 50"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="pt-4 border-t border-slate-100 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCashbackModalOpen(false)}
+                                    className="flex-1 py-4 border-2 border-slate-200 text-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isProcessing}
+                                    className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl disabled:opacity-50 flex justify-center items-center gap-2"
+                                >
+                                    {isProcessing ? <Clock className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Settings</>}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
-import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2, MessageSquare } from 'lucide-react';
+import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2, MessageSquare, Ticket } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 
@@ -402,6 +402,32 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         )
                                     ))}
                                 </div>
+
+                                {/* Coupon Discount Banner */}
+                                {loan.coupon_discount > 0 && (
+                                    <div className="mt-4 bg-emerald-100/60 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                                                <Ticket size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Coupon Applied</p>
+                                                <p className="text-sm font-black text-emerald-900">
+                                                    {loan.coupon?.code || loan.loan_coupon?.code || 'COUPON'}
+                                                    {loan.coupon?.name && <span className="text-emerald-600 font-bold ml-1.5 text-xs">({loan.coupon.name})</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Original → After Discount</p>
+                                            <p className="text-sm font-black">
+                                                <span className="text-slate-400 line-through">₹{(Number(loan.calculations?.total_deductions || 0) + Number(loan.coupon_discount)).toLocaleString()}</span>
+                                                <span className="text-emerald-700 ml-2">₹{Number(loan.calculations?.total_deductions || 0).toLocaleString()}</span>
+                                                <span className="ml-2 px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-full">-₹{Number(loan.coupon_discount).toLocaleString()}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -1211,8 +1237,20 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         </td>
                                         <td className="p-4">
                                             <div className="font-black text-slate-900">
-                                                ₹{parseFloat(emi.amount).toLocaleString()}
+                                                {Number(emi.emi_number) === 0 && loan.coupon_discount > 0 ? (
+                                                    <>
+                                                        <span className="text-slate-400 line-through text-sm mr-1.5">₹{(Number(emi.amount) + Number(loan.coupon_discount)).toLocaleString()}</span>
+                                                        <span className="text-emerald-700">₹{parseFloat(emi.amount).toLocaleString()}</span>
+                                                    </>
+                                                ) : (
+                                                    <>₹{parseFloat(emi.amount).toLocaleString()}</>
+                                                )}
                                             </div>
+                                            {Number(emi.emi_number) === 0 && loan.coupon_discount > 0 && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[8px] font-black mt-1">
+                                                    <Ticket size={9} /> -{Number(loan.coupon_discount).toLocaleString()} coupon
+                                                </span>
+                                            )}
                                             <div className="flex gap-2 mt-1">
                                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter" title="Principal">P: ₹{parseFloat(emi.principal_component || 0).toLocaleString()}</span>
                                                 <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter" title="Interest (Profit)">I: ₹{parseFloat(emi.interest_component || 0).toLocaleString()}</span>

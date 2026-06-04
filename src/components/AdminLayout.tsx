@@ -138,6 +138,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'QR Generator', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Global Zones', href: '/pincodes', icon: <MapPin className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Coupons', href: '/coupon-generator', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
+        { label: 'Loan Coupon Codes', href: '/loan-coupon-codes', icon: <Percent className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Configure Cards', href: '/vault-cards', icon: <CreditCard className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
 

@@ -97,6 +97,7 @@ export default function EditLoanPlan() {
     const [pincodeSearch, setPincodeSearch] = useState('');
 
     const [error, setError] = useState('');
+    const [saveWarning, setSaveWarning] = useState('');
 
     useEffect(() => {
         if (id) {
@@ -318,6 +319,7 @@ export default function EditLoanPlan() {
         e.preventDefault();
         setSubmitting(true);
         setError('');
+        setSaveWarning('');
 
         if (formData.configurations.length === 0) {
             setError("Please add at least one tenure configuration.");
@@ -350,12 +352,21 @@ export default function EditLoanPlan() {
 
             console.log("[TargetingDebug] Sending Update Payload:", payload);
 
-            await apiFetch(`/admin/loan-plans/${id}`, {
+            const result = await apiFetch(`/admin/loan-plans/${id}`, {
                 method: 'PUT',
                 body: JSON.stringify(payload)
             });
 
-            router.push('/loan-plans');
+            // Show warning if there are frozen/live loans affected
+            if (result?.warning) {
+                setSaveWarning(result.warning);
+                // Don't redirect immediately — let admin see the warning
+                setTimeout(() => {
+                    router.push('/loan-plans');
+                }, 4000);
+            } else {
+                router.push('/loan-plans');
+            }
         } catch (err: any) {
             setError(err.message || 'Failed to update plan');
         } finally {
@@ -1218,6 +1229,17 @@ export default function EditLoanPlan() {
                             </div>
                         )}
                     </div>
+
+                    {saveWarning && (
+                        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm font-bold flex items-start gap-3">
+                            <span className="text-lg">⚠️</span>
+                            <div>
+                                <p className="font-black text-amber-900 mb-1">Plan Updated — Impact Notice</p>
+                                <p>{saveWarning}</p>
+                                <p className="text-xs text-amber-600 mt-1">Frozen loans have their original terms preserved. Redirecting...</p>
+                            </div>
+                        </div>
+                    )}
 
                     {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold">{error}</div>}
 
