@@ -698,7 +698,7 @@ export default function VaultCardsPage() {
                                                                 Review Pay
                                                             </button>
                                                         )}
-                                                        {(req.status === 'ACTIVATED' && req.payment_proof) && (
+                                                        {(req.status === 'ACTIVATED' && req.payment_proof && !req.payment_verified) && (
                                                             <button
                                                                 onClick={() => {
                                                                     setSelectedRequest(req);
