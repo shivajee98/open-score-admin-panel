@@ -141,6 +141,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Loan Coupon Codes', href: '/loan-coupon-codes', icon: <Percent className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Referral Settings', href: '/referral-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
         { label: 'Configure Cards', href: '/vault-cards', icon: <CreditCard className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
+        { label: 'Vault Users', href: '/vault-cards/activated-users', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
 
         // Rewards & Incentives
         { label: 'Merchant Tiers', href: '/merchant-cashback-tiers', icon: <Gift className="w-5 h-5" />, roles: ['ADMIN'], group: 'Rewards & Incentives' },

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import {
@@ -67,7 +68,8 @@ export default function VaultCardsPage() {
         cashback_percentage: '',
         receive_cashback_percentage: '',
         cashback_flat_amount: '',
-        receive_cashback_flat_amount: ''
+        receive_cashback_flat_amount: '',
+        max_cashback_times_per_day: '3'
     });
 
     // Growth Plans CRUD State
@@ -354,20 +356,22 @@ export default function VaultCardsPage() {
         e.preventDefault();
         setIsProcessing(true);
         try {
-            await apiFetch(`/admin/users/${selectedCashbackCustomer.id}`, {
-                method: 'PUT',
+            await apiFetch(`/admin/users/${selectedCashbackCustomer.id}/cashback`, {
+                method: 'POST',
                 body: JSON.stringify({
                     cashback_percentage: parseFloat(cashbackForm.cashback_percentage) || 0,
                     receive_cashback_percentage: parseFloat(cashbackForm.receive_cashback_percentage) || 0,
                     cashback_flat_amount: parseFloat(cashbackForm.cashback_flat_amount) || 0,
-                    receive_cashback_flat_amount: parseFloat(cashbackForm.receive_cashback_flat_amount) || 0
+                    receive_cashback_flat_amount: parseFloat(cashbackForm.receive_cashback_flat_amount) || 0,
+                    max_cashback_times_per_day: parseInt(cashbackForm.max_cashback_times_per_day) || 3
                 })
             });
             toast.success('Cashback settings updated successfully');
             setIsCashbackModalOpen(false);
             loadRequests();
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to update cashback');
+        } catch (error: unknown) {
+            const err = error as { message?: string };
+            toast.error(err.message || 'Failed to update cashback');
         } finally {
             setIsProcessing(false);
         }
@@ -459,6 +463,12 @@ export default function VaultCardsPage() {
                     >
                         Global Config
                     </button>
+                    <Link
+                        href="/vault-cards/activated-users"
+                        className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-600"
+                    >
+                        Vault Users
+                    </Link>
                 </div>
             </div>
 
@@ -720,7 +730,8 @@ export default function VaultCardsPage() {
                                                                         cashback_percentage: req.customer.cashback_percentage?.toString() || '0',
                                                                         receive_cashback_percentage: req.customer.receive_cashback_percentage?.toString() || '0',
                                                                         cashback_flat_amount: req.customer.cashback_flat_amount?.toString() || '0',
-                                                                        receive_cashback_flat_amount: req.customer.receive_cashback_flat_amount?.toString() || '0'
+                                                                        receive_cashback_flat_amount: req.customer.receive_cashback_flat_amount?.toString() || '0',
+                                                                        max_cashback_times_per_day: req.customer.max_cashback_times_per_day?.toString() || '3'
                                                                     });
                                                                     setIsCashbackModalOpen(true);
                                                                 }}
@@ -1595,41 +1606,95 @@ export default function VaultCardsPage() {
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Agent Provide %</label>
                                     <input
-                                        type="number" step="0.01" required
+                                        type="number" step="0.01"
                                         value={cashbackForm.cashback_percentage}
-                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, cashback_percentage: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        disabled={parseFloat(cashbackForm.cashback_flat_amount) > 0}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setCashbackForm(prev => ({
+                                                ...prev,
+                                                cashback_percentage: val,
+                                                cashback_flat_amount: parseFloat(val) > 0 ? '' : prev.cashback_flat_amount
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm",
+                                            parseFloat(cashbackForm.cashback_flat_amount) > 0 && "opacity-50 cursor-not-allowed"
+                                        )}
                                         placeholder="e.g. 5"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Agent Receive %</label>
                                     <input
-                                        type="number" step="0.01" required
+                                        type="number" step="0.01"
                                         value={cashbackForm.receive_cashback_percentage}
-                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, receive_cashback_percentage: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        disabled={parseFloat(cashbackForm.receive_cashback_flat_amount) > 0}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setCashbackForm(prev => ({
+                                                ...prev,
+                                                receive_cashback_percentage: val,
+                                                receive_cashback_flat_amount: parseFloat(val) > 0 ? '' : prev.receive_cashback_flat_amount
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm",
+                                            parseFloat(cashbackForm.receive_cashback_flat_amount) > 0 && "opacity-50 cursor-not-allowed"
+                                        )}
                                         placeholder="e.g. 2"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Flat Agent Provide (₹)</label>
                                     <input
-                                        type="number" step="0.01" required
+                                        type="number" step="0.01"
                                         value={cashbackForm.cashback_flat_amount}
-                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, cashback_flat_amount: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        disabled={parseFloat(cashbackForm.cashback_percentage) > 0}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setCashbackForm(prev => ({
+                                                ...prev,
+                                                cashback_flat_amount: val,
+                                                cashback_percentage: parseFloat(val) > 0 ? '' : prev.cashback_percentage
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm",
+                                            parseFloat(cashbackForm.cashback_percentage) > 0 && "opacity-50 cursor-not-allowed"
+                                        )}
                                         placeholder="e.g. 100"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Flat Agent Receive (₹)</label>
                                     <input
-                                        type="number" step="0.01" required
+                                        type="number" step="0.01"
                                         value={cashbackForm.receive_cashback_flat_amount}
-                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, receive_cashback_flat_amount: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        disabled={parseFloat(cashbackForm.receive_cashback_percentage) > 0}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setCashbackForm(prev => ({
+                                                ...prev,
+                                                receive_cashback_flat_amount: val,
+                                                receive_cashback_percentage: parseFloat(val) > 0 ? '' : prev.receive_cashback_percentage
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm",
+                                            parseFloat(cashbackForm.receive_cashback_percentage) > 0 && "opacity-50 cursor-not-allowed"
+                                        )}
                                         placeholder="e.g. 50"
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Max Cashback Times Per Day</label>
+                                    <input
+                                        type="number" min="0" required
+                                        value={cashbackForm.max_cashback_times_per_day}
+                                        onChange={(e) => setCashbackForm(prev => ({ ...prev, max_cashback_times_per_day: e.target.value }))}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 font-bold text-sm"
+                                        placeholder="e.g. 3"
                                     />
                                 </div>
                             </div>
