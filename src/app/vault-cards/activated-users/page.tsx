@@ -683,11 +683,11 @@ export default function ActivatedUsersPage() {
                                                         {rule.is_active ? 'Active' : 'Inactive'}
                                                     </span>
                                                     <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[9px] font-black">
-                                                        Range: ₹{rule.min_withdrawal_amount} - {rule.max_withdrawal_amount ? `₹${rule.max_withdrawal_amount}` : 'Unlimited'}
+                                                        Range: {rule.min_withdrawal_amount} - {rule.max_withdrawal_amount ? `${rule.max_withdrawal_amount}` : 'Unlimited'}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-900">
-                                                    Daily Limit: {rule.daily_limit ? `₹${rule.daily_limit}` : 'Unlimited'}
+                                                    Daily Limit: {rule.daily_limit ? `${rule.daily_limit}` : 'Unlimited'}
                                                 </h3>
                                             </div>
                                         </div>
@@ -696,7 +696,7 @@ export default function ActivatedUsersPage() {
                                             <div>
                                                 <p className="text-[9px] font-bold text-slate-400 uppercase mb-1.5">Spend Requirements</p>
                                                 <div className="space-y-1">
-                                                    <p>Min Spend: ₹{rule.min_spend_amount || '0'}</p>
+                                                    <p>Min Spend: {rule.min_spend_amount || '0'}</p>
                                                     <p>Min Transactions: {rule.min_txn_count || '0'}</p>
                                                 </div>
                                             </div>
@@ -713,12 +713,12 @@ export default function ActivatedUsersPage() {
                                             <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-4 text-xs font-semibold text-slate-700">
                                                 <div>
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase mb-1.5">Charges</p>
-                                                    <p>Threshold: ₹{rule.charge_threshold}</p>
+                                                    <p>Threshold: {rule.charge_threshold}</p>
                                                     <p>Percent: {rule.charge_percent}%</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase mb-1.5">Limits & Free Count</p>
-                                                    <p>Min/Max: ₹{rule.min_charge_amount}/₹{rule.max_charge_amount}</p>
+                                                    <p>Min/Max: {rule.min_charge_amount}/{rule.max_charge_amount}</p>
                                                     <p>Monthly Free: {rule.monthly_free_count}</p>
                                                 </div>
                                             </div>
@@ -845,7 +845,7 @@ export default function ActivatedUsersPage() {
 
                                         <div>
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                                                Sender Flat Cashback (₹)
+                                                Sender Flat Cashback
                                             </label>
                                             <input
                                                 type="number"
@@ -871,7 +871,7 @@ export default function ActivatedUsersPage() {
 
                                         <div>
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                                                Receiver Flat Cashback (₹)
+                                                Receiver Flat Cashback
                                             </label>
                                             <input
                                                 type="number"
@@ -963,7 +963,7 @@ export default function ActivatedUsersPage() {
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                                        Min Withdrawal Amount (₹)
+                                        Min Withdrawal Amount
                                     </label>
                                     <input
                                         type="number"
@@ -978,7 +978,7 @@ export default function ActivatedUsersPage() {
 
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                                        Max Withdrawal Amount (₹)
+                                        Max Withdrawal Amount
                                     </label>
                                     <input
                                         type="number"
@@ -992,7 +992,7 @@ export default function ActivatedUsersPage() {
 
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                                        Daily Limit (₹)
+                                        Daily Limit
                                     </label>
                                     <input
                                         type="number"
@@ -1019,7 +1019,7 @@ export default function ActivatedUsersPage() {
 
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                                        Min Spend Amount (₹)
+                                        Min Spend Amount
                                     </label>
                                     <input
                                         type="number"
@@ -1064,7 +1064,7 @@ export default function ActivatedUsersPage() {
                                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200/50">
                                         <div>
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                                                Charge Threshold (₹)
+                                                Charge Threshold
                                             </label>
                                             <input
                                                 type="number"
@@ -1090,7 +1090,7 @@ export default function ActivatedUsersPage() {
                                         </div>
                                         <div>
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                                                Min Charge (₹)
+                                                Min Charge
                                             </label>
                                             <input
                                                 type="number"
@@ -1103,7 +1103,7 @@ export default function ActivatedUsersPage() {
                                         </div>
                                         <div>
                                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                                                Max Charge (₹)
+                                                Max Charge
                                             </label>
                                             <input
                                                 type="number"
@@ -1196,7 +1196,7 @@ export default function ActivatedUsersPage() {
                                                         </div>
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-black text-slate-900 bg-indigo-50 px-2 py-1 rounded-lg">
-                                                                ₹{(parseFloat(vaultItem.balance) || 0).toLocaleString('en-IN', { minimumFractionDigits: 1 })}
+                                                                {(parseFloat(vaultItem.balance) || 0).toLocaleString('en-IN', { minimumFractionDigits: 1 })}
                                                             </span>
                                                             <input
                                                                 type="checkbox"

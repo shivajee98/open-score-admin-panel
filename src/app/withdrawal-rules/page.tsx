@@ -248,7 +248,7 @@ export default function WithdrawalRulesPage() {
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{rule.user_type}</span>
                                                 )}
                                             </div>
-                                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Withdrawal Range: ₹{rule.min_withdrawal_amount} - ₹{rule.max_withdrawal_amount}</span>
+                                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-black">Withdrawal Range: {rule.min_withdrawal_amount} - {rule.max_withdrawal_amount}</span>
                                         </div>
                                         <h3 className="text-lg font-black text-slate-900">
                                             Daily Request Limit: {rule.daily_txn_limit || 'Unlimited'} 
@@ -263,7 +263,7 @@ export default function WithdrawalRulesPage() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <CreditCard className="w-3 h-3 text-slate-400" />
-                                                <span className="text-xs font-bold text-slate-700">Min Spend: ₹{rule.min_spend_amount}</span>
+                                                <span className="text-xs font-bold text-slate-700">Min Spend: {rule.min_spend_amount}</span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Activity className="w-3 h-3 text-slate-400" />
@@ -458,7 +458,7 @@ export default function WithdrawalRulesPage() {
                                                     </div>
                                                 </div>
                                                 <p className="text-[8px] font-bold text-slate-500 italic mt-3 px-1">
-                                                    * Allows withdrawal below standard min if within ₹{formData.min_charge_amount || '0'} - ₹{formData.max_charge_amount || '0'}
+                                                    * Allows withdrawal below standard min if within {formData.min_charge_amount || '0'} - {formData.max_charge_amount || '0'}
                                                 </p>
                                             </div>
                                         </div>
