@@ -1543,7 +1543,7 @@ export default function LoanApprovals() {
                                                                     </button>
                                                                 )}
 
-                                                                {isPlatformFeePaid(loan) && (!loan.reupload_fields || loan.reupload_fields.length === 0) && (
+                                                                {isPlatformFeePaid(loan) && (!loan.user?.is_aadhar_verified || !loan.user?.is_pan_verified) && (!loan.reupload_fields || loan.reupload_fields.length === 0) && (
                                                                     <button
                                                                         disabled={!!actionLoading}
                                                                         onClick={async (e) => {
@@ -1573,22 +1573,24 @@ export default function LoanApprovals() {
                                                                     </button>
                                                                 )}
 
-                                                                <button
-                                                                    disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan)) || (loan.reupload_fields && loan.reupload_fields.length > 0)}
-                                                                    onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'release', 'Funds Released!'); }}
-                                                                    className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all font-mono ${(hasPlatformFee(loan) && !isPlatformFeePaid(loan)) || (loan.reupload_fields && loan.reupload_fields.length > 0)
-                                                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                                                                        : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/30'
-                                                                        }`}
-                                                                    title={hasPlatformFee(loan) && !isPlatformFeePaid(loan)
-                                                                        ? 'Platform fee must be paid before disbursal'
-                                                                        : (loan.reupload_fields && loan.reupload_fields.length > 0)
-                                                                            ? 'Pending Aadhaar/PAN or other document verification'
-                                                                            : 'Release funds to customer'
-                                                                    }
-                                                                >
-                                                                    Disburse
-                                                                </button>
+                                                                {loan.user?.is_aadhar_verified && loan.user?.is_pan_verified && (
+                                                                    <button
+                                                                        disabled={!!actionLoading || (hasPlatformFee(loan) && !isPlatformFeePaid(loan)) || (loan.reupload_fields && loan.reupload_fields.length > 0)}
+                                                                        onClick={(e) => { e.stopPropagation(); handleAction(loan.id, 'release', 'Funds Released!'); }}
+                                                                        className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all font-mono ${(hasPlatformFee(loan) && !isPlatformFeePaid(loan)) || (loan.reupload_fields && loan.reupload_fields.length > 0)
+                                                                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                                                            : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/30'
+                                                                            }`}
+                                                                        title={hasPlatformFee(loan) && !isPlatformFeePaid(loan)
+                                                                            ? 'Platform fee must be paid before disbursal'
+                                                                            : (loan.reupload_fields && loan.reupload_fields.length > 0)
+                                                                                ? 'Pending Aadhaar/PAN or other document verification'
+                                                                                : 'Release funds to customer'
+                                                                        }
+                                                                    >
+                                                                        Disburse
+                                                                    </button>
+                                                                )}
                                                                 {hasPlatformFee(loan) && !isPlatformFeePaid(loan) && (
                                                                     <span className="text-[9px] font-bold text-orange-500 max-w-[100px] leading-tight">
                                                                         {getPendingPlatformFee(loan) ? 'Awaiting Approval' : 'Fee unpaid'}
