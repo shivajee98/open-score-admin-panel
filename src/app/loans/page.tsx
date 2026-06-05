@@ -1241,15 +1241,37 @@ export default function LoanApprovals() {
                                                         </div>
                                                         <div>
                                                             <p className="font-black text-slate-900">{loan.user?.name || 'Unknown User'}</p>
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
-                                                                {loan.user?.kyc_status === 'FIELD_VERIFIED' ? (
-                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-200">FIELD KYC VERIFIED</span>
-                                                                ) : loan.user?.kyc_status === 'FULL_VERIFIED' ? (
-                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">FULL KYC VERIFIED</span>
-                                                                ) : (
-                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">KYC PENDING</span>
-                                                                )}
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">#{loan.display_id || loan.id} • {loan.user?.mobile_number}</p>
+                                                                    {loan.user?.kyc_status === 'FIELD_VERIFIED' ? (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-200">FIELD KYC VERIFIED</span>
+                                                                    ) : loan.user?.kyc_status === 'FULL_VERIFIED' ? (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">FULL KYC VERIFIED</span>
+                                                                    ) : (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">KYC PENDING</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-1">
+                                                                    {loan.user?.is_aadhar_verified ? (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-0.5">
+                                                                            <Check size={8} className="stroke-[3]" /> AADHAAR
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100">
+                                                                            AADHAAR PENDING
+                                                                        </span>
+                                                                    )}
+                                                                    {loan.user?.is_pan_verified ? (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-0.5">
+                                                                            <Check size={8} className="stroke-[3]" /> PAN
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100">
+                                                                            PAN PENDING
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
 
                                                             {/* Referral Info */}
@@ -1489,7 +1511,7 @@ export default function LoanApprovals() {
                                                                     >
                                                                         <Search size={18} />
                                                                     </button>
-                                                                    {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
+                                                                    {loan.reupload_fields && loan.reupload_fields.length > 0 && (
                                                                         <button
                                                                             disabled={actionLoading === `reverify-${loan.id}`}
                                                                             onClick={(e) => { e.stopPropagation(); handleReverifyKyc(loan.id); }}
@@ -1519,7 +1541,7 @@ export default function LoanApprovals() {
                                                                         risk needs manual verification during disbursal
                                                                     </span>
                                                                 )}
-                                                                {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
+                                                                {loan.reupload_fields && loan.reupload_fields.length > 0 && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
                                                                         disabled={actionLoading === `reverify-${loan.id}`}
@@ -1601,7 +1623,7 @@ export default function LoanApprovals() {
 
                                                         {['DISBURSED', 'CLOSED'].includes(loan.status) && (
                                                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                                {loan.reupload_fields && loan.reupload_fields.length > 0 && loan.kyc_submitted_at && (
+                                                                {loan.reupload_fields && loan.reupload_fields.length > 0 && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}
                                                                         disabled={actionLoading === `reverify-${loan.id}`}
