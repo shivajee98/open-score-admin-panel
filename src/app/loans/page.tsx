@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiFetch, getStorageUrl } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
-import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck, Percent, Bell, Send } from 'lucide-react';
+import { BadgeCheck, Clock, ChevronRight, Calculator, IndianRupee, Search, Filter, Trash2, XCircle, ChevronLeft, Eye, FileText, Download, MapPin, Briefcase, Landmark, Camera, User, Mail, Phone, Shield, ExternalLink, X, Info, RotateCcw, MessageSquare, Ban, Zap, AlertTriangle, Check, RefreshCw, CheckCircle2, Sliders, Calendar, Star, ShieldCheck, Percent, Bell, Send, Lock, Unlock } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import ActionConfirmationDialog, { ActionType } from '@/components/loans/ActionConfirmationDialog';
@@ -437,6 +437,34 @@ export default function LoanApprovals() {
         const timeout = setTimeout(loadLoans, 300);
         return () => clearTimeout(timeout);
     }, [activeTab, search, referralSearch, statusFilter, page, itemsPerPage, dateFrom, dateTo, kycDateFrom, kycDateTo, emiDateFrom, emiDateTo, emiCount, overdueFilter]);
+
+    const handleAddNachLink = async (id: number, link: string) => {
+        try {
+            const res = await apiFetch(`/admin/loans/${id}/nach`, {
+                method: 'POST',
+                body: JSON.stringify({ nach_link: link })
+            });
+            if (res.error) throw new Error(res.error);
+            toast.success('NACH link updated');
+            loadLoans();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to update NACH link');
+        }
+    };
+
+    const handleMarkNachAdded = async (id: number) => {
+        if (!window.confirm("Mark NACH as added for this loan?")) return;
+        try {
+            const res = await apiFetch(`/admin/loans/${id}/nach/mark`, {
+                method: 'POST'
+            });
+            if (res.error) throw new Error(res.error);
+            toast.success('NACH marked as added');
+            loadLoans();
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to mark NACH as added');
+        }
+    };
 
     const handleAction = async (id: number, endpoint: string, successMsg: string, method = 'POST') => {
         const loan = loans.find(l => l.id === id);
@@ -1211,6 +1239,7 @@ export default function LoanApprovals() {
                                             <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</th>
                                             <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Bal.</th>
                                             <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Details</th>
+                                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">NACH</th>
                                             <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Actions</th>
                                         </tr>
                                     </thead>
@@ -1450,6 +1479,37 @@ export default function LoanApprovals() {
                                                         </div>
                                                     </div>
                                                 </td>
+                                                <td className="p-6" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex flex-col gap-2">
+                                                        {!loan.is_nach_added ? (
+                                                            <>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="NACH Link..."
+                                                                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-32 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all"
+                                                                    defaultValue={loan.nach_link || ''}
+                                                                    onBlur={(e) => {
+                                                                        if (e.target.value !== loan.nach_link) {
+                                                                            handleAddNachLink(loan.id, e.target.value);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                {loan.nach_link && (
+                                                                    <button
+                                                                        onClick={() => handleMarkNachAdded(loan.id)}
+                                                                        className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all shadow-sm"
+                                                                    >
+                                                                        Mark as Added
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm whitespace-nowrap text-center">
+                                                                NACH Added ✓
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="p-6 pr-8 text-right">
                                                     <div className="flex justify-end items-center gap-2">
                                                         {['PENDING', 'APPLIED'].includes(loan.status) && (
@@ -1623,6 +1683,23 @@ export default function LoanApprovals() {
 
                                                         {['DISBURSED', 'CLOSED'].includes(loan.status) && (
                                                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                {loan.status === 'DISBURSED' && (
+                                                                    <button
+                                                                        onClick={(e) => { 
+                                                                            e.stopPropagation(); 
+                                                                            handleAction(loan.id, loan.is_funds_locked ? 'unlock-funds' : 'lock-funds', loan.is_funds_locked ? 'Funds Unlocked!' : 'Funds Locked!'); 
+                                                                        }}
+                                                                        disabled={actionLoading === `${loan.id}-lock-funds` || actionLoading === `${loan.id}-unlock-funds`}
+                                                                        className={`p-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center ${
+                                                                            loan.is_funds_locked 
+                                                                            ? 'bg-rose-100 text-rose-600 hover:bg-rose-200' 
+                                                                            : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                                                                        }`}
+                                                                        title={loan.is_funds_locked ? 'Unlock Funds' : 'Lock Funds'}
+                                                                    >
+                                                                        {loan.is_funds_locked ? <Lock size={18} /> : <Unlock size={18} />}
+                                                                    </button>
+                                                                )}
                                                                 {loan.reupload_fields && loan.reupload_fields.length > 0 && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); openLoanPreview(loan); }}

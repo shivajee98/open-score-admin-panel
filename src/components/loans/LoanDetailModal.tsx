@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
-import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2, MessageSquare, Ticket } from 'lucide-react';
+import { BadgeCheck, X, Calendar, CreditCard, User, AlertCircle, Clock, CheckCircle2, Eye, ShieldCheck, XCircle, Image as ImageIcon, ExternalLink, Shield, Calculator, FileText, MapPin, Briefcase, Landmark, Camera, ChevronRight, Plus, Loader2, MessageSquare, Ticket, Lock, Unlock } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.msmeloan.sbs/api';
 
@@ -80,6 +80,22 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
         if (!path) return '';
         if (path.startsWith('http')) return path;
         return `https://api.msmeloan.sbs/storage/${path}`;
+    };
+
+    const handleToggleLock = async () => {
+        if (!data?.loan) return;
+        setActionLoading('toggle-lock');
+        const endpoint = data.loan.is_funds_locked ? 'unlock-funds' : 'lock-funds';
+        try {
+            const res = await apiFetch(`/admin/loans/${loanId}/${endpoint}`, { method: 'POST' });
+            if (res.error) throw new Error(res.error);
+            await loadDetails();
+            onUpdate();
+        } catch (error: any) {
+            alert(error.message || 'Failed to toggle funds lock');
+        } finally {
+            setActionLoading(null);
+        }
     };
 
     const loadDetails = async () => {
@@ -326,9 +342,26 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                 )}
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-red-500">
-                            <X className="w-6 h-6" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {loan.status === 'DISBURSED' && (
+                                <button
+                                    onClick={handleToggleLock}
+                                    disabled={actionLoading === 'toggle-lock'}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                                        loan.is_funds_locked 
+                                        ? 'bg-rose-100 text-rose-600 hover:bg-rose-200' 
+                                        : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                                    }`}
+                                    title={loan.is_funds_locked ? 'Unlock Funds' : 'Lock Funds'}
+                                >
+                                    {actionLoading === 'toggle-lock' ? <Loader2 size={14} className="animate-spin" /> : loan.is_funds_locked ? <Lock size={14} /> : <Unlock size={14} />}
+                                    {loan.is_funds_locked ? 'Locked' : 'Unlocked'}
+                                </button>
+                            )}
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-red-500">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="p-6 sm:p-8 space-y-8">
@@ -758,7 +791,18 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         <div className="col-span-2 flex justify-between items-start">
                                             <div>
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pan Card Number</p>
-                                                <p className="text-sm font-black text-slate-900 uppercase font-mono">{loan.form_data.pan_number || 'N/A'}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-black text-slate-900 uppercase font-mono">{loan.form_data.pan_number || 'N/A'}</p>
+                                                    {loan.user?.is_pan_verified ? (
+                                                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black bg-emerald-50 text-emerald-600 border border-emerald-200 uppercase tracking-wider">
+                                                            Verified
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wider">
+                                                            Not Verified
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <button
                                                 onClick={() => toggleReuploadField('pan_number')}
@@ -794,7 +838,18 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                         <div className="col-span-2 flex justify-between items-start">
                                             <div>
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aadhaar Card Number</p>
-                                                <p className="text-sm font-black text-slate-900 font-mono">{loan.form_data.aadhar_number || 'N/A'}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-black text-slate-900 font-mono">{loan.form_data.aadhar_number || 'N/A'}</p>
+                                                    {loan.user?.is_aadhar_verified ? (
+                                                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black bg-emerald-50 text-emerald-600 border border-emerald-200 uppercase tracking-wider">
+                                                            Verified
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wider">
+                                                            Not Verified
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <button
                                                 onClick={() => toggleReuploadField('aadhar_number')}
@@ -1285,8 +1340,12 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                     <Clock size={12} /> Verification
                                                 </span>
                                             ) : (
-                                                <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">
-                                                    Pending
+                                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                                    ['DISBURSED', 'OVERDUE', 'CLOSED'].includes(loan.status)
+                                                        ? 'bg-slate-100 text-slate-500'
+                                                        : 'bg-blue-50 text-blue-600 border border-blue-100/50'
+                                                }`}>
+                                                    {['DISBURSED', 'OVERDUE', 'CLOSED'].includes(loan.status) ? 'Pending' : 'Planned'}
                                                 </span>
                                             )}
 
@@ -1345,7 +1404,7 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                                                 )}
 
                                                 {/* PENDING — Collect Manual */}
-                                                {emi.status === 'PENDING' && (
+                                                {emi.status === 'PENDING' && ['DISBURSED', 'OVERDUE'].includes(loan.status) && (
                                                     collectingId === emi.id ? (
                                                         <div className="flex flex-col gap-2 min-w-[200px] bg-slate-50 p-3 rounded-xl border border-blue-100 shadow-lg relative z-10">
                                                             <p className="text-xs font-bold text-slate-900 text-left">Manual Collection</p>

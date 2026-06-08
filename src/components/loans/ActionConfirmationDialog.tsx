@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Info, RotateCcw, ArrowRight, ShieldAlert } from 'lucide-react';
 
-export type ActionType = 'PROCEED' | 'SEND_KYC' | 'APPROVE' | 'DISBURSE' | 'REDO' | 'DELETE' | 'REJECT' | 'APPROVE_FEE';
+export type ActionType = 'PROCEED' | 'SEND_KYC' | 'APPROVE' | 'DISBURSE' | 'REDO' | 'DELETE' | 'REJECT' | 'APPROVE_FEE' | 'LOCK_FUNDS' | 'UNLOCK_FUNDS' | 'RELEASE';
 
 interface ActionConfirmationDialogProps {
   isOpen: boolean;
@@ -106,6 +106,28 @@ const ActionConfirmationDialog: React.FC<ActionConfirmationDialogProps> = ({
           step2Label: 'Confirm Rejection',
           confirmText: 'Reject Now',
           warning: 'This will notify the customer about the rejection.'
+        };
+      case 'LOCK_FUNDS':
+        return {
+          title: 'Lock Disbursed Funds',
+          description: `This will lock the disbursed amount of ₹${amount} for ${customerName}, preventing them from using it.`,
+          icon: <ShieldAlert className="w-12 h-12 text-rose-500" />,
+          color: 'rose',
+          step1Label: 'I want to lock these funds',
+          step2Label: 'Confirm Fund Lock',
+          confirmText: 'Lock Funds',
+          warning: 'The customer will not be able to use these funds until you unlock them.'
+        };
+      case 'UNLOCK_FUNDS':
+        return {
+          title: 'Unlock Disbursed Funds',
+          description: `This will unlock the disbursed amount of ₹${amount} for ${customerName}, allowing them to use it.`,
+          icon: <CheckCircle className="w-12 h-12 text-emerald-500" />,
+          color: 'emerald',
+          step1Label: 'I want to unlock these funds',
+          step2Label: 'Confirm Fund Unlock',
+          confirmText: 'Unlock Funds',
+          warning: 'The customer will immediately gain access to these funds.'
         };
       case 'SEND_KYC':
         return {
