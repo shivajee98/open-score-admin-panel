@@ -174,7 +174,7 @@ export default function KycLogsPage() {
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">Production Bypass Control</h2>
                     <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                        Toggle developer bypass features in production. When active, any OTP request or verification for mobile numbers starting with <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-amber-600 font-bold">99999</code> will automatically bypass carrier SMS dispatch and accept <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-emerald-600 font-bold">123456</code>. You can also enable <strong className="text-slate-800">KYC Auto-Verify</strong> to allow bypassed alternate number accounts to verify Aadhaar and PAN using mock sandbox responses.
+                        Toggle developer bypass features in production. When active, any OTP request or verification for mobile numbers starting with <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-amber-600 font-bold">99999</code> will automatically bypass carrier SMS dispatch and accept <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-emerald-600 font-bold">123456</code>. You can also enable <strong className="text-slate-800">Sandbox Test Environment</strong> to allow bypassed alternate number accounts to verify Aadhaar and PAN using the Sandbox test API keys instead of mocking the response directly.
                     </p>
                 </div>
                 

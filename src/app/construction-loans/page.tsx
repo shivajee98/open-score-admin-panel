@@ -28,6 +28,8 @@ export default function ConstructionLoanAdmin() {
     const [selectedLoan, setSelectedLoan] = useState<any>(null);
     const [remarks, setRemarks] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
+    const [isEditingJson, setIsEditingJson] = useState(false);
+    const [editJsonStr, setEditJsonStr] = useState('');
 
     // Email Modal States
     const [isEmailHistoryOpen, setIsEmailHistoryOpen] = useState(false);
@@ -186,6 +188,49 @@ export default function ConstructionLoanAdmin() {
             }
         } catch (error: any) {
             toast.error(error.message || 'Failed to update application status.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteLoan = async (id: number) => {
+        if (!confirm('Are you sure you want to permanently delete this application?')) return;
+        setActionLoading(true);
+        try {
+            await apiFetch(`/admin/construction-loans/${id}`, {
+                method: 'DELETE'
+            });
+            toast.success('Application deleted successfully');
+            setSelectedLoan(null);
+            fetchLoans();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to delete application.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleUpdateDetails = async () => {
+        if (!selectedLoan) return;
+        try {
+            const parsedData = JSON.parse(editJsonStr);
+            setActionLoading(true);
+            const response = await apiFetch(`/admin/construction-loans/${selectedLoan.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: selectedLoan.amount,
+                    form_data: parsedData
+                })
+            });
+            if (response && response.loan) {
+                toast.success('Details updated successfully');
+                setSelectedLoan(response.loan);
+                setIsEditingJson(false);
+                fetchLoans();
+            }
+        } catch (e: any) {
+            toast.error(e.message || 'Invalid JSON format or update failed');
         } finally {
             setActionLoading(false);
         }
@@ -750,13 +795,56 @@ export default function ConstructionLoanAdmin() {
                                         </button>
                                         <button 
                                             disabled={actionLoading}
+                                            onClick={() => handleUpdateStatus('RE_EDIT')}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                                        >
+                                            Ask for Re-Edit
+                                        </button>
+                                        <button 
+                                            disabled={actionLoading}
                                             onClick={() => handleUpdateStatus('CANCELLED')}
                                             className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-50"
                                         >
                                             Cancel Application
                                         </button>
                                     </div>
+                                    <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-200">
+                                        <button 
+                                            disabled={actionLoading}
+                                            onClick={() => {
+                                                setEditJsonStr(JSON.stringify(selectedLoan.form_data || {}, null, 2));
+                                                setIsEditingJson(true);
+                                            }}
+                                            className="bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                                        >
+                                            Edit Details JSON
+                                        </button>
+                                        <button 
+                                            disabled={actionLoading}
+                                            onClick={() => handleDeleteLoan(selectedLoan.id)}
+                                            className="bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-50 ml-auto"
+                                        >
+                                            <Trash2 size={14} /> Delete Application
+                                        </button>
+                                    </div>
                                 </div>
+                                
+                                {isEditingJson && (
+                                    <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
+                                        <div className="bg-white rounded-3xl p-6 w-full max-w-2xl">
+                                            <h3 className="text-xl font-black text-slate-900 mb-4">Edit Form Data (JSON)</h3>
+                                            <textarea 
+                                                className="w-full h-96 bg-slate-900 text-emerald-400 font-mono text-xs p-4 rounded-xl outline-none"
+                                                value={editJsonStr}
+                                                onChange={(e) => setEditJsonStr(e.target.value)}
+                                            />
+                                            <div className="flex gap-3 mt-4 justify-end">
+                                                <button onClick={() => setIsEditingJson(false)} className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase rounded-xl">Cancel</button>
+                                                <button onClick={handleUpdateDetails} disabled={actionLoading} className="px-5 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase rounded-xl">Save Changes</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                             </div>
                         </div>
