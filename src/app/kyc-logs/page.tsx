@@ -23,6 +23,7 @@ export default function KycLogsPage() {
     const [bypassKycForTest, setBypassKycForTest] = useState<boolean>(false);
     const [bypassLoading, setBypassLoading] = useState<boolean>(true);
     const [bypassSaving, setBypassSaving] = useState<boolean>(false);
+    const [testPhones, setTestPhones] = useState<string>('');
 
     const fetchSettings = async () => {
         setTestingLoading(true);
@@ -36,6 +37,10 @@ export default function KycLogsPage() {
             const bypassSetting = data.find((s: any) => s.key === 'bypass_kyc_for_test_accounts');
             if (bypassSetting) {
                 setBypassKycForTest(bypassSetting.value === '1');
+            }
+            const phonesSetting = data.find((s: any) => s.key === 'sandbox_test_phones');
+            if (phonesSetting) {
+                setTestPhones(phonesSetting.value || '');
             }
         } catch (error) {
             console.error('Failed to load system settings', error);
@@ -73,7 +78,7 @@ export default function KycLogsPage() {
 
     const handleToggleBypass = async (checked: boolean) => {
         setBypassSaving(true);
-        const toastId = toast.loading(checked ? 'Enabling KYC Bypass...' : 'Disabling KYC Bypass...');
+        const toastId = toast.loading(checked ? 'Enabling Test-Based KYC...' : 'Disabling Test-Based KYC...');
         try {
             await apiFetch('/admin/system-settings', {
                 method: 'POST',
@@ -86,12 +91,32 @@ export default function KycLogsPage() {
             setBypassKycForTest(checked);
             toast.success(
                 checked 
-                    ? 'KYC Bypass enabled for 99999 alternate numbers!' 
-                    : 'KYC Bypass disabled. Real KYC active.',
+                    ? 'Test-Based KYC enabled! Entered phone numbers will hit Sandbox Test Env.' 
+                    : 'Test-Based KYC disabled. Real KYC active.',
                 { id: toastId }
             );
         } catch (error) {
             toast.error('Failed to update KYC bypass setting', { id: toastId });
+        } finally {
+            setBypassSaving(false);
+        }
+    };
+
+    const handleSaveTestPhones = async () => {
+        setBypassSaving(true);
+        const toastId = toast.loading('Saving test phone numbers...');
+        try {
+            await apiFetch('/admin/system-settings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    settings: {
+                        sandbox_test_phones: testPhones
+                    }
+                })
+            });
+            toast.success('Test phone numbers saved successfully!', { id: toastId });
+        } catch (error) {
+            toast.error('Failed to save test phone numbers', { id: toastId });
         } finally {
             setBypassSaving(false);
         }
@@ -185,32 +210,58 @@ export default function KycLogsPage() {
                     </div>
 
                     {/* Toggle 2: KYC Bypass for Test Accounts */}
-                    <div className="flex items-center gap-4 bg-white/60 border border-slate-100/50 backdrop-blur p-5 rounded-[2rem] shadow-sm">
-                        <div className="flex-1">
-                            <p className="text-xs font-black text-slate-900 uppercase tracking-wide">KYC Auto-Verify</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
-                                {bypassLoading ? 'Loading setting...' : (bypassKycForTest ? 'Mock Aadhaar & PAN active' : 'Real KYC active')}
-                            </p>
-                        </div>
-                        
-                        {bypassLoading ? (
-                            <div className="w-10 h-6 flex items-center justify-center">
-                                <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                    <div className="flex flex-col gap-3 bg-white/60 border border-slate-100/50 backdrop-blur p-5 rounded-[2rem] shadow-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <p className="text-xs font-black text-slate-900 uppercase tracking-wide">Test-Based KYC</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                                    {bypassLoading ? 'Loading setting...' : (bypassKycForTest ? 'Sandbox Test Env active' : 'Real KYC active')}
+                                </p>
                             </div>
-                        ) : (
-                            <button
-                                disabled={bypassSaving}
-                                onClick={() => handleToggleBypass(!bypassKycForTest)}
-                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-2 ${
-                                    bypassKycForTest ? 'bg-amber-500' : 'bg-slate-200'
-                                }`}
-                            >
-                                <span
-                                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
-                                        bypassKycForTest ? 'translate-x-5' : 'translate-x-0'
+                            
+                            {bypassLoading ? (
+                                <div className="w-10 h-6 flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                                </div>
+                            ) : (
+                                <button
+                                    disabled={bypassSaving}
+                                    onClick={() => handleToggleBypass(!bypassKycForTest)}
+                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-2 ${
+                                        bypassKycForTest ? 'bg-amber-500' : 'bg-slate-200'
                                     }`}
-                                />
-                            </button>
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
+                                            bypassKycForTest ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
+                                    />
+                                </button>
+                            )}
+                        </div>
+
+                        {bypassKycForTest && (
+                            <div className="mt-1 space-y-2 border-t border-slate-100/80 pt-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                    Test Phone Numbers (comma-separated)
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={testPhones}
+                                        onChange={(e) => setTestPhones(e.target.value)}
+                                        placeholder="e.g. 9999999999, 9876543210"
+                                        className="flex-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-white/80 focus:outline-none focus:border-amber-500 text-slate-900"
+                                    />
+                                    <button
+                                        onClick={handleSaveTestPhones}
+                                        disabled={bypassSaving}
+                                        className="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition disabled:opacity-50"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

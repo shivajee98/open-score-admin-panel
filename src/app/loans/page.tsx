@@ -1247,7 +1247,7 @@ export default function LoanApprovals() {
                                         {loans.map((loan: any) => (
                                             <tr
                                                 key={loan.id}
-                                                className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                                                className="bg-[#f8fafc] hover:bg-blue-50/50 transition-all group cursor-pointer"
                                                 onClick={() => setSelectedLoan(loan.id)}
                                             >
                                                 <td className="p-6 pl-8" onClick={(e) => e.stopPropagation()}>
@@ -1480,35 +1480,41 @@ export default function LoanApprovals() {
                                                     </div>
                                                 </td>
                                                 <td className="p-6" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex flex-col gap-2">
-                                                        {!loan.is_nach_added ? (
-                                                            <>
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="NACH Link..."
-                                                                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-32 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all"
-                                                                    defaultValue={loan.nach_link || ''}
-                                                                    onBlur={(e) => {
-                                                                        if (e.target.value !== loan.nach_link) {
-                                                                            handleAddNachLink(loan.id, e.target.value);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                {loan.nach_link && (
-                                                                    <button
-                                                                        onClick={() => handleMarkNachAdded(loan.id)}
-                                                                        className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all shadow-sm"
-                                                                    >
-                                                                        Mark as Added
-                                                                    </button>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm whitespace-nowrap text-center">
-                                                                NACH Added ✓
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <form className="flex flex-col gap-2 w-36" onSubmit={(e) => {
+                                                        e.preventDefault();
+                                                        const input = e.currentTarget.elements.namedItem('nach_link') as HTMLInputElement;
+                                                        if (input.value) handleAddNachLink(loan.id, input.value);
+                                                    }}>
+                                                        <input
+                                                            name="nach_link"
+                                                            type="text"
+                                                            placeholder="Add NACH link..."
+                                                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs w-full focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all"
+                                                            defaultValue={loan.nach_link || ''}
+                                                        />
+                                                        <div className="flex flex-col gap-2">
+                                                            <button
+                                                                type="submit"
+                                                                className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all shadow-sm"
+                                                            >
+                                                                Save Link
+                                                            </button>
+                                                            {loan.nach_link && !loan.is_nach_added && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleMarkNachAdded(loan.id)}
+                                                                    className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all shadow-sm"
+                                                                >
+                                                                    Mark as Done
+                                                                </button>
+                                                            )}
+                                                            {loan.is_nach_added && (
+                                                                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm whitespace-nowrap text-center">
+                                                                    NACH Done ✓
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </form>
                                                 </td>
                                                 <td className="p-6 pr-8 text-right">
                                                     <div className="flex justify-end items-center gap-2">

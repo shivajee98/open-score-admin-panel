@@ -393,6 +393,42 @@ export default function LoanDetailModal({ loanId, onClose, onUpdate }: LoanDetai
                             </div>
                         )}
 
+                        {/* KYC Verification Feedback Banner */}
+                        {loan.user?.is_aadhar_verified && loan.user?.is_pan_verified && (
+                            <div className={`border-2 rounded-3xl p-6 shadow-sm animate-in slide-in-from-top-4 duration-500 ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
+                                <div className="flex items-start gap-4">
+                                    <div className={`p-3 bg-white rounded-2xl shadow-sm border flex-shrink-0 ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'border-emerald-100' : 'border-blue-100'}`}>
+                                        <ShieldCheck className={`w-6 h-6 ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'text-emerald-500' : 'text-blue-500'}`} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className={`text-sm font-black tracking-wide ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'text-emerald-900' : 'text-blue-900'}`}>
+                                                {loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'KYC Automatically Verified' : 'KYC Manually Verified'}
+                                            </h3>
+                                            {loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? (
+                                                <span className="px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-full uppercase tracking-widest">Sandbox API</span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-black rounded-full uppercase tracking-widest">Admin</span>
+                                            )}
+                                        </div>
+                                        <p className={`text-xs font-bold leading-relaxed ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'text-emerald-700' : 'text-blue-700'}`}>
+                                            {loan.user?.aadhar_verified_at && loan.user?.pan_verified_at 
+                                                ? 'The applicant has successfully verified their Aadhaar and PAN details through the Sandbox integration.'
+                                                : 'The applicant\'s Aadhaar and PAN details were manually verified and cleared by an administrator.'}
+                                        </p>
+                                        <div className="flex gap-4 mt-3">
+                                            <div className={`flex items-center gap-1.5 text-[10px] font-black bg-white px-2 py-1 rounded-lg border shadow-sm ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'text-emerald-600 border-emerald-100' : 'text-blue-600 border-blue-100'}`}>
+                                                <BadgeCheck size={12} /> Aadhaar: {loan.form_data?.aadhar_number || loan.user?.aadhar_number || 'Verified'}
+                                            </div>
+                                            <div className={`flex items-center gap-1.5 text-[10px] font-black bg-white px-2 py-1 rounded-lg border shadow-sm ${loan.user?.aadhar_verified_at && loan.user?.pan_verified_at ? 'text-emerald-600 border-emerald-100' : 'text-blue-600 border-blue-100'}`}>
+                                                <BadgeCheck size={12} /> PAN: {loan.form_data?.pan_number || loan.user?.pan_number || 'Verified'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
