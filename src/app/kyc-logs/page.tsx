@@ -32,11 +32,11 @@ export default function KycLogsPage() {
             const data = await apiFetch('/admin/system-settings');
             const testingSetting = data.find((s: any) => s.key === 'testing_in_prod');
             if (testingSetting) {
-                setTestingInProd(testingSetting.value === '1');
+                setTestingInProd(testingSetting.value === '1' || testingSetting.value === 1 || testingSetting.value === true);
             }
             const bypassSetting = data.find((s: any) => s.key === 'bypass_kyc_for_test_accounts');
             if (bypassSetting) {
-                setBypassKycForTest(bypassSetting.value === '1');
+                setBypassKycForTest(bypassSetting.value === '1' || bypassSetting.value === 1 || bypassSetting.value === true);
             }
             const phonesSetting = data.find((s: any) => s.key === 'sandbox_test_phones');
             if (phonesSetting) {
@@ -65,7 +65,7 @@ export default function KycLogsPage() {
             setTestingInProd(checked);
             toast.success(
                 checked 
-                    ? 'Testing in Prod enabled! 99999-prefix numbers will bypass OTP.' 
+                    ? 'Testing in Prod enabled! 99999999-prefix numbers will bypass OTP.' 
                     : 'Testing in Prod disabled. Standard OTP flow active.',
                 { id: toastId }
             );
@@ -174,7 +174,7 @@ export default function KycLogsPage() {
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">Production Bypass Control</h2>
                     <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                        Toggle developer bypass features in production. When active, any OTP request or verification for mobile numbers starting with <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-amber-600 font-bold">99999</code> will automatically bypass carrier SMS dispatch and accept <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-emerald-600 font-bold">123456</code>. You can also enable <strong className="text-slate-800">Sandbox Test Environment</strong> to allow bypassed alternate number accounts to verify Aadhaar and PAN using the Sandbox test API keys instead of mocking the response directly.
+                        Toggle developer bypass features in production. When active, any OTP request or verification for mobile numbers starting with <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-amber-600 font-bold">99999999</code> will automatically bypass carrier SMS dispatch and accept <code className="font-mono bg-slate-200/60 px-1.5 py-0.5 rounded text-emerald-600 font-bold">123456</code>. You can also enable <strong className="text-slate-800">Sandbox Test Environment</strong> to allow bypassed alternate number accounts to verify Aadhaar and PAN using the Sandbox test API keys instead of mocking the response directly.
                     </p>
                 </div>
                 
