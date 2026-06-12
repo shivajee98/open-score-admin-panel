@@ -171,7 +171,7 @@ const TeamEarningsCell = ({ agent, apiFetch, onUpdate }: any) => {
 
 
 // Sub-component for individual user rows to handle local input state
-const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onViewStats, onSendEmail, onSendNotification }: any) => {
+const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, handleMakeIndependent, setSelectedUser, setIsCreditsModalOpen, reloadUsers, currentUser, onViewStats, onSendEmail, onSendNotification }: any) => {
     const isAdmin = currentUser?.role === 'ADMIN';
     const [supportNumber, setSupportNumber] = useState(user.support_number ?? '');
     const [isSavingSupport, setIsSavingSupport] = useState(false);
@@ -489,13 +489,22 @@ const UserRow = ({ user, selectedIds, toggleSelect, toggleStatus, handleUnlink, 
                     </button>
 
                     {isAdmin && user.role !== 'SYSTEM' && user.role !== 'ADMIN' && (
-                        <button
-                            onClick={() => handleUnlink(user.id)}
-                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                            title="Unlink & Archive Agent"
-                        >
-                            <Trash2 className="w-5 h-5" />
-                        </button>
+                        <>
+                            <button
+                                onClick={() => handleMakeIndependent(user.id)}
+                                className="p-2 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-lg transition-colors"
+                                title="Disconnect from vendor & Keep Commissions"
+                            >
+                                <LinkIcon className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => handleUnlink(user.id)}
+                                className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
+                                title="Unlink & Archive Agent (Revert to Customer)"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        </>
                     )}
                 </div>
             </td>
@@ -796,13 +805,24 @@ export default function AgentsPage() {
     };
 
     const handleUnlink = async (id: number) => {
-        if (!confirm('Are you sure you want to unlink this agent? They will be reverted to a CUSTOMER role and their work history will be archived.')) return;
+        if (!confirm('Are you sure you want to unlink this agent? They will be reverted to a CUSTOMER role and their work history will be archived. COMMISSIONS WILL BE ZEROED.')) return;
         try {
             await apiFetch(`/admin/users/${id}/unlink`, { method: 'POST' });
             loadAgents();
             toast.success("Agent unlinked and reverted to customer.");
         } catch (e: any) {
             toast.error(e.message || "Failed to unlink agent");
+        }
+    };
+
+    const handleMakeIndependent = async (id: number) => {
+        if (!confirm('Disconnect this agent from their vendor? They will remain an AGENT, and their current commission rates will be PRESERVED. You can edit their rates on the Independent Agents page.')) return;
+        try {
+            await apiFetch(`/admin/users/${id}/make-independent`, { method: 'POST' });
+            loadAgents();
+            toast.success("Agent successfully made independent!");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to make agent independent");
         }
     };
 
@@ -1223,6 +1243,7 @@ export default function AgentsPage() {
                                         toggleSelect={toggleSelect}
                                         toggleStatus={toggleStatus}
                                         handleUnlink={handleUnlink}
+                                        handleMakeIndependent={handleMakeIndependent}
                                         setSelectedUser={setSelectedUser}
                                         setIsCreditsModalOpen={setIsCreditsModalOpen}
                                         reloadUsers={loadAgents}

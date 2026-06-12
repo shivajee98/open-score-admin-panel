@@ -11,6 +11,7 @@ import Link from 'next/link';
 import FundsCard from '@/components/dashboard/FundsCard';
 import SystemResetDialog from '@/components/dashboard/SystemResetDialog';
 import CampaignManager from '@/components/dashboard/CampaignManager';
+import LoginAccessControl from '@/components/dashboard/LoginAccessControl';
 import { toast } from 'sonner';
 
 export default function AdminDashboard() {
@@ -216,7 +217,8 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout title="System Overview">
-            <div className="flex justify-end mb-6">
+            <div className="flex justify-end gap-3 mb-6">
+                <LoginAccessControl />
                 <SystemResetDialog />
             </div>
             <FundsCard />

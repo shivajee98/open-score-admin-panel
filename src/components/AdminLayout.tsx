@@ -133,6 +133,7 @@ export default function AdminLayout({ children, title }: { children: React.React
         { label: 'Agents', href: '/agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
         { label: 'Agent Setting', href: '/vendor-settings', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
         { label: 'Unlinked History', href: '/agents/history', icon: <Archive className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
+        { label: 'Independent Agents', href: '/independent-agents', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'], group: 'User & Team', subGroup: 'Vendors' },
 
         // Promotions & Tools
         { label: 'QR Generator', href: '/qr-generator', icon: <QrCode className="w-5 h-5" />, roles: ['ADMIN'], group: 'Promotions & Tools' },
